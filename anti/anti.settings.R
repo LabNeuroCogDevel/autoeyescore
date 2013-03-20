@@ -1,0 +1,66 @@
+#### Settings ######
+
+# XDAT CODES
+startcodes   <- c(2,4,5,6)+30
+targetcodes  <- c(1:4)+130
+stopcodes    <- c(250)
+
+# number of trials
+expectedTrialLengths  <- 48
+
+## xpos ##
+# saccade left thresholds
+sac.left.large  <- 2 
+sac.left.small  <- 87 
+
+# saccade right thresholds
+sac.right.small <- 172
+sac.right.large <- 258
+
+# padding to give to expected positions
+sac.padding     <- 30
+
+# the useful saccades probably already occur
+sac.majorRegionEnd <- .75 
+  
+sac.thresholds <- c(
+      c  (sac.right.large,
+          sac.right.small  ) ,
+
+      c(  sac.left.small,
+          sac.left.large )
+)
+
+names(sac.thresholds)<-c(1:4)
+
+
+
+## FUNCTIONS
+# where are the files?
+getFiles  <- function() {
+ #/mnt/B/bea_res/Data/Tasks/Anti/Basic/11146/20130313/Raw/EyeData/txt/11146.20130313.anti.1.tsv
+ files    <- Sys.glob('/mnt/B/bea_res/Data/Tasks/Anti/Basic/*/*/Raw/EyeData/txt/*.tsv')
+ splitfile <- strsplit(basename(files),'\\.')
+ splitfile <- as.data.frame(t(sapply(splitfile,rbind)))[,-5]
+ names(splitfile)  <- c('subj','date','type','run')
+ splitfile$subj    <- as.character(splitfile$subj)
+ splitfile$date    <- as.character(splitfile$date)
+ splitfile$type    <- as.character(splitfile$type)
+ splitfile$run     <- as.numeric(as.character(splitfile$run))
+ splitfile$file    <- files
+ splitfile$id      <- paste( splitfile$date,splitfile$run, sep=".")  
+ splitfile$savedas <- paste(dirname(dirname(dirname(dirname(files)))), '/Scored/txt/',
+                            paste(splitfile$subj,splitfile$date,splitfile$type,splitfile$run,'sac.txt',sep="."),
+                            sep="" )
+ return(splitfile)
+}
+# what is the threshold for left/right position
+getExpPos <- function(sac.thresholds,xdatCode){
+    # xdatCode is index for thesholds (1 -> right short, 2-> right long, 3->left short, 4->left long)
+    return(sac.thresholds[ xdatCode - 130 ] )
+}
+
+# is this xdat an antisaccde xdat?
+xdatIsAS <- function(xdat){
+ return(TRUE)
+}
