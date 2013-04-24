@@ -23,7 +23,7 @@ find( {wanted => \&wanted,no_chdir=>1,follow=>1}, '/mnt/B/bea_res/Data/Tasks/Bar
 my $p = Spreadsheet::ParseExcel->new();
 
 # print header
-print join("\t",qw(subject.date.trial PCdif autoPC manPC a_drop m_drop conf scorer)),"\n";
+print join(",",qw(subject.date.trial PCdif autoPC manPC a_drop m_drop scorer conf)),"\n";
 
 #@scoreSheets=qw(/mnt/B/bea_res/Data/Tasks/BarsBehavioral/Basic/10156/20110810/Scored/Run02/fs_10156_bars2.xls
 #                /mnt/B/bea_res/Data/Tasks/BarsBehavioral/Basic/10847/20100920/Scored/Run01/fs_10847_bars1.xls
@@ -38,12 +38,14 @@ for my $xlsfn (@scoreSheets){
   my $manPC      = sprintf('%.2f',$xls->get_cell(5,12)->unformatted());
 
   my $confidence = $xls->get_cell(0,0)->unformatted();
-  $confidence    =~ /(\d.*) of 5/;
-  $confidence    = $1;
+  $confidence    = $1 if $confidence  =~ /(\d.*) of 5?/;
+  $confidence    =~ s/,/;/g;
+  
 
   my $scorer = $xls->get_cell(1,0)->unformatted();
   $scorer =~ s/scorer:? ?//i;
   my $dropped    = $xls->get_cell(1,6)->unformatted();
+  $dropped=0 if !$dropped;
 
   # get auto scoring
   my $autofnpath = dirname(dirname($xlsfn)) ."/txt/*$run.trial.txt";
@@ -70,6 +72,6 @@ for my $xlsfn (@scoreSheets){
      $autoPC=sprintf("%.2f", $a{TRUE}/($autoTotalRuns)*100);
   }
 
-  print join("\t",$trial, $autoPC - $manPC, $autoPC,$manPC,60 - $autoTotalRuns,$dropped,$confidence, $scorer), "\n";
+  print join(",",$trial, sprintf('%.2f',$autoPC - $manPC), $autoPC,$manPC,60 - $autoTotalRuns,$dropped,$scorer, $confidence), "\n";
 }
 

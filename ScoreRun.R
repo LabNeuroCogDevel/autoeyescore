@@ -505,7 +505,6 @@ scoreRun <- function(eydfile, subj, run, runtype, onlyontrials=NULL,writetopdf=T
     ptitle <- paste(subj,runtype, trl,xdatCode)
     g    <- ggplotXpos(est,d,trgt,sac.df,base.val,delt.x.scale,slowpnt.x.scale,ptitle)
     drv <- ggplotDrv(fst,scnd,slowpnt.x.scale,delt.x.scale)
-    print(g)
 
     # write out plot
     if(is.null(savedas)){ 
