@@ -16,6 +16,9 @@ use Spreadsheet::ParseExcel;
 # find all fs*xls files and check %correct against auto
 #
 #####
+
+open my $OUTFH, '>checkBars.csv' or die 'cannot open output\n';
+
 my @scoreSheets;
 sub wanted {push @scoreSheets, $File::Find::name if  m:fs.*xls:i};
 find( {wanted => \&wanted,no_chdir=>1,follow=>1}, '/mnt/B/bea_res/Data/Tasks/BarsBehavioral/Basic/' );
@@ -23,7 +26,9 @@ find( {wanted => \&wanted,no_chdir=>1,follow=>1}, '/mnt/B/bea_res/Data/Tasks/Bar
 my $p = Spreadsheet::ParseExcel->new();
 
 # print header
-print join(",",qw(subject.date.trial PCdif autoPC manPC a_drop m_drop scorer conf)),"\n";
+my $header= join(",",qw(subject.date.trial PCdif autoPC manPC a_drop m_drop scorer conf))."\n";
+print $header;
+print $OUTFH $header;
 
 #@scoreSheets=qw(/mnt/B/bea_res/Data/Tasks/BarsBehavioral/Basic/10156/20110810/Scored/Run02/fs_10156_bars2.xls
 #                /mnt/B/bea_res/Data/Tasks/BarsBehavioral/Basic/10847/20100920/Scored/Run01/fs_10847_bars1.xls
@@ -38,7 +43,8 @@ for my $xlsfn (@scoreSheets){
   my $manPC      = sprintf('%.2f',$xls->get_cell(5,12)->unformatted());
 
   my $confidence = $xls->get_cell(0,0)->unformatted();
-  $confidence    = $1 if $confidence  =~ /(\d.*) of 5?/;
+  #$confidence    = $1 if $confidence  =~ /(\d.*) of 5?/;
+  $confidence    =~ s/Confidence rating: //i;
   $confidence    =~ s/,/;/g;
   
 
@@ -52,7 +58,8 @@ for my $xlsfn (@scoreSheets){
   my @autofn = glob( $autofnpath );
 
   # initialze
-  my $trial  = basename($autofnpath).".$run";
+  $xlsfn =~ m:/(\d{5})/(\d{8})/:;
+  my $trial  = "*$1.$2.$run";
   my $autoTotalRuns = 0;
   my $autoPC = 0;
 
@@ -72,6 +79,9 @@ for my $xlsfn (@scoreSheets){
      $autoPC=sprintf("%.2f", $a{TRUE}/($autoTotalRuns)*100);
   }
 
-  print join(",",$trial, sprintf('%.2f',$autoPC - $manPC), $autoPC,$manPC,60 - $autoTotalRuns,$dropped,$scorer, $confidence), "\n";
+  my $output= join(",",$trial, sprintf('%.2f',$autoPC - $manPC), $autoPC,$manPC,60 - $autoTotalRuns,$dropped,$scorer, $confidence). "\n";
+  print $OUTFH $output;
+  print $output;
 }
+close $OUTFH;
 

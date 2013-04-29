@@ -193,7 +193,7 @@ dropTrial <- function(subj,runtype,trl,xdatCode,reason,plotData=F,savedas=NULL) 
 
 }
 # returns 'allsacs' a list of all saccades in each trial
-scoreRun <- function(eydfile, subj, run, runtype, onlyontrials=NULL,writetopdf=T,savedas=NULL){
+scoreRun <- function(eydfile, subj, run, runtype,onlyontrials=NULL,writetopdf=T,savedas=NULL, showplot=F){
   cat('using ', eydfile ,'\n')
 
   ### load data
@@ -263,7 +263,20 @@ scoreRun <- function(eydfile, subj, run, runtype, onlyontrials=NULL,writetopdf=T
     #trl  <- 8
     
     # target code xdat is a little past where target index starts
-    xdatCode <- d$xdat[ targetIdxs[trl,1] + 15 ]
+    xdatCode <- d$xdat[ targetIdxs[trl,1] + 1 ]
+    # the code is after the startcode but before stopcode (between targetidx[,1] and [,2] 
+    # before was taking the 15th to make sure past any repated start xdat??
+    # now only using 1 ahead
+
+    # seems okay because:
+    #print(head(d$xdat[ targetIdxs[trl,1]:targetIdxs[trl,2] ]))
+    
+    # maybe not the best place, but we should check targetIdx length
+    numTargetCodes<-diff(targetIdxs[trl,])
+    ##TODO: THIS 85 SHOULD NOT BE HARDCODED
+    # it is the min number of samples accepted for a target code  
+    if(numTargetCodes < 85) cat(sprintf('WARNING: have only %d target codes\n',numTargetCodes))
+
     # this particular threshold
     #sac.thres <<- sac.thresholds[ xdatCode%%10 ]
     # xdatCode is index for thesholds (1 -> right short, 2-> right long, 3->left short, 4->left long)
@@ -500,22 +513,24 @@ scoreRun <- function(eydfile, subj, run, runtype, onlyontrials=NULL,writetopdf=T
     
     #cat('mean', base.val , '\n')
  
-    ## PLOT
+    ## PLOT -- only if we are told to
 
-    ptitle <- paste(subj,runtype, trl,xdatCode)
-    g    <- ggplotXpos(est,d,trgt,sac.df,base.val,delt.x.scale,slowpnt.x.scale,ptitle)
-    drv <- ggplotDrv(fst,scnd,slowpnt.x.scale,delt.x.scale)
+    if(showplot) {
+       ptitle <- paste(subj,runtype, trl,xdatCode)
+       g    <- ggplotXpos(est,d,trgt,sac.df,base.val,delt.x.scale,slowpnt.x.scale,ptitle)
+       drv <- ggplotDrv(fst,scnd,slowpnt.x.scale,delt.x.scale)
 
-    # write out plot
-    if(is.null(savedas)){ 
-      outputdir <- paste(saverootdir, subj,paste(run,runtype,'DROPPED',sep=".") ,sep="/")
-    } else {
-      outputdir <- paste(dirname(savedas),'img',sep='/')
+       # write out plot
+       if(is.null(savedas)){ 
+         outputdir <- paste(saverootdir, subj,paste(run,runtype,'DROPPED',sep=".") ,sep="/")
+       } else {
+         outputdir <- paste(dirname(savedas),'img',sep='/')
+       }
+       filename<-paste(sprintf("%02d",trl),xdatCode,sep="-")
+       filename<-paste(outputdir,'/', filename,'.pdf', sep="")
+
+       savePlots(sac.df,g,drv,filename,writetopdf)
     }
-    filename<-paste(sprintf("%02d",trl),xdatCode,sep="-")
-    filename<-paste(outputdir,'/', filename,'.pdf', sep="")
-
-    savePlots(sac.df,g,drv,filename,writetopdf)
 
     allsacs <- rbind(allsacs,
                    data.frame(

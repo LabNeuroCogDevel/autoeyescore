@@ -52,10 +52,11 @@ getsubj <- function(i){
   #print('looking for')
   #print(savedas)
 
-  print(paste('looking for/creating',savedas))
   if(file.exists(savedas) ) {
+    print(paste('reading',savedas))
     allsacs <- read.table(sep="\t",header=T, file=savedas)
   } else{
+    print(sprintf('running: scoreRun(%s,%s,%s,%s,%s,writetopdf=%s,savedas=%s)',filename, subj,run, type,plotTrial,savedas))
     allsacs <- scoreRun( filename, subj,run, type,writetopdf=plotTrial,savedas=savedas) 
   }
   
