@@ -26,7 +26,7 @@ find( {wanted => \&wanted,no_chdir=>1,follow=>1}, '/mnt/B/bea_res/Data/Tasks/Bar
 my $p = Spreadsheet::ParseExcel->new();
 
 # print header
-my $header= join(",",qw(subject.date.trial PCdif autoPC manPC a_drop m_drop scorer conf))."\n";
+my $header= join(",",qw(subject.date.run PC_Δ drop_Δ a_PC m_PC a_drop m_drop scorer conf))."\n";
 print $header;
 print $OUTFH $header;
 
@@ -79,7 +79,8 @@ for my $xlsfn (@scoreSheets){
      $autoPC=sprintf("%.2f", $a{TRUE}/($autoTotalRuns)*100);
   }
 
-  my $output= join(",",$trial, sprintf('%.2f',$autoPC - $manPC), $autoPC,$manPC,60 - $autoTotalRuns,$dropped,$scorer, $confidence). "\n";
+  my $auto_drop = 60 - $autoTotalRuns ;
+  my $output= join(",",$trial, sprintf('%.2f',$autoPC - $manPC), $auto_drop - $dropped, $autoPC,$manPC,$auto_drop,$dropped,$scorer, $confidence). "\n";
   print $OUTFH $output;
   print $output;
 }

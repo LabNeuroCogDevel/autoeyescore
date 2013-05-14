@@ -1,0 +1,21 @@
+##### Runnning
+# anti example (same for bars)
+ cd anti
+ ./mktsv.bash # parse all the eyds into tab seperated files
+ R
+  source('anti.settings.R')
+  source('../ScoreRun.R')
+  source('../ScoreEveryone.R')
+
+# saves output to results/
+#   while also puting a *sac.txt, *trial.txt, and *summary.txt in each subjects Score/txt/ directory
+
+##### Hacking
+
+getFiles() is set per task in *.settings.R
+ e.g. bars looks for files with
+ files    <- Sys.glob('/mnt/B/bea_res/Data/Tasks/BarsBehavioral/Basic/*/*/Raw/EyeData/txt/*.tsv')
+
+ sets where files should be saved
+  
+

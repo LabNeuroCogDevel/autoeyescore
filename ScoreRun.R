@@ -1,9 +1,11 @@
-# TODO:
-#
+#TO USE:
 # Score an eyd turned tsv file
 #  ** NEED TO SOURCE a settings file before running this!!!
 #     e.g. anti/anti.settings.R 
 #
+#
+#TODO:
+#NOTES: 
 # accuracy is if the saccade is held
 #    which is if there is no saccade in the next 100ms
 # * add 'held' T/F column
@@ -13,12 +15,27 @@
 # * graph dropped trials still. can see how bad it is
 # * take a meassure of polyfit's estimation, drop if off in critical time
 #
+#  getSacs  -- generate saccades for a run
+#  scoreSac  -- score sacades 
+#
+#  trial, xdat, lat, fstCorrect, ErrCorr, AS, Count 
+#    fstCorrect boolean, True if first saccade is the correct direction
+#    ErrCorr boolean, True if there is a corretive saccade (not just to baseline)
+#    AS boolean, prosaccade or antisaccade? True if AS
+#    Count -- number of trials to get to a correct response
+#       0 -- never correct
+#       1 -- first saccade is correct
+#       2 -- corrected incorrect saccade (might have been 3rd, 4th, etc, saccade)
+
+#
 library(KernSmooth)
 library(ggplot2)
 library(gridExtra)
+library(plyr)
+library(zoo) # for na.approx
 
 #### Settings ######
-saverootdir  <- 'eyeData'
+saverootdir  <- 'aux'
 
 #ASL max is 261x240
 xmax         <- 274
@@ -47,6 +64,8 @@ sac.held    <- 100/1000  # if a sac is held -- it is accurate
 
 
 ### Plot settings
+plot.endtime <- 1.75
+
 # Green:   means correct direction to the correct place
 # Blue:    good dir, over or under shot position
 # Orange:  wrong dir, but moved as much as should have if the direction was correct
@@ -55,13 +74,13 @@ sac.held    <- 100/1000  # if a sac is held -- it is accurate
 # TRUE FALSE is correct direction, wrong magintued of saccade -- NA's sneak in, so inluce a bunch of 'black's
 positionColors<-c('TRUE TRUE'='green', 'TRUE FALSE'='blue', 'FALSE FALSE'='red','FALSE TRUE'='orange', 'black','black','black','black','black')
   
-xScaleTime <- sort(c(seq(0,3,by=.25), lat.fastest, sac.time ) )
+xScaleTime <- sort(c(seq(0,plot.endtime,by=.25), lat.fastest, sac.time ) )
 # remove the tick that is close to sac.time -- should do this algorithmicly with diff
 xScaleTime <- xScaleTime[-which(xScaleTime==1.5)]
 # p is always the same
 # but x limit should probably be done programticly/abstracted (170-> variable name)
 p    <- ggplot() + theme_bw() + theme(legend.position="none" ) +
-        scale_x_continuous(limits=c(0,170), breaks=xScaleTime*60, labels=xScaleTime)
+        scale_x_continuous(limits=c(0,plot.endtime*60), breaks=xScaleTime*60, labels=xScaleTime)
 
 
 ## FUNCTIONS
@@ -79,8 +98,9 @@ ggplotXpos <- function(est,d,trgt,sac.df,base.val,delt.x.scale,slowpnt.x.scale,p
      g <- g + geom_point(data=data.frame(x=est$x,y=est$y),aes(x=x,y=y),alpha=I(.5))
   }
 
-     g <- g + geom_point(data=d[trgt,],x=1:length(trgt), aes(y=xpos,color=as.factor(xdat)))  +
-          scale_color_manual(values=c('green','red','blue','black')) + # should only ever see green
+     g <- g + geom_point(data=d[trgt,],x=1:length(trgt), aes(y=xpos,color=as.factor(xdat),size=dil))  +
+          scale_color_manual(values=c('green','red','blue','black')) + # should only ever see green -- otherwise more than one XDAT
+          scale_size_continuous(limits=c(30,70),range=c(.1,4)) + # limit dilation scale to 2 std of mean (for random subj)
           geom_vline(xintercept=60*lat.fastest,color=I('red')) +
           geom_vline(xintercept=60*sac.time,color=I('red'),linetype=I('dotdash'))
 
@@ -131,20 +151,26 @@ savePlots <- function(sac.df,g,drv,filename,writetopdf) {
   
   # only write to pdf if we are told to
   if(writetopdf) {
-     #cat('write to', outputdir, filename,"\n")
      outputdir<-dirname(filename)
      if(!file.exists(outputdir)) { dir.create(outputdir,recursive=T) }
 
+     cat('write to', outputdir, filename,"\n")
      pdf(filename,height=6, width=15)
+  }
+  else {
+   print('not saving')
+   x11()
   }
   
   # if we have saccades, show a table
   if(length(sac.df)>0){
-      grid.arrange( nrow=3,heights=c(.5,1,.4),
+      print (
+        grid.arrange( nrow=3,heights=c(.5,1,.4),
                 tableGrob( sac.df[,-c(1:3)]),  # exclude index values
                  g,
                  drv
            ) 
+      )
   }
   # otherwise just show the eye data
   else{
@@ -160,10 +186,15 @@ savePlots <- function(sac.df,g,drv,filename,writetopdf) {
 
 
 ### DROP A TRIAL
-dropTrial <- function(subj,runtype,trl,xdatCode,reason,plotData=F,savedas=NULL) {
-   cat(subj, runtype, trl ,'|', reason,'| DROPPED!\n')
+dropTrial <- function(subj,runtype,trl,xdatCode,reason,allsacs,showplot=F,savedas=NULL,writetopdf=F,run=0,rundate=0) {
+   cat(sprintf('DROP: %s.%s.%s.%s %s\n',subj,rundate, run, trl,reason))
 
-   if(plotData==T){
+   ## write what is dropped
+   outputdir=saverootdir;
+   if(!file.exists(outputdir)) { dir.create(outputdir,recursive=T) }
+   cat(file=sprintf('%s/%s.%s.%s.%s.dropped.txt',outputdir,subj,rundate,run,trl),reason)
+
+   if(showplot==T){
       ptitle <- paste(subj,runtype, trl,xdatCode, paste('DROPPED!', reason) )
       g    <- ggplotXpos(est=NULL,d,trgt,sac.df=NULL,base.val=NULL,delt.x.scale=NULL,slowpnt.x.scale=NULL,ptitle)
       #g    <- g + theme(legend.position="top") , causes error
@@ -180,26 +211,32 @@ dropTrial <- function(subj,runtype,trl,xdatCode,reason,plotData=F,savedas=NULL) 
       filename<-paste(outputdir,'/', filename,'.pdf', sep="")
       if(!file.exists(outputdir)) { dir.create(outputdir,recursive=T) }
 
-      savePlots(sac.df=NULL,g,drv=NULL,filename,writetopdf=T)
+      savePlots(sac.df=NULL,g,drv=NULL,filename,writetopdf)
    }
 
    # return empty data frame -- no sacs
 
-   data.frame(
-         subj=subj,run=runtype,trial=trl,
+   droppedTrial <- data.frame(
+         subj=subj,run=run,trial=trl,
          onset=0,slowed=0,end=0,startpos=0,endpos=0,cordir=F,corpos=F, # combined=F,
-         held=F,gtMinLen=F, intime=F,p.tracked=0, xdat=xdatCode
+         held=F,gtMinLen=F, intime=F,p.tracked=0, xdat=xdatCode, maxpos=NA,minpos=NA,
+         crossFix=NA,MaxMinX=NA, startatFix=NA, distance=NA
          )
 
+  if(dim(allsacs)[1] > 1 ) {
+    allsacs <- rbind( allsacs, droppedTrial)
+   } else {
+    allsacs <- droppedTrial
+   }
 }
 # returns 'allsacs' a list of all saccades in each trial
-scoreRun <- function(eydfile, subj, run, runtype,onlyontrials=NULL,writetopdf=T,savedas=NULL, showplot=F){
+getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writetopdf=F,savedas=NULL, showplot=F){
   cat('using ', eydfile ,'\n')
 
   ### load data
   #load xdat, eye position and dialation data for parsed eydfile
-  d        <- read.table( eydfile, sep="\t",header=T)
-  names(d) <- c("xdat","dil","xpos","ypos")
+  d        <<- read.table( eydfile, sep="\t",header=T)
+  names(d) <<- c("xdat","dil","xpos","ypos")
 
   ## fix bars zero'ed xdats
   zeroxdat        <- rle(d$xdat==0)
@@ -261,6 +298,7 @@ scoreRun <- function(eydfile, subj, run, runtype,onlyontrials=NULL,writetopdf=T,
   for(trl in runontrials ) {
     #print(c(trl,length(runontrials)))
     #trl  <- 8
+    #print(trl)
     
     # target code xdat is a little past where target index starts
     xdatCode <- d$xdat[ targetIdxs[trl,1] + 1 ]
@@ -276,6 +314,7 @@ scoreRun <- function(eydfile, subj, run, runtype,onlyontrials=NULL,writetopdf=T,
     ##TODO: THIS 85 SHOULD NOT BE HARDCODED
     # it is the min number of samples accepted for a target code  
     if(numTargetCodes < 85) cat(sprintf('WARNING: have only %d target codes\n',numTargetCodes))
+
 
     # this particular threshold
     #sac.thres <<- sac.thresholds[ xdatCode%%10 ]
@@ -293,22 +332,131 @@ scoreRun <- function(eydfile, subj, run, runtype,onlyontrials=NULL,writetopdf=T,
     sac.expdir <<- sign(sac.expmag)
     sac.expmag <<- abs(sac.expmag)
 
+
     
     # grab the eye data for thsi trials traget code
     #trgt <-targetIdxs[trl,1]:targetIdxs[trl,2] 
-    print(trl)
-    trgt <-(targetIdxs[trl,1]+1):targetIdxs[trl,2]  # +1 to skip the last cue xdat code
-    b    <-na.omit( data.frame(time=1:length(trgt),x=d$xpos[trgt]) )
+    #print(trl)
+    trgt <<-(targetIdxs[trl,1]+1):targetIdxs[trl,2]  # +1 to skip the last cue xdat code
+
+    # test for tracking before target onset
+    # we want to drop (b/c lat will be useless) if they blinked for more than .2s within .3s of target onset
+    # TODO: remove hardcoded sample freq
+    pretargetIDX <- trgt[1]-.3*60 + 1:(.3*60)
+    if (any(pretargetIDX<1)) {
+     allsacs <- dropTrial(subj,runtype,trl,xdatCode,'weird! no eye position data before trial onset! cannot tell if pretrial blink',allsacs,showplot=F,run=run,rundate=rundate)
+     next
+    }
+
+    pretargetD   <- d[pretargetIDX, ] 
+    if ( length(which(is.na(pretargetD$xpos))) > .2*60) {
+     allsacs <- dropTrial(subj,runtype,trl,xdatCode,'blink before target onset',allsacs,showplot=showplot,run=run,rundate=rundate)
+     next
+    }
+
+
+    ## get eye tracking for relevant portion
+    b.orig     <- data.frame(time=1:length(trgt),x=d$xpos[trgt]) 
+
     # fill in the NAs with approximations
-    naX   <- which(is.na(d$xpos[trgt]))
-    b.all <-b
+    # using first method that came to mind (old/bad)
+    b.nona<- na.omit(b.orig)
+    b.all <-b.nona
     names(b.all) <- c('x','y')
+
+
+    ###### BLINK
+    # scary blink fliter -- remove 2 samples on each side of an NA seq that is longer than 10 samples (1/6 sec)
+    naSeq <- rle(is.na(b.orig$x))
+    SeqStartIdx <- cumsum(naSeq$lengths) - naSeq$lengths + 1
+    naStartIdx <- which( naSeq$values == T & naSeq$lengths > 10 ) 
+
+    nastarts <- SeqStartIdx[naStartIdx]-2
+    nastarts[nastarts<1] <- 1
+
+    nastops  <-  SeqStartIdx[naStartIdx]+ naSeq$lengths[naStartIdx]+2 
+    nastops[nastops>length(b.orig$x)] <- length(b.orig$x)
+
+    start10nas <- unname(unlist(alply(cbind(nastarts,nastops),1, function(x) { x[1]:x[2]} )))
+    b.cutblink <- b.orig
+    b.cutblink$x[start10nas] <- NA
+
     
+    ###### TRIM
+    # drop all NAs at the end (b/c they can't be estimtated)
+    naX   <- which(is.na(b.cutblink$x))
+
+    lastNA <- ifelse(length(naX)==0, 0 , lastNA <- naX[length(naX)] )
+
+    b.approx <- b.cutblink;
+
+
+    # trim last 
+    while(length(b.approx$x) == lastNA && length(b.approx$x)>0) {
+     # find all the NAs at the end
+     NAreps   <- tail(rle(diff(naX))$lengths,n=1) 
+
+     if( length(NAreps)>=1 & !is.na(NAreps[1])) {
+       dropidxs <- seq( lastNA - NAreps,lastNA) 
+     } else { 
+       dropidxs <-  lastNA 
+     }
+
+     b.approx <- b.approx[-dropidxs,]
+
+     naX   <- which(is.na(b.approx$x))
+     lastNA<-ifelse(length(naX)==0,  0, naX[length(naX)] )
+    }
+
+    naX     <- which(is.na(b.approx$x))
+    firstNA <-ifelse(length(naX)==0,  0, naX[1] )
+    # trim first
+    while(firstNA == 1) {
+     # find all the NAs at the end
+     NAreps   <- rle(diff(naX))$lengths[1]
+
+     if(length(NAreps)>=1 & !is.na(NAreps[1]) ) { 
+       dropidxs <- seq( firstNA , NAreps+1)
+     } else { 
+       dropidxs <- firstNA               
+     }
+     b.approx <- b.approx[-dropidxs,]
+     naX   <- which(is.na(b.approx$x))
+     firstNA <-ifelse(length(naX)==0,  0, naX[1] )
+    }
+
+    ###### CHECKS
     # if we take out the NAs and there is nothing left!
-    if(length(b.all$y)<=0){
-     allsacs <- rbind( allsacs, dropTrial(subj,runtype,trl,xdatCode,'no data',plot=F))
+    if(length(b.approx$x)<=1){
+     allsacs <- dropTrial(subj,runtype,trl,xdatCode,'no data',allsacs,showplot=showplot,run=run,rundate=rundate)
      next 
     }
+
+    ####### Estimate away NAs
+    b.approx$x <- na.approx(b.approx$x,x=b.approx$time) 
+    names(b.approx) <- c('x','y') # bad code elsewhere wants x and y
+    # replace NAs so we can do polyfit
+    b.all <- b.approx
+    # oldway replace NAs so we can do polyfit
+    ## if(length(naX)>0){
+    ##   esta  <-approx(b.all$x,b.all$y, naX)
+    ##   if(any(is.na(esta$y))){
+    ##     esta <- data.frame(x=c(),y=c())
+    ##     print(paste(sep=" ",subj,runtype, trl, xdatCode, 'estimation errored, has NAs')  )
+    ##   }
+    ## 
+    ##   # merge est approx with original
+    ##   # keep original so approx can easily be plotted
+    ##   b.all <- rbind(b.all,as.data.frame(esta))
+    ## 
+    ##   # check bind didn't introduce repeated x values
+    ##   if (   length(which( rle( sort( b.all$x ) )$lengths >1 ) ) != 0 ) {
+    ##      print(paste(sep=" ",subj,runtype, trl, xdatCode,'multiple X values after approximation!')  )
+    ##    }
+    ## 
+    ## }
+
+    
 
     # sanity check -- do we really only have target Idxs?
     obsvTrgCode <- unique(d$xdat[trgt])
@@ -322,39 +470,21 @@ scoreRun <- function(eydfile, subj, run, runtype,onlyontrials=NULL,writetopdf=T,
     #print(c(SOI.actual,SOI.expect))
     #print(b.all)
     if(SOI.actual < SOI.expect*.30) {
-     allsacs <- rbind( allsacs, dropTrial(subj,runtype,trl,xdatCode,'< 30% tracking for samples of interest'))
+     allsacs <- dropTrial(subj,runtype,trl,xdatCode,'< 30% tracking for samples of interest',allsacs,showplot=showplot,run=run,rundate=rundate)
      next 
     }
 
     # is trackign smooth?
     averageChange <- sd(abs(diff(na.omit(d$xpos[trgt[3:(sac.majorRegionEnd*60) ]  ]))))
-    if(averageChange > 15) {
+    if(is.na(averageChange) || averageChange > 15) {
         cat(subj,run,trl,"WARNING: sd of xpos delta in samples of interset is high: ",averageChange,"\n")
     }
 
-    # replace NAs so we can do polyfit
-    if(length(naX)>0){
-      esta  <-approx(b.all$x,b.all$y, naX)
-      if(any(is.na(esta$y))){
-        esta <- data.frame(x=c(),y=c())
-        print(paste(sep=" ",subj,runtype, trl, xdatCode, 'estimation errored, has NAs')  )
-      }
-    
-      # merge est approx with original
-      # keep original so approx can easily be plotted
-      b.all <- rbind(b.all,as.data.frame(esta))
-    
-      # check bind didn't introduce repeated x values
-      if (   length(which( rle( sort( b.all$x ) )$lengths >1 ) ) != 0 ) {
-         print(paste(sep=" ",subj,runtype, trl, xdatCode,'multiple X values after approximation!')  )
-       }
-    
-    }
    # target codes didn't match, we ate the whole file
    # or way too many
    # 200 might be too low of a threshold
    if (   length(b.all$x ) > 200 ) {
-     allsacs <- rbind( allsacs, dropTrial(subj,runtype,trl,xdatCode,paste('too many samples in trial', dim(b.all$x)[1]) ) )
+     dropTrial(subj,runtype,trl,xdatCode,paste('too many samples in trial', dim(b.all$x)[1]),allsacs,showplot=showplot,run=run,rundate=rundate) 
      next 
     }
     
@@ -370,7 +500,9 @@ scoreRun <- function(eydfile, subj, run, runtype,onlyontrials=NULL,writetopdf=T,
     # run length encode when the change in sacad postion is faster
     # than the min velocity for a saccade
     # ** First sacade attribute
-    rlePastDrv <- rle(abs(fst$y)>lat.minvel)
+
+    ## WARNING: if something broke -- it's because i put not na here
+    rlePastDrv <- rle(abs(fst$y)>lat.minvel & !is.na(fst$y))
     delt.x <- cumsum( rlePastDrv$lengths )
 
     # when does the direction change?
@@ -409,16 +541,13 @@ scoreRun <- function(eydfile, subj, run, runtype,onlyontrials=NULL,writetopdf=T,
     
     nsacs      <- dim(sac.df)[1]
 
-    if(nsacs<1){
-     droppedTrial <- dropTrial(subj,runtype,trl,xdatCode,'no saccades')
-     if(dim(allsacs)[1] > 1 ) {
-       allsacs <- rbind( allsacs, droppedTrial)
-      } else {
-       allsacs <- droppedTrial
-      }
-
-     next 
+    ###### DROP TRIAL CONDITIONS
+    # no saccades, also will trap no enough data
+    if( nsacs<1){
+     allsacs <- dropTrial(subj,runtype,trl,xdatCode,'no saccades',allsacs,run=run,showplot=showplot,rundate=rundate)
+     next
     }
+
 
     ##print(b.all$x)
     #print(est$x
@@ -429,6 +558,15 @@ scoreRun <- function(eydfile, subj, run, runtype,onlyontrials=NULL,writetopdf=T,
     sac.df$slowed = est$x[sac.df$slowedIdx]/60
     sac.df$end    = est$x[sac.df$endIdx]/60
     
+
+    # if the first sacc is too soon
+    #browser()
+    # is something the scoring function should do!? -- dropTrial is easier to run from here
+    if(sac.df$onset[1]<lat.fastest  ){
+     allsacs <-  dropTrial(subj,runtype,trl,xdatCode,'1st sac too soon',allsacs,run=run,showplot=showplot,rundate=rundate)
+     next
+
+    }
     
     
     ## TODO:
@@ -468,7 +606,13 @@ scoreRun <- function(eydfile, subj, run, runtype,onlyontrials=NULL,writetopdf=T,
     # position
     sac.df$startpos  = est$y[sac.df$onsetIdx]
     sac.df$endpos    = est$y[sac.df$endIdx]
-    
+
+    sac.df <- cbind( sac.df,
+            ddply(sac.df,.(onsetIdx, endIdx),function(x){
+             a=est$y[x$onsetIdx:x$endIdx]; 
+             c(maxpos=max(a),minpos=min(a))}
+            )[,c('maxpos','minpos')]
+   ) 
     # T/F saccade attributes
     # direction, position, length(time), and before next fixation
     if(nsacs>1){
@@ -482,6 +626,14 @@ scoreRun <- function(eydfile, subj, run, runtype,onlyontrials=NULL,writetopdf=T,
     sac.df$corpos    = abs(sac.df$endpos - sac.thres) <= sac.padding
     sac.df$gtMinLen  = sac.df$end - sac.df$onset > sac.minlen
     sac.df$intime    = sac.df$onset < sac.time & sac.df$end > lat.fastest
+
+    sac.df$distance  = sac.df$endpos - sac.df$startpos 
+    sac.df$crossFix  = as.numeric(sac.df$startpos < screen.x.mid) - as.numeric(sac.df$endpos < screen.x.mid)
+    sac.df$MaxMinX   = as.numeric(sac.df$minpos < screen.x.mid) - as.numeric(sac.df$maxpos < screen.x.mid)
+    sac.df$startatFix= sac.df$startpos > screen.x.mid -10 & sac.df$startpos < screen.x.mid + 10
+    #  0 if sac did not cross sides
+    # -1 moved to the left
+    #  1 moved to the right
 
     
     #sac.df$p.tracked = length(which( !is.na(d$xpos[trgt][sac.df$onsetIdx:sac.df$endIdx]) ) )/(sac.df$endIdx - sac.df$onsetIdx +1)
@@ -512,29 +664,30 @@ scoreRun <- function(eydfile, subj, run, runtype,onlyontrials=NULL,writetopdf=T,
     base.val <- mean(est$y[base.idx])
     
     #cat('mean', base.val , '\n')
+
+    # output dir to save images/write dropped
+    if(is.null(savedas)){ 
+       outputdir <- paste(saverootdir, subj,paste(run,runtype,'DROPPED',sep=".") ,sep="/")
+    } else {
+       outputdir <- dirname(savedas)
+    }
  
     ## PLOT -- only if we are told to
-
     if(showplot) {
        ptitle <- paste(subj,runtype, trl,xdatCode)
        g    <- ggplotXpos(est,d,trgt,sac.df,base.val,delt.x.scale,slowpnt.x.scale,ptitle)
        drv <- ggplotDrv(fst,scnd,slowpnt.x.scale,delt.x.scale)
 
        # write out plot
-       if(is.null(savedas)){ 
-         outputdir <- paste(saverootdir, subj,paste(run,runtype,'DROPPED',sep=".") ,sep="/")
-       } else {
-         outputdir <- paste(dirname(savedas),'img',sep='/')
-       }
        filename<-paste(sprintf("%02d",trl),xdatCode,sep="-")
-       filename<-paste(outputdir,'/', filename,'.pdf', sep="")
+       filename<-paste(outputdir,'/img/', filename,'.pdf', sep="")
 
        savePlots(sac.df,g,drv,filename,writetopdf)
     }
 
     allsacs <- rbind(allsacs,
                    data.frame(
-                     subj=subj,run=runtype,trial=trl,
+                     subj=subj,run=run,trial=trl,
                      sac.df[,-c(1:3)], xdat=xdatCode
                    )
                 )
@@ -553,5 +706,82 @@ scoreRun <- function(eydfile, subj, run, runtype,onlyontrials=NULL,writetopdf=T,
 
   return(allsacs)
 } 
-#mtrace(scoreRun)
+
+# score a saccades per trial (or feed just one trial)
+scoreSac <- function(allsacs){
+
+
+  # select only those saccades we will count
+  goodsacs <- subset(allsacs, subset=intime&gtMinLen&p.tracked>0)
+  # break into trials, do we have a first correct movement, correct movement after incorrect, an xdat that says Anti Saccade?
+
+  # All Drops, nothing to score
+  if(dim(goodsacs)[1] < 1){
+   
+   #warning(sprintf('%d %d %d no good saccades!',allsacs[1,c('subj','run','trial')]))
+   cat(allsacs$subj[1],allsacs$trial[1], 'no good saccades!\n')
+   cor.ErrCor.AS <- data.frame(trial=allsacs$trial[1],
+                             xdat=allsacs$xdat[1],
+                             lat=NA,
+                             fstCorrect=F,ErrCorr=F,
+                             AS=xdatIsAS(allsacs$xdat[1]),
+                             Count=as.numeric(NA)
+                             )
+   return(cor.ErrCor.AS)
+  }else {
+   cor.ErrCor.AS <- ddply(goodsacs, .(trial), function(x) { c(
+                                 x$xdat[1],
+                                 round(x$onset[1]*1000),
+                                 x$cordir[1]==TRUE,
+                                 !x$cordir[1]&any(x$cordir & (x$MaxMinX | x$startatFix ) ),
+                                 xdatIsAS(mean(x$xdat))
+                              ) } )
+   names(cor.ErrCor.AS) <- c('trial','xdat','lat','fstCorrect','ErrCorr','AS')
+  }
+
+  cor.ErrCor.AS[,c('fstCorrect','ErrCorr','AS')]<-sapply(cor.ErrCor.AS[,c('fstCorrect','ErrCorr','AS')],as.logical)
+  cor.ErrCor.AS$Count <- 0
+  cor.ErrCor.AS$Count[ which(cor.ErrCor.AS$fstCorrect == T ) ] <- 1
+  cor.ErrCor.AS$Count[ which(cor.ErrCor.AS$ErrCorr    == T ) ] <- 2
+  #fstCorrect&ErrCor
+  #write.table(file=paste(  paste('eyeData',subj,id,sep="/"), "/", subj, "-", type,'.pertrial.txt', sep=""),cor.ErrCor.AS,row.names=F,quote=F)
+  return(cor.ErrCor.AS)
+}
+
+scoreRun <-function(cor.ErrCor.AS,seentrials) {
+  ## dropped trials
+  dropped <- setdiff( seentrials,  cor.ErrCor.AS$trial)
+  #TODO: are dropped pro or anti saccades
+  
+  ## Pro Saccade
+  PS <- subset(cor.ErrCor.AS, subset=!AS)
+  PS.cor    <- which(PS$fstCorrect)
+  PS.ErrCor <- which(PS$ErrCorr)
+  PS.Err    <- which(!( PS$fstCorrect | PS$ErrCorr))
+
+  ## Anti Saccade
+  AS <- subset(cor.ErrCor.AS, subset=AS)
+  AS.cor    <- which(AS$fstCorrect)
+  AS.ErrCor <- which(AS$ErrCorr)
+  AS.Err    <- which(!( AS$fstCorrect | AS$ErrCorr))
+
+  lats <-as.data.frame(t(
+   c(
+     sapply(list(AScor.lat=AS.cor,ASErrCor.lat=AS.ErrCor,ASErr.lat=AS.Err),function(x){mean(AS$lat[x])}), 
+     sapply(list(PScor.lat=PS.cor,PSErrCor.lat=PS.ErrCor,PSErr.lat=PS.Err),function(x){mean(PS$lat[x])})
+   )))
+
+  #simple stat
+  stats <- list('PSCor'=PS.cor,'PSCorErr'=PS.ErrCor,'PSErr'=PS.Err,'ASCor'=AS.cor,'ASErrCor'=AS.ErrCor,'ASErr'=AS.Err, 'Dropped'=dropped)
+  lengths <- lapply(stats,length)
+  #print(lengths)
+  #print(sum(lengths))
+  lengths$total <- sum(unlist(lengths))
+
+  r <- cbind(as.data.frame(lengths), lats) 
+  return(r)
+}
+
+#library(debug)
+#mtrace(getSacs)
 #mtrace(dropTrial)

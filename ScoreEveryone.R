@@ -10,8 +10,9 @@
 library(plyr)
 library(foreach)
 library(reshape2)
-# do this after sourcing *.settings.R
-#source('ScoreRun.R')
+# do this after sourcing the approp. settings file and Run scoring functions
+#  source('*.settings.R')
+#  source('ScoreRun.R')
 
 
 args<-commandArgs(TRUE)
@@ -34,6 +35,8 @@ splitfile <- getFiles()  # sourced from task specific settings file
 #r$lengths[ which(r$lengths!=4) ]
 
 #r<-rle(sort(paste(splitfile$subj, splitfile$type)))
+
+
 getsubj <- function(i){
   filename <- splitfile$file[i]
   type     <- splitfile$type[i]
@@ -52,12 +55,14 @@ getsubj <- function(i){
   #print('looking for')
   #print(savedas)
 
+  #print(filename)
+  #print(savedas)
   if(file.exists(savedas) ) {
     print(paste('reading',savedas))
     allsacs <- read.table(sep="\t",header=T, file=savedas)
   } else{
-    print(sprintf('running: scoreRun(%s,%s,%s,%s,%s,writetopdf=%s,savedas=%s)',filename, subj,run, type,plotTrial,savedas))
-    allsacs <- scoreRun( filename, subj,run, type,writetopdf=plotTrial,savedas=savedas) 
+    cat(sprintf('running: getSacs("%s",%s,%s,"%s",writetopdf=%s,savedas="%s")\n',filename, subj,run, type,plotTrial,savedas))
+    allsacs <- getSacs( filename, subj,run, type,rundate=rundate,writetopdf=plotTrial,savedas=savedas) 
   }
   
   if(length(allsacs)<1) {
@@ -68,61 +73,26 @@ getsubj <- function(i){
    output$xdat  <- NaN
    output$subj  <- subj
    output$run   <- run
+   output$date  <- rundate
    output$type  <- type
    return(as.data.frame(output))
   }
-  # select only those saccades we will count
-  goodsacs <- subset(allsacs, subset=intime&gtMinLen&p.tracked>0 )
-  # break into trials, do we have a first correct movement, correct movement after incorrect, an xdat that says Anti Saccade?
-  cor.ErrCor.AS <- ddply(goodsacs, .(trial), function(x) { c(x$xdat[1], round(x$onset[1]*1000), x$cordir[1]==TRUE, !x$cordir[1]&any(x$cordir), xdatIsAS(mean(x$xdat))) } )
-  names(cor.ErrCor.AS) <- c('trial','xdat','lat','fstCorrect','ErrCorr','AS')
-  cor.ErrCor.AS[,c('fstCorrect','ErrCorr','AS')]<-sapply(cor.ErrCor.AS[,c('fstCorrect','ErrCorr','AS')],as.logical)
-  cor.ErrCor.AS$Count <- 0
-  cor.ErrCor.AS$Count[ which(cor.ErrCor.AS$fstCorrect == T ) ] <- 1
-  cor.ErrCor.AS$Count[ which(cor.ErrCor.AS$ErrCorr    == T ) ] <- 2
-  #fstCorrect&ErrCor
-  #write.table(file=paste(  paste('eyeData',subj,id,sep="/"), "/", subj, "-", type,'.pertrial.txt', sep=""),cor.ErrCor.AS,row.names=F,quote=F)
-  write.table(file=pertrialoutput,cor.ErrCor.AS,row.names=F,quote=F)
+
+  # TODO: score sac goes here
+  cor.ErrCor.AS <- scoreSac(allsacs)
+  write.table(file=pertrialoutput,cor.ErrCor.AS,row.names=F,quote=F,sep="\t")
   
-  ## dropped trials
-  dropped <- setdiff( unique(allsacs$trial),  cor.ErrCor.AS$trial)
-  #TODO: are dropped pro or anti saccades
-  
-  ## Pro Saccade
-  PS <- subset(cor.ErrCor.AS, subset=!AS)
-  PS.cor    <- which(PS$fstCorrect)
-  PS.ErrCor <- which(PS$ErrCorr)
-  PS.Err    <- which(!( PS$fstCorrect | PS$ErrCorr))
-
-  ## Anti Saccade
-  AS <- subset(cor.ErrCor.AS, subset=AS)
-  AS.cor    <- which(AS$fstCorrect)
-  AS.ErrCor <- which(AS$ErrCorr)
-  AS.Err    <- which(!( AS$fstCorrect | AS$ErrCorr))
-
-  lats <-as.data.frame(t(
-   c(
-     sapply(list(AScor.lat=AS.cor,ASErrCor.lat=AS.ErrCor,ASErr.lat=AS.Err),function(x){mean(AS$lat[x])}), 
-     sapply(list(PScor.lat=PS.cor,PSErrCor.lat=PS.ErrCor,PSErr.lat=PS.Err),function(x){mean(PS$lat[x])})
-   )))
-
-  #simple stat
-  stats <- list('PSCor'=PS.cor,'PSCorErr'=PS.ErrCor,'PSErr'=PS.Err,'ASCor'=AS.cor,'ASErrCor'=AS.ErrCor,'ASErr'=AS.Err, 'Dropped'=dropped)
-  lengths <- lapply(stats,length)
-  #print(lengths)
-  #print(sum(lengths))
-  lengths$total <- sum(unlist(lengths))
-
-  r <- cbind(as.data.frame(lengths), lats) 
+  r <- scoreRun(cor.ErrCor.AS, expectedTrialLengths  ) #was ( , unique(allsacs$trial))
   r$subj  <- subj
+  r$date  <- rundate 
   r$run   <- run
   r$type  <- type
 
 
-
   # save summary as a one line file in subject directory
   summaryoutput <- sub('.trial.txt$','.summary.txt',pertrialoutput)
-  write.table(file=summaryoutput,r,row.names=F,quote=F)
+  write.table(file=summaryoutput,r,row.names=F,quote=F,sep="\t")
+  #print(c('wrote',subj))
 
   return(r)
 
@@ -135,6 +105,12 @@ getsubj <- function(i){
   #break
 }
 perRunStats <- foreach(i=1:nrow(splitfile),.combine=rbind ) %do% getsubj(i)
+#perRunStats <- getsubj(1)
+#for( i in 2:nrow(splitfile) ){
+# print(i)
+# s <-getsubj(i)
+# perRunStats <- rbind(perRunStats,s )
+#}
 
 # only do final summaries if we actually grabbed everyone
 if(length(args) == 0 ) {
