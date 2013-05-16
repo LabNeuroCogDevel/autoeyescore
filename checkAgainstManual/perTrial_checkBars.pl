@@ -80,7 +80,7 @@ for my $xlsfn (@scoreSheets){
    if   ( scalar(grep(/4/,@dlats) ) > 0 ){$countToCorrect= 2 }
    elsif( scalar(grep(/2/,@dlats) ) > 0 ){$countToCorrect= 0 } 
    elsif( scalar(grep(/1/,@dlats) ) > 0 ){$countToCorrect= 1 }
-   else                                   {$countToCorrect=-1 }
+   else                                  {$countToCorrect=-1 }
 
    #print "$trial: ";#, join(" ", map {$_->{dlat}} @{$trialsacs[$trial]}), "\n";
    #print $countToCorrect, "\n";

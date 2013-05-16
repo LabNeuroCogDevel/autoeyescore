@@ -44,7 +44,9 @@ screen.x.mid <- 261/2    # xpos of eye, not x axis! -- this is where we expect t
 sampleHz     <- 60
 
 ## experimental design
-sac.time     <- 1.45 # how long is the target up before we see the fixation cross again?
+sac.time          <- 1.45 # how long is the target up before we see the fixation cross again?
+
+sac.trackingtresh <- 0    # what percent of a sac has to have actual samples (tacked) to be counted
 
 ## latancy properties
 #  how fast the eye has to move before considering the movement a saccade (also heuristic overcompesating approximation)
@@ -57,7 +59,7 @@ lat.fastest  <- 67/1000  # fastest latency allowed is 200ms
 # beyond threshold == saccad to expected region
 
 #minium distance to be considered a saccade
-sac.minmag   <-  50      # min abs of x position change, was 20 -- then changed to 15, now 50
+sac.minmag   <-  10      # min abs of x position change -- set very low
 sac.minlen   <-  50/1000 # saccades less than 50ms are merged/ignored
 sac.mingap   <-  50/1000 # saccades must be at mimumum this time appart, merged otherwise
 sac.held     <- 100/1000 # if a sac is held -- it is accurate
@@ -81,7 +83,7 @@ xScaleTime <- sort(c(seq(0,plot.endtime,by=.25), lat.fastest, sac.time ) )
 xScaleTime <- xScaleTime[-which(xScaleTime==1.5)]
 # p is always the same
 # but x limit should probably be done programticly/abstracted (170-> variable name)
-p    <- ggplot() + theme_bw() + theme(legend.position="none" ) +
+p    <- ggplot() + theme_bw() + theme(legend.position="none")  + #,text=element_text(size=10,family="mono") ) +
         scale_x_continuous(limits=c(0,plot.endtime*sampleHz), breaks=xScaleTime*sampleHz, labels=xScaleTime)
 
 
@@ -111,7 +113,8 @@ ggplotXpos <- function(est,d,trgt,sac.df,base.val,delt.x.scale,slowpnt.x.scale,p
      g <- g +
           geom_vline(xintercept=delt.x.scale,color=I('blue'),alpha=I(.3)) +
           geom_vline(xintercept=slowpnt.x.scale,color=I('yellow'),alpha=I(.3)) +
-          geom_hline(yintercept=base.val,color=I('green'),alpha=I(.5))
+          geom_hline(yintercept=base.val,color=I('green'),alpha=I(.5))+
+          geom_hline(yintercept=screen.x.mid,color=I('darkgreen'),alpha=I(.5))
    }
 
      # outline "good" position (with padding) in purple
@@ -168,7 +171,7 @@ savePlots <- function(sac.df,g,drv,filename,writetopdf) {
   if(length(sac.df)>0){
       print (
         grid.arrange( nrow=3,heights=c(.5,1,.4),
-                tableGrob( sac.df[,-c(1:3)]),  # exclude index values
+                tableGrob( sac.df[,-c(1:3)],gpar.coretext = gpar(fontsize=6),gpar.coltext=gpar(fontsize=8)),  # exclude index values
                  g,
                  drv
            ) 
@@ -480,8 +483,11 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
 
     # is trackign smooth?
     averageChange <- sd(abs(diff(na.omit(d$xpos[trgt[3:(sac.majorRegionEnd*sampleHz) ]  ]))))
-    if(is.na(averageChange) || averageChange > 15) {
-        cat(subj,run,trl,"WARNING: sd of xpos delta in samples of interset is high: ",averageChange,"\n")
+    if(is.na(averageChange) || averageChange > 23) {
+     allsacs <-  dropTrial(subj,runtype,trl,xdatCode,
+                     sprintf('poor tracking: sd of xposΔ=%f',averageChange),
+                     allsacs,run=run,showplot=showplot,rundate=rundate)
+     next
     }
 
    # target codes didn't match, we ate the whole file
@@ -572,19 +578,6 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
 
     }
 
-    # drop if there is a long blink that ends before any sacade begins
-    NArle <- rle(is.na(b.approx$x))
-    NArlecs <- cumsum(NArle$lengths)/sampleHz
-    blinkends <- NArlecs[ NArle$values==T & NArle$lengths/sampleHz > blink.mintimedrop ]
-    if(length(blinkends)==0){blinkends <- Inf}
-
-    if(sac.df$onset[1] > blinkends[1] ){
-     allsacs <-  dropTrial(subj,runtype,trl,xdatCode,'blink ends before any saccades',allsacs,run=run,showplot=showplot,rundate=rundate)
-     next
-
-    }
-
-    
     
     ## TODO:
     # see 007 ANTI 48
@@ -647,7 +640,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     sac.df$distance  = sac.df$endpos - sac.df$startpos 
     sac.df$crossFix  = as.numeric(sac.df$startpos < screen.x.mid) - as.numeric(sac.df$endpos < screen.x.mid)
     sac.df$MaxMinX   = as.numeric(sac.df$minpos < screen.x.mid) - as.numeric(sac.df$maxpos < screen.x.mid)
-    sac.df$gtMinMag  = abs(sac.df$MaxMinX) > sac.minmag
+    sac.df$gtMinMag  = abs(sac.df$distance) > sac.minmag
     sac.df$startatFix= sac.df$startpos > screen.x.mid -10 & sac.df$startpos < screen.x.mid + 10
     #  0 if sac did not cross sides
     # -1 moved to the left
@@ -678,8 +671,37 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
                           
     #TODO: determine baseline and sac.* iteratively
     #      error out if cannot be done
-    base.idx <- which(est$y < sac.right.small & est$y > sac.left.small & abs(fst$y) < lat.minvel )
-    base.val <- mean(est$y[base.idx])
+    #base.idx <- which(est$y < sac.right.small & est$y > sac.left.small & abs(fst$y) < lat.minvel )
+    #base.val <- mean(est$y[base.idx])
+    base.val <- mean(d[ c(-5,2) + targetIdxs[trl,1], 'xpos' ],na.rm=T)
+
+    if(abs(base.val-screen.x.mid )>50) {
+     allsacs <- dropTrial(subj,runtype,trl,xdatCode,
+                   sprintf('average fixpos(%f) is off from baseline(%f)!\n',base.val,screen.x.mid ),
+                   allsacs,run=run,showplot=showplot,rundate=rundate)
+     next;
+    }
+
+
+
+    # BLINK DROP
+    # drop if there is a long blink that ends before any good sacade begins
+    NArle <- rle(is.na(b.approx$x))
+    NArlecs <- cumsum(NArle$lengths)/sampleHz
+    blinkends <- NArlecs[ NArle$values==T & NArle$lengths/sampleHz > blink.mintimedrop ]
+    if(length(blinkends)==0){blinkends <- Inf}
+    
+    firstsacstart <- sac.df[sac.df$held & sac.df$intime & sac.df$gtMinLen & sac.df$gtMinMag & sac.df$p.tracked>sac.trackingtresh, ]$onset[1]
+    if(is.na(firstsacstart)){firstsacstart <- -Inf}
+
+    if(any(blinkends < firstsacstart )){
+     allsacs <-  dropTrial(subj,runtype,trl,xdatCode,'blink ends before any saccades',allsacs,run=run,showplot=showplot,rundate=rundate)
+     next
+
+    }
+
+    
+
     
     #cat('mean', base.val , '\n')
 

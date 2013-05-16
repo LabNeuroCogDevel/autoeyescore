@@ -26,4 +26,7 @@ echo "===== comparing manual to automatic ===="
 
 echo "===== %incorrect against scorers ===="
 echo "score'soff	lat's off"
-perl -slane 'next  unless /20\d\d/; $i++; if($F[1] != $F[3]){$a++}elsif(abs($F[2]-$F[4])>50){ $o++ }END{print join("\t", map{$_/($i-1)}($a,$o)),}' checkBars_trial.csv
+grep -v '^*' checkBars_trial.csv |perl -slane 'next  unless /20\d\d/; $i++; if($F[1] != $F[3]){$a++}elsif(abs($F[2]-$F[4])>50){ $o++ }END{print join("\t", map{$_/($i-1)}($a,$o)),}'| tee results/accuracy_against_scorers-$(date +%F).txt
+
+echo;echo;echo;
+grep -v '^*' checkBars_trial.csv |cut -f 2,4 -d"	" |sort|uniq -c|sort -n | tee -a results/accuracy_against_scorers-$(date +%F).txt
