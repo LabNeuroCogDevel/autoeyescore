@@ -61,7 +61,7 @@ getsubj <- function(i){
     print(paste('reading',savedas))
     allsacs <- read.table(sep="\t",header=T, file=savedas)
   } else{
-    cat(sprintf('running: getSacs("%s",%s,%s,"%s",writetopdf=%s,savedas="%s")\n',filename, subj,run, type,plotTrial,savedas))
+    cat(sprintf('running: getSacs("%s",%s,%s,"%s",rundate=%s,writetopdf=%s,savedas="%s")\n',filename, subj,run, type,rundate,plotTrial,savedas))
     allsacs <- getSacs( filename, subj,run, type,rundate=rundate,writetopdf=plotTrial,savedas=savedas) 
   }
   

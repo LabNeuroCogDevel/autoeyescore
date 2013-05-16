@@ -41,6 +41,7 @@ saverootdir  <- 'aux'
 xmax         <- 274
 ymax         <- 250
 screen.x.mid <- 261/2    # xpos of eye, not x axis! -- this is where we expect the center fixation to be
+sampleHz     <- 60
 
 ## experimental design
 sac.time     <- 1.45 # how long is the target up before we see the fixation cross again?
@@ -56,12 +57,13 @@ lat.fastest  <- 67/1000  # fastest latency allowed is 200ms
 # beyond threshold == saccad to expected region
 
 #minium distance to be considered a saccade
-sac.minmag   <- 50       # min abs of x position change, was 20 -- then changed to 15, now 50
-#sac.maxlen   <- 250/1000 # maximum length of a sac should be 250 ms # NOTE. account for merged
+sac.minmag   <-  50      # min abs of x position change, was 20 -- then changed to 15, now 50
 sac.minlen   <-  50/1000 # saccades less than 50ms are merged/ignored
 sac.mingap   <-  50/1000 # saccades must be at mimumum this time appart, merged otherwise
-sac.held    <- 100/1000  # if a sac is held -- it is accurate
+sac.held     <- 100/1000 # if a sac is held -- it is accurate
+#sac.maxlen   <- 250/1000 # maximum length of a sac should be 250 ms # NOTE. account for merged
 
+blink.mintimedrop  <- 100/1000
 
 ### Plot settings
 plot.endtime <- 1.75
@@ -80,7 +82,7 @@ xScaleTime <- xScaleTime[-which(xScaleTime==1.5)]
 # p is always the same
 # but x limit should probably be done programticly/abstracted (170-> variable name)
 p    <- ggplot() + theme_bw() + theme(legend.position="none" ) +
-        scale_x_continuous(limits=c(0,plot.endtime*60), breaks=xScaleTime*60, labels=xScaleTime)
+        scale_x_continuous(limits=c(0,plot.endtime*sampleHz), breaks=xScaleTime*sampleHz, labels=xScaleTime)
 
 
 ## FUNCTIONS
@@ -100,9 +102,9 @@ ggplotXpos <- function(est,d,trgt,sac.df,base.val,delt.x.scale,slowpnt.x.scale,p
 
      g <- g + geom_point(data=d[trgt,],x=1:length(trgt), aes(y=xpos,color=as.factor(xdat),size=dil))  +
           scale_color_manual(values=c('green','red','blue','black')) + # should only ever see green -- otherwise more than one XDAT
-          scale_size_continuous(limits=c(30,70),range=c(.1,4)) + # limit dilation scale to 2 std of mean (for random subj)
-          geom_vline(xintercept=60*lat.fastest,color=I('red')) +
-          geom_vline(xintercept=60*sac.time,color=I('red'),linetype=I('dotdash'))
+          scale_size_continuous(limits=c(1,100),range=c(.1,5)) + # limit dilation scale to 2 std of mean (for random subj)
+          geom_vline(xintercept=sampleHz*lat.fastest,color=I('red')) +
+          geom_vline(xintercept=sampleHz*sac.time,color=I('red'),linetype=I('dotdash'))
 
   # show velocity changes and estimated base (center focus) value
   if(length(delt.x.scale)>0) {
@@ -121,7 +123,7 @@ ggplotXpos <- function(est,d,trgt,sac.df,base.val,delt.x.scale,slowpnt.x.scale,p
   # put colored boxes around saccades
   if(!is.null(sac.df) && dim(sac.df)[1]>=1){
      g <- g +
-           geom_rect(data=sac.df, aes(xmin=onset*60,xmax=end*60,
+           geom_rect(data=sac.df, aes(xmin=onset*sampleHz,xmax=end*sampleHz,
                                       ymin=-Inf,    ymax=Inf,
                      fill=as.factor(paste(cordir,corpos)), alpha=intime&gtMinLen  )) + 
            scale_fill_manual(values=positionColors) +
@@ -220,7 +222,7 @@ dropTrial <- function(subj,runtype,trl,xdatCode,reason,allsacs,showplot=F,saveda
          subj=subj,run=run,trial=trl,
          onset=0,slowed=0,end=0,startpos=0,endpos=0,cordir=F,corpos=F, # combined=F,
          held=F,gtMinLen=F, intime=F,p.tracked=0, xdat=xdatCode, maxpos=NA,minpos=NA,
-         crossFix=NA,MaxMinX=NA, startatFix=NA, distance=NA
+         crossFix=NA,MaxMinX=NA,gtMinMag=F, startatFix=NA, distance=NA
          )
 
   if(dim(allsacs)[1] > 1 ) {
@@ -310,10 +312,12 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     #print(head(d$xdat[ targetIdxs[trl,1]:targetIdxs[trl,2] ]))
     
     # maybe not the best place, but we should check targetIdx length
+    # targetIdxs has start and stop, diff is length
+    if(is.na(trl)){ stop('why is trl na?!') }
     numTargetCodes<-diff(targetIdxs[trl,])
     ##TODO: THIS 85 SHOULD NOT BE HARDCODED
     # it is the min number of samples accepted for a target code  
-    if(numTargetCodes < 85) cat(sprintf('WARNING: have only %d target codes\n',numTargetCodes))
+    if(numTargetCodes < 85 ) cat(sprintf('WARNING: have only %d target codes\n',numTargetCodes))
 
 
     # this particular threshold
@@ -342,14 +346,14 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     # test for tracking before target onset
     # we want to drop (b/c lat will be useless) if they blinked for more than .2s within .3s of target onset
     # TODO: remove hardcoded sample freq
-    pretargetIDX <- trgt[1]-.3*60 + 1:(.3*60)
+    pretargetIDX <- trgt[1]-.3*sampleHz + 1:(.3*sampleHz)
     if (any(pretargetIDX<1)) {
      allsacs <- dropTrial(subj,runtype,trl,xdatCode,'weird! no eye position data before trial onset! cannot tell if pretrial blink',allsacs,showplot=F,run=run,rundate=rundate)
      next
     }
 
     pretargetD   <- d[pretargetIDX, ] 
-    if ( length(which(is.na(pretargetD$xpos))) > .2*60) {
+    if ( length(which(is.na(pretargetD$xpos))) > .2*sampleHz) {
      allsacs <- dropTrial(subj,runtype,trl,xdatCode,'blink before target onset',allsacs,showplot=showplot,run=run,rundate=rundate)
      next
     }
@@ -433,10 +437,10 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     }
 
     ####### Estimate away NAs
-    b.approx$x <- na.approx(b.approx$x,x=b.approx$time) 
-    names(b.approx) <- c('x','y') # bad code elsewhere wants x and y
     # replace NAs so we can do polyfit
     b.all <- b.approx
+    b.all$x <- na.approx(b.approx$x,x=b.approx$time) 
+    names(b.all) <- c('x','y') # bad code elsewhere wants x and y
     # oldway replace NAs so we can do polyfit
     ## if(length(naX)>0){
     ##   esta  <-approx(b.all$x,b.all$y, naX)
@@ -465,8 +469,8 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     }
 
     # check tracking coverage for  "samples of interest"
-    SOI.expect <- (sac.majorRegionEnd - lat.fastest)*60
-    SOI.actual <- length(which(b.all$x/60 < sac.majorRegionEnd & b.all$x/60 > lat.fastest) )
+    SOI.expect <- (sac.majorRegionEnd - lat.fastest)*sampleHz
+    SOI.actual <- length(which(b.all$x/sampleHz < sac.majorRegionEnd & b.all$x/sampleHz > lat.fastest) )
     #print(c(SOI.actual,SOI.expect))
     #print(b.all)
     if(SOI.actual < SOI.expect*.30) {
@@ -475,7 +479,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     }
 
     # is trackign smooth?
-    averageChange <- sd(abs(diff(na.omit(d$xpos[trgt[3:(sac.majorRegionEnd*60) ]  ]))))
+    averageChange <- sd(abs(diff(na.omit(d$xpos[trgt[3:(sac.majorRegionEnd*sampleHz) ]  ]))))
     if(is.na(averageChange) || averageChange > 15) {
         cat(subj,run,trl,"WARNING: sd of xpos delta in samples of interset is high: ",averageChange,"\n")
     }
@@ -554,9 +558,9 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     
     # actual time from target cue
     # est$x is in 60Hz samples, but est indexes are not!
-    sac.df$onset = est$x[sac.df$onsetIdx]/60
-    sac.df$slowed = est$x[sac.df$slowedIdx]/60
-    sac.df$end    = est$x[sac.df$endIdx]/60
+    sac.df$onset = est$x[sac.df$onsetIdx]/sampleHz
+    sac.df$slowed = est$x[sac.df$slowedIdx]/sampleHz
+    sac.df$end    = est$x[sac.df$endIdx]/sampleHz
     
 
     # if the first sacc is too soon
@@ -567,6 +571,19 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
      next
 
     }
+
+    # drop if there is a long blink that ends before any sacade begins
+    NArle <- rle(is.na(b.approx$x))
+    NArlecs <- cumsum(NArle$lengths)/sampleHz
+    blinkends <- NArlecs[ NArle$values==T & NArle$lengths/sampleHz > blink.mintimedrop ]
+    if(length(blinkends)==0){blinkends <- Inf}
+
+    if(sac.df$onset[1] > blinkends[1] ){
+     allsacs <-  dropTrial(subj,runtype,trl,xdatCode,'blink ends before any saccades',allsacs,run=run,showplot=showplot,rundate=rundate)
+     next
+
+    }
+
     
     
     ## TODO:
@@ -630,6 +647,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     sac.df$distance  = sac.df$endpos - sac.df$startpos 
     sac.df$crossFix  = as.numeric(sac.df$startpos < screen.x.mid) - as.numeric(sac.df$endpos < screen.x.mid)
     sac.df$MaxMinX   = as.numeric(sac.df$minpos < screen.x.mid) - as.numeric(sac.df$maxpos < screen.x.mid)
+    sac.df$gtMinMag  = abs(sac.df$MaxMinX) > sac.minmag
     sac.df$startatFix= sac.df$startpos > screen.x.mid -10 & sac.df$startpos < screen.x.mid + 10
     #  0 if sac did not cross sides
     # -1 moved to the left
@@ -651,7 +669,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     delt.x.scale    <- est$x[delt.x] # * length(trgt)/length(fst$x))
     slowpnt.x.scale <- est$x[slowpntIdx]
 
-    slowcnt <- length(which(slowpntIdx<sac.majorRegionEnd*60))
+    slowcnt <- length(which(slowpntIdx<sac.majorRegionEnd*sampleHz))
     # normal seems to be around 7
     # 2 would be perfect (e.g. start going up, slow once at top)
     if(slowcnt > 8) { cat(subj,run,trl,"WARNING: unusual number of velc. changes",slowcnt ," poor tracking?\n") }

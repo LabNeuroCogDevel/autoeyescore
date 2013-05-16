@@ -39,13 +39,19 @@ for my $xlsfn (@scoreSheets){
   # manual scoring parse
   ################################
   next if $xlsfn =~ /^$/;
-  my $run = $1 if $xlsfn =~ m:Run0(\d):;
+  my $run=0;
+  $run = $1 if $xlsfn =~ m:Run0?(\d):;
   
 
   my $xls    = ($p->parse($xlsfn)->worksheets())[0];
 
   my $scorer = $xls->get_cell(1,0)->unformatted();
   $scorer =~ s/scorer:? ?//i;
+  $scorer = uc($scorer);
+  $scorer =~ s/[^A-Z]//gi;
+  $scorer="JP" if $scorer =~ /justin/i;
+  $scorer="unknown" if $scorer =~ /^$/;
+
 
   my ($rowstart,$rowend) = $xls->row_range();
   my @trialsacs; # array of trials with an array of hashes lat dlat dacc

@@ -23,3 +23,7 @@ R CMD BATCH score.R
 ### check against manual scores
 echo "===== comparing manual to automatic ===="
 ./compareToManual.pl
+
+echo "===== %incorrect against scorers ===="
+echo "score'soff	lat's off"
+perl -slane 'next  unless /20\d\d/; $i++; if($F[1] != $F[3]){$a++}elsif(abs($F[2]-$F[4])>50){ $o++ }END{print join("\t", map{$_/($i-1)}($a,$o)),}' checkBars_trial.csv
