@@ -245,9 +245,21 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
 
   ## fix bars zero'ed xdats
   zeroxdat        <- rle(d$xdat==0)
-  if(length(zeroxdat$lengths)>1) {
+  
+  if(zeroxdat$values[1] == T) { 
+    minzeroxdatlen <-2 
+  } else {
+   minzeroxdatlen <- 1
+  }
+
+  if(length(zeroxdat$lengths)>minzeroxdatlen) {
      xdatswitchidx   <- cumsum(zeroxdat$lengths)
      zeroxdatidx     <- which(zeroxdat$values==TRUE)
+
+     #if the very first xdat is 0, we're in trouble, so ingore that one
+     if(zeroxdatidx[1] == 1) {
+        zeroxdatidx <- zeroxdatidx[-1]
+     }
 
      replacementXdat <- d$xdat[xdatswitchidx[zeroxdatidx-1]]
      #needReplaced    <- d$xdat[xdatswitchidx[zeroxdatidx]:(xdatswitchidx[zeroxdatidx]+zeroxdat$lengths[zeroxdatidx])]
