@@ -197,7 +197,10 @@ dropTrial <- function(subj,runtype,trl,xdatCode,reason,allsacs,showplot=F,saveda
    ## write what is dropped
    outputdir=saverootdir;
    if(!file.exists(outputdir)) { dir.create(outputdir,recursive=T) }
-   cat(file=sprintf('%s/%s.%s.%s.%s.dropped.txt',outputdir,subj,rundate,run,trl),reason)
+   for(trial in trl) {
+      cat(file=sprintf('%s/%s.%s.%s.%s.dropped.txt',outputdir,subj,rundate,run,trial),
+          sprintf("%s\n",reason))
+   }
 
    if(showplot==T){
       ptitle <- paste(subj,runtype, trl,xdatCode, paste('DROPPED!', reason) )
@@ -236,11 +239,29 @@ dropTrial <- function(subj,runtype,trl,xdatCode,reason,allsacs,showplot=F,saveda
 }
 # returns 'allsacs' a list of all saccades in each trial
 getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writetopdf=F,savedas=NULL, showplot=F){
+  # setup dataframe to hold sacades from all trials
+  allsacs     <- data.frame()
+
   cat('using ', eydfile ,'\n')
 
   ### load data
   #load xdat, eye position and dialation data for parsed eydfile
-  d        <<- read.table( eydfile, sep="\t",header=T)
+  readeydsuccess <- tryCatch( { d        <<- read.table( eydfile, sep="\t",header=T) },error=function(e){cat('error! cant read input\n')})
+
+  if(is.null(readeydsuccess)) {
+    allsacs <- dropTrial(subj,runtype,1:expectedTrialLengths,0,'no data in eyd!',
+                         allsacs,showplot=F,run=run,rundate=rundate)
+    return() 
+  }
+
+
+  if(dim(d)[2] != 4) {
+    allsacs <- dropTrial(subj,runtype,1:expectedTrialLengths,0,sprintf('eyd data does not make sense to me %dx%d',dim(d)[1],dim(d)[2]),
+                         allsacs,showplot=F,run=run,rundate=rundate)
+    return() 
+  }
+
+
   names(d) <<- c("xdat","dil","xpos","ypos")
 
   ## fix bars zero'ed xdats
@@ -281,7 +302,8 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
   # if there is x and ypos and dil != 0
   # maybe we should keep?
   badidxs=d$xpos>xmax|d$ypos>ymax|d$dil==0
-  d[badidxs,c('dil','xpos','ypos')] = c(NA,NA,NA)
+  d[which(badidxs),c('dil','xpos','ypos')] = c(NA,NA,NA)
+  # which is need to not die on scanbars 10656.20090410.2
   
    # remove repeats
   xdats             <- rle(d$xdat)            # run length encode
@@ -293,10 +315,16 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
   goodTargPos      <- tarCodePos[  xdats$values[tarCodePos  - 1]  %in%  startcodes ]
   goodTargPos      <- goodTargPos[ xdats$values[goodTargPos + 1]  %in%  stopcodes  ]
   
+  # if onlyontrials is specified, we only want to look at those/that trial
+  # but we want to keep onlyontrials null/not null for write.csv check later
+  if( is.null(onlyontrials) ) { runontrials <- 1:dim(targetIdxs)[1] }
+  else                        { runontrials <- onlyontrials }
+
   if(length(goodTargPos) <= 0) {
-    cat(subj,runtype,'WARNING: no understandable start/stop xdats!\n')
+    allsacs <- dropTrial(subj,runtype,runontrials,0,'no understandable start/stop xdats!',allsacs,showplot=F,run=run,rundate=rundate)
     return() 
   }
+
   if(! length(goodTargPos) %in% expectedTrialLengths ) {
     cat(subj,runtype,'WARNING: unexpected num of trials', length(goodTargPos),'\n')
   }
@@ -304,13 +332,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
   targetIdxs       <- cbind(xdats$cs[goodTargPos-1],xdats$cs[goodTargPos])
   
 
-  # setup dataframe to hold sacades from all trials
-  allsacs     <- data.frame()
   
-  # if onlyontrials is specified, we only want to look at those/that trial
-  # but we want to keep onlyontrials null/not null for write.csv check later
-  if( is.null(onlyontrials) ) { runontrials <- 1:dim(targetIdxs)[1] }
-  else                        { runontrials <- onlyontrials }
 
   for(trl in runontrials ) {
     #print(c(trl,length(runontrials)))
@@ -497,7 +519,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     averageChange <- sd(abs(diff(na.omit(d$xpos[trgt[3:(sac.majorRegionEnd*sampleHz) ]  ]))))
     if(is.na(averageChange) || averageChange > 23) {
      allsacs <-  dropTrial(subj,runtype,trl,xdatCode,
-                     sprintf('poor tracking: sd of xposΔ=%f',averageChange),
+                     sprintf('poor tracking: sd of xpos Δ=%f',averageChange),
                      allsacs,run=run,showplot=showplot,rundate=rundate)
      next
     }
@@ -685,9 +707,9 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     #      error out if cannot be done
     #base.idx <- which(est$y < sac.right.small & est$y > sac.left.small & abs(fst$y) < lat.minvel )
     #base.val <- mean(est$y[base.idx])
-    base.val <- mean(d[ c(-5,2) + targetIdxs[trl,1], 'xpos' ],na.rm=T)
+    base.val <- mean(d[ c(-5:2) + targetIdxs[trl,1], 'xpos' ],na.rm=T)
 
-    if(abs(base.val-screen.x.mid )>50) {
+    if(is.nan(base.val) || abs(base.val-screen.x.mid )>50) {
      allsacs <- dropTrial(subj,runtype,trl,xdatCode,
                    sprintf('average fixpos(%f) is off from baseline(%f)!\n',base.val,screen.x.mid ),
                    allsacs,run=run,showplot=showplot,rundate=rundate)

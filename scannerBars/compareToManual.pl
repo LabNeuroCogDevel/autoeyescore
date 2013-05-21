@@ -45,7 +45,11 @@ for my $xlsfn (@scoreSheets){
   $run = $1 if $xlsfn =~ m:Run0?(\d):;
   
 
-  my $xls    = ($p->parse($xlsfn)->worksheets())[0];
+  my $xlsp = $p->parse($xlsfn);
+  if(!$xlsp ) { print STDERR "$xlsfn is empty?\n"; next }
+  my @worksheets = $xlsp->worksheets();
+  if($#worksheets <=0 ) { print STDERR "$xlsfn is empty?\n"; next }
+  my $xls    = $worksheets[0];
 
   my $scorer = $xls->get_cell(1,0)->unformatted();
   $scorer =~ s/scorer:? ?//i;
