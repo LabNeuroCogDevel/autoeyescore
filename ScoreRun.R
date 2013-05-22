@@ -725,7 +725,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     blinkends <- NArlecs[ NArle$values==T & NArle$lengths/sampleHz > blink.mintimedrop ]
     if(length(blinkends)==0){blinkends <- Inf}
     
-    firstsacstart <- sac.df[sac.df$held & sac.df$intime & sac.df$gtMinLen & sac.df$gtMinMag & sac.df$p.tracked>sac.trackingtresh, ]$onset[1]
+    firstsacstart <- sac.df[ sac.df$intime & sac.df$gtMinLen & sac.df$gtMinMag & sac.df$p.tracked>sac.trackingtresh, ]$onset[1]
     if(is.na(firstsacstart)){firstsacstart <- -Inf}
 
     if(any(blinkends < firstsacstart )){
