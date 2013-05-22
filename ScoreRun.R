@@ -315,6 +315,9 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
   goodTargPos      <- tarCodePos[  xdats$values[tarCodePos  - 1]  %in%  startcodes ]
   goodTargPos      <- goodTargPos[ xdats$values[goodTargPos + 1]  %in%  stopcodes  ]
   
+  # x by 2 matrix of target onset and offset indicies
+  targetIdxs       <- cbind(xdats$cs[goodTargPos-1],xdats$cs[goodTargPos])
+
   # if onlyontrials is specified, we only want to look at those/that trial
   # but we want to keep onlyontrials null/not null for write.csv check later
   if( is.null(onlyontrials) ) { runontrials <- 1:dim(targetIdxs)[1] }
@@ -328,8 +331,6 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
   if(! length(goodTargPos) %in% expectedTrialLengths ) {
     cat(subj,runtype,'WARNING: unexpected num of trials', length(goodTargPos),'\n')
   }
-  # x by 2 matrix of target onset and offset indicies
-  targetIdxs       <- cbind(xdats$cs[goodTargPos-1],xdats$cs[goodTargPos])
   
 
   
