@@ -3,7 +3,7 @@ source('scannerbars/scannerbars.settings.R')
 source('ScoreRun.R')
 
 filebasedir <- '/mnt/B/bea_res/Data/Tasks/BarsScan/Basic/'
-if(!file.exists(filebasedir)) { filebasedir <- '/Users/lncd/rcn/B/bea_res/Data/Tasks/BarsScan/Basic/'}
+if(!file.exists(filebasedir)) { filebasedir <- '/Users/lncd/rcn/bea_res/Data/Tasks/BarsScan/Basic/'}
 if(!file.exists(filebasedir)) { error('cannot find good location for B') }
 
 getSacDot <- function(dotnotation) {
