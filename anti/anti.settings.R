@@ -40,7 +40,7 @@ names(sac.thresholds)<-c(1:4)
 filebasedir <- '/mnt/B/bea_res/Data/Tasks/Anti/Basic/'
 getFiles  <- function() {
  #/mnt/B/bea_res/Data/Tasks/Anti/Basic/11146/20130313/Raw/EyeData/txt/11146.20130313.anti.1.tsv
- files     <- Sys.glob(sprintf('%s/*/*/Raw/EyeData/txt/*.data.tsv',filebasedir))
+ files     <- Sys.glob(sprintf('%s/*/*/Raw/EyeData/txt/*data.tsv',filebasedir))
  splitfile <- strsplit(basename(files),'\\.')
  splitfile <- as.data.frame(t(sapply(splitfile,rbind)))[,-5]
  names(splitfile)  <- c('subj','date','type','run')

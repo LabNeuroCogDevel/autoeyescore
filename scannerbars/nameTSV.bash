@@ -1,0 +1,5 @@
+basicdir="/mnt/B/bea_res/Data/Tasks/BarsScan/Basic/"
+# give eyd file, print tsv
+function nameTSV {
+ echo $1 | perl -lne 'print "$+{id}.$+{date}.$+{run}.data.tsv" if m:/(?<date>\d{8})/.*/(?<id>\d{5})[^/]*(bars|run|rpn)(?<run>\d):'
+}

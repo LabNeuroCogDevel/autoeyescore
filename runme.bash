@@ -96,19 +96,20 @@ done
 ### only do this if scoring R scripts have changed has changed
 ### todo: check that they pass tests
 echo "===== Moving old files ===="
+mkdir -p $old
+mv results $old/
+
 if [ -n "$REDO" ]; then
    mkdir -p tsv/$old
    ls -1d  $scorebase/*/*/Scored/txt/ |while read file; do
      mv "$file" tsv/$old/$(echo "$file" |perl -lne 'print "$1.$2" if m:(\d{5})/(\d{8}):;');
    done
+   mv aux tsv/$old/
 fi
-
-mv results $old/
-mv aux $old/
 
 ### create any new tsv files
 echo "===== Looking for new runs ===="
-mktsv.bash
+$(dirname $0)/mktsv.bash
 
 ### timestamp
 mkdir results
