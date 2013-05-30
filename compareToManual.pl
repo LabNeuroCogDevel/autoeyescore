@@ -15,6 +15,9 @@ use Spreadsheet::ParseExcel;
 # 
 # find all fs*xls files and check %correct against auto
 #
+# write manual scoring to text file (from xls) if it doesn't already exist
+#  as "/txt/$subj.$rundate.$run.manual.txt"
+#
 #####
 
 
@@ -32,7 +35,7 @@ my $p = Spreadsheet::ParseExcel->new();
 
 # print header
 my $header=join("\t",qw/trial count_a lat_a count_m lat_m scorer/)."\n";
-print $header;
+#print $header;
 print $OUTFH $header;
 
 my @scoreSheets;
@@ -165,7 +168,7 @@ for my $xlsfn (@scoreSheets){
    #) {
      my $output=join("\t","$runname.$t", @{$autoT[$t]}{qw/count lat/},@{$manualT[$t]}{qw/count lat/},$scorer)."\n";
      print $OUTFH $output;
-     print $output;
+     #print $output;
    #}
   }
 }
