@@ -19,7 +19,7 @@ getSacDot <- function(dotnotation) {
 }
 
 
-n<-read.table('scannerbars/results/checkBars_trial.csv',sep="\t",header=T)
+n<-read.table('scannerbars/results/checkAgainstManual_trial.csv',sep="\t",header=T)
 #sampleDifferences <-function(auto,manual) {
 #  sapply(sample(as.character(n[n$count_a==auto&n$count_m==manual,'trial']),10), function(x){a<-getSacDot(x);readline();dev.off();scoreSac(a)})
 #}

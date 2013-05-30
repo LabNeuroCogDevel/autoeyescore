@@ -51,7 +51,10 @@ for my $xlsfn (@scoreSheets){
   ################################
   next if $xlsfn =~ /^$/;
   my ($subj,$rundate,$run,$scorer)=(0)x4;
-  $run = $1 if $xlsfn =~ m:Run0?(\d):;
+  $subj    = $1 if $xlsfn =~ m:/(\d{5})/:;
+  $rundate = $1 if $xlsfn =~ m:/(\d{8})/:;
+  $run     = $1 if $xlsfn =~ m:Run0?(\d):;
+
 
   my $xlstxtfn = dirname(dirname($xlsfn)) ."/txt/$subj.$rundate.$run.manual.txt";
   
@@ -109,10 +112,15 @@ for my $xlsfn (@scoreSheets){
      }
 
      # write to txt file for faster processing
-     open my $txtfh, '>', $xlstxtfn;
-     print $txtfh "$scorer\n";
-     print $txtfh join("\t",$_,@{$manualT[$_]}{qw/count lat/})."\n" for (0..$#manualT);
-     close $txtfh;
+     if($#manualT>0 and open my $txtfh, '>', $xlstxtfn){
+        print "writting $xlstxtfn\n";
+        print $txtfh "$scorer\n";
+        print $txtfh join("\t",$_,@{$manualT[$_]}{qw/count lat/})."\n" for (1..$#manualT);
+        close $txtfh;
+     }
+     else {
+      print STDERR "$xlstxtfn not written!(have $#manualT trials in $xlsfn)\n";
+     }
 
   }else{
      open my $txtfh, '<', $xlstxtfn;

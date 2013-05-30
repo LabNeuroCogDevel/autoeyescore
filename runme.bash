@@ -175,4 +175,4 @@ fi;
 echo "done: $(date)" | tee -a results/timing
 rm Rplots.pdf
 mv score.Rout results/
-[ -n "$COMPARE" ] && mv checkBars_trial.csv results/
+[ -n "$COMPARE" ] && mv checkAgainstManual_trial.csv results/

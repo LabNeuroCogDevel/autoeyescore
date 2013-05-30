@@ -538,6 +538,18 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
      next 
     }
     
+    #TODO: determine baseline and sac.* iteratively
+    #      error out if cannot be done
+    #base.idx <- which(est$y < sac.right.small & est$y > sac.left.small & abs(fst$y) < lat.minvel )
+    #base.val <- mean(est$y[base.idx])
+    base.val <- mean(d[ c(-5:2) + targetIdxs[trl,1], 'xpos' ],na.rm=T)
+
+    if(is.nan(base.val) || abs(base.val-screen.x.mid )>50) {
+     allsacs <- dropTrial(subj,runtype,trl,xdatCode,
+                   sprintf('average fixpos(%f) is off from baseline(%f)!\n',base.val,screen.x.mid ),
+                   allsacs,run=run,showplot=showplot,rundate=rundate)
+     next;
+    }
     
     
     # fit to local polynomial (with guassain kernel)
@@ -674,14 +686,16 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     #browser()
     sac.df$cordir    = sign(sac.df$endpos - sac.df$startpos) == sac.expdir
     sac.df$corpos    = abs(sac.df$endpos - sac.thres) <= sac.padding
+    sac.df$corside   = sign(sac.df$endpos - base.val ) == sign(sac.thres - base.val)
     sac.df$gtMinLen  = sac.df$end - sac.df$onset > sac.minlen
     sac.df$intime    = sac.df$onset < sac.time & sac.df$end > lat.fastest
 
     sac.df$distance  = sac.df$endpos - sac.df$startpos 
-    sac.df$crossFix  = as.numeric(sac.df$startpos < screen.x.mid) - as.numeric(sac.df$endpos < screen.x.mid)
-    sac.df$MaxMinX   = as.numeric(sac.df$minpos < screen.x.mid) - as.numeric(sac.df$maxpos < screen.x.mid)
+    sac.df$crossFix  = as.numeric(sac.df$startpos < base.val) - as.numeric(sac.df$endpos < base.val)
+    # want to test against both the base.val (where we think center is) and screen.x.mid (where center fix should be)
+    sac.df$MaxMinX   = as.numeric(sac.df$minpos < min(base.val,screen.x.mid)) - as.numeric(sac.df$maxpos < max(base.val,screen.x.mid))
     sac.df$gtMinMag  = abs(sac.df$distance) > sac.minmag
-    sac.df$startatFix= sac.df$startpos > screen.x.mid -10 & sac.df$startpos < screen.x.mid + 10
+    sac.df$startatFix= sac.df$startpos > base.val -10 & sac.df$startpos < base.val + 10
     #  0 if sac did not cross sides
     # -1 moved to the left
     #  1 moved to the right
@@ -709,18 +723,6 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     
     ##TODO?? not a saccade (we care about) if motion is back to baseline
                           
-    #TODO: determine baseline and sac.* iteratively
-    #      error out if cannot be done
-    #base.idx <- which(est$y < sac.right.small & est$y > sac.left.small & abs(fst$y) < lat.minvel )
-    #base.val <- mean(est$y[base.idx])
-    base.val <- mean(d[ c(-5:2) + targetIdxs[trl,1], 'xpos' ],na.rm=T)
-
-    if(is.nan(base.val) || abs(base.val-screen.x.mid )>50) {
-     allsacs <- dropTrial(subj,runtype,trl,xdatCode,
-                   sprintf('average fixpos(%f) is off from baseline(%f)!\n',base.val,screen.x.mid ),
-                   allsacs,run=run,showplot=showplot,rundate=rundate)
-     next;
-    }
 
 
 
@@ -855,7 +857,8 @@ scoreSac <- function(allsacs){
                                  x$xdat[1],
                                  round(x$onset[1]*1000),
                                  x$cordir[1]==TRUE,
-                                 !x$cordir[1]&any(x$cordir & (x$MaxMinX | x$startatFix ) ),
+                                 #!x$cordir[1]&any(x$cordir & (x$MaxMinX | x$startatFix) ),
+                                 !x$cordir[1]&any(x$cordir &  x$corside  ),
                                  xdatIsAS(mean(x$xdat))
                               ) } )
    names(cor.ErrCor.AS) <- c('trial','xdat','lat','fstCorrect','ErrCorr','AS')
