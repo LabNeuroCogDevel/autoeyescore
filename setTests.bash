@@ -2,15 +2,14 @@
 
 ######
 # 
-# Generate files to test AGAINST in R
-#  i.e. generate ground truth
+#  get parsed raw data needed by trials.txt in test directory
 #
 #####
 
 taskdir=/mnt/B/bea_res/Data/Tasks/
 
 # list of trials to explore
-listfn='task_subj_date_run_trial.list';
+listfn='trials.txt';
 [ ! -r $listfn ] &&  echo "need $listfn" && exit 1
 
 # remake test directories
@@ -21,7 +20,7 @@ done
 
 # generate test data
 sed 1d "$listfn" | while read task subj date run trial reason ; do
- tsv=$taskdir/$task/Basic/$subj/$date/Raw/EyeData/txt/$subj.$date.$run.tsv
+ tsv=$taskdir/$task/Basic/$subj/$date/Raw/EyeData/txt/$subj.$date.$run.data.tsv
  [ ! -r $tsv ] && echo cannot read $tsv && continue
  cp "$tsv" input/
 

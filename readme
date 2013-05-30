@@ -1,21 +1,26 @@
-##### Runnning
-# anti example (same for bars)
- cd anti
- ./mktsv.bash # parse all the eyds into tab seperated files
- R
-  source('anti.settings.R')
-  source('../ScoreRun.R')
-  source('../ScoreEveryone.R')
+RUNNING
+  
+  each task has it's own directory (anti,bars,scannerbars) with subdirectories for results and tests
+ 
+  see runme.bash for help
 
-# saves output to results/
-#   while also puting a *sac.txt, *trial.txt, and *summary.txt in each subjects Score/txt/ directory
 
-##### Hacking
+ depeneds on 
+  finding files: 
+    root in /mnt/B/bea_res/Data/Tasks/$TASK/Basic/$SUBJ/$DATE/
+    prased to                Raw/txt/$SUBJ.$DATE.$RUN.data.tsv
+    output saved as          Scored/txt/$SUBJ.$DATE.$RUN.{trial,summary}.tsv
 
-getFiles() is set per task in *.settings.R
- e.g. bars looks for files with
- files    <- Sys.glob('/mnt/B/bea_res/Data/Tasks/BarsBehavioral/Basic/*/*/Raw/EyeData/txt/*.tsv')
+  parsing eyds: ../eyds/dataFromAnyEyd.pl (which needs ../eyds/EyeTracking-EYD/EyeTracking-EYD-0.1.2/lib/EyeTracking/EYD.pm)
 
- sets where files should be saved
+
+TESTING
+
+  in R
+    # for scanner bars
+    source('checkBars.R')
+  
+  and
+    runme.sh -T
   
 

@@ -4,6 +4,7 @@
 # wrapper to run/resume scoring on everyone
 #
 #  [REQIRED]  -t <task>  see $0 -t list
+#  [OPTIONAL] -T         test ( -t not required )
 #  [OPTIONAL] -C         compare scoring against manual
 #  [OPTIONAL] -R         remove and redo all auto-scoring
 # 
@@ -13,6 +14,10 @@
 #    $0 -t bars              # update all unscored behav bars
 # 
 #    $0 -t list              # list aval. eye scoring experements 
+# 
+#    $0 -T                   # run all tests
+#    $0 -T bars              # run tests on bars
+#    $0 -T -t bars           # same as above (NB order is important, '-t bars -T' does all)
 # 
 # 
 #  PIPELINE   
@@ -51,35 +56,68 @@ while [ -n "$1" ]; do
  arg=$1; shift;
  case $arg in
  
-  -t) type=$1; shift;; # type; eg. scanner base
-  -R) REDO=1        ;; # REDO everything; useful when code changes
-  -C) COMPARE=1       ;; # COMPARE against manual
+  -t) type=$1; shift;;         # type; eg. scanner base
+  -T) type=$1; TEST=1; shift;; # type; eg. scanner base
+  -R) REDO=1        ;;         # REDO everything; useful when code changes
+  -C) COMPARE=1     ;;         # COMPARE against manual
   *)  printhelp     ;;
  esac
 done
 
 ### ARG COMPAREING
-[ -z "$type" ] && printhelp
+[ -z "$type" -a -z "$TEST" ] && printhelp
 
+basedir=$(cd $(dirname $0);pwd)
+
+function list {
+ find $basedir -name \*settings.R | xargs -n1 dirname | xargs -n1 basename
+}
 ## list all types we can find
 if [ "$type" = "list" ]; then
  echo "Aval. types:"
- find $(dirname $0) -name \*settings.R | xargs -n1 dirname | xargs -n1 basename |sed 's/^/  /'
+ list |sed 's/^/  /'
  exit 0
 fi
 
-settingsfile=$(dirname $0)/$type/$type.settings.R
-[ ! -f $settingsfile ] && echo "$type does not have a settings.R file!" && exit 1
 
-scorebase=$(perl -lne 'print $1 if m/filebasedir[ \t]*<-[ \t]*(.*)/' $settingsfile|sed "s/['\"]//g")
-[ ! -d "$scorebase" ] && echo "settings file points to nonexistant task base directory! ($scorebase)" && exit 1 
-echo "Task in $scorebase"
+## this is before TESTing portion because test can specify a single type. This makes sure that is valid.
+## but if not type given for test, settingsfile is nonsense --  but it wont be used
+settingsfile=$basedir/$type/$type.settings.R
+[ ! -f $settingsfile -a -n "$type" ] && echo "$type does not have a settings.R file!" && exit 1
+
+# export filebasedir and expectedTrialLengths
+eval "$(perl -lne 'print if s/(filebasedir|expectedTrialLengths)[ \t]*<-[ \t]*/export $1=/ig' $settingsfile)"
+# export expectedTrialLengths
+# export filebasedir
+
+
+
+## Run tests if told to
+if [ -n "$TEST" ]; then
+ [ -z "$type" ] && type="$(list)"
+ for task in $type; do
+   echo "===== TESTING $task ===="
+   testdir=$basedir/$task/test
+   [ ! -f "$testdir/trials.txt" ] && echo "	no tests available!" && continue
+   cd $testdir
+   
+   # collect any parsed raw eye movements we dont already have
+   $basedir/setTests.bash
+   # run tests, test_file is set to chdir=T, making this a little ugly
+   R CMD BATCH <( echo "library(testthat);wd<-getwd(); test_file('$basedir/scoreTests.R')")
+   # show results
+   cat *Rout
+ done
+
+ exit
+fi
+
+#filebasedir=$(perl -lne 'print $1 if m/filebasedir[ \t]*<-[ \t]*(.*)/' $settingsfile|sed "s/['\"]//g")
+[ ! -d "$filebasedir" ] && echo "settings file points to nonexistant task base directory! ($filebasedir)" && exit 1 
+echo "Task in $filebasedir"
 
 # everythign is run from settings file, so go there
 cd $(dirname $settingsfile)
-
-
-
 
 ## make old file name incase we need it
 old=old/$(date +%F); 
@@ -101,7 +139,7 @@ mv results $old/
 
 if [ -n "$REDO" ]; then
    mkdir -p tsv/$old
-   ls -1d  $scorebase/*/*/Scored/txt/ |while read file; do
+   ls -1d  $filebasedir/*/*/Scored/txt/ |while read file; do
      mv "$file" tsv/$old/$(echo "$file" |perl -lne 'print "$1.$2" if m:(\d{5})/(\d{8}):;');
    done
    mv aux tsv/$old/
@@ -109,7 +147,7 @@ fi
 
 ### create any new tsv files
 echo "===== Looking for new runs ===="
-$(dirname $0)/mktsv.bash
+$basedir/mktsv.bash
 
 ### timestamp
 mkdir results
@@ -122,14 +160,15 @@ R CMD BATCH ../score.R
 if [ -n "$COMPARE" ]; then
    ### check against manual scores
    echo "===== comparing manual to automatic ===="
-   ./compareToManual.pl
+   # need expectedTrialLengths and filebasedir exported
+   $basedir/compareToManual.pl
 
    echo "===== %incorrect against scorers ===="
-   echo "scores_off	lats_off" | tee results/accuracy-overal.txt
-   grep -v '^*' checkBars_trial.csv |perl -slane 'next  unless /20\d\d/; $i++; if($F[1] != $F[3]){$a++}elsif(abs($F[2]-$F[4])>50){ $o++ }END{print join("\t", map{$_/($i-1)}($a,$o))}'| tee -a results/accuracy-overall.txt
+   echo "scores_off	lats_off" | tee results/accuracy-overall.txt
+   grep -v '^*' checkAgainstManual_trial.csv |perl -slane 'next  unless /20\d\d/; $i++; if($F[1] != $F[3]){$a++}elsif(abs($F[2]-$F[4])>50){ $o++ }END{print join("\t", map{$_/($i-1)}($a,$o))}'| tee -a results/accuracy-overall.txt
 
    echo;echo;echo;
-   grep -v '^*' checkBars_trial.csv |cut -f 2,4 -d"	" |sort|uniq -c|sort -n | tee results/accuracy-breakdown.txt
+   grep -v '^*' checkAgainstManual_trial.csv |cut -f 2,4 -d"	" |sort|uniq -c|sort -n | tee results/accuracy-breakdown.txt
 fi;
 
 ## wrap up

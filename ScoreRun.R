@@ -50,7 +50,7 @@ sac.trackingtresh <- 0    # what percent of a sac has to have actual samples (ta
 
 ## latancy properties
 #  how fast the eye has to move before considering the movement a saccade (also heuristic overcompesating approximation)
-lat.minvel   <- 5        # ASLcoordx/60Hz 
+lat.minvel   <- 4.5      # ASLcoordx/60Hz 
 lat.fastest  <- 67/1000  # fastest latency allowed is 200ms
 
 ## saccade properties ##
@@ -63,9 +63,11 @@ sac.minmag   <-  10      # min abs of x position change -- set very low
 sac.minlen   <-  50/1000 # saccades less than 50ms are merged/ignored
 sac.mingap   <-  50/1000 # saccades must be at mimumum this time appart, merged otherwise
 sac.held     <- 100/1000 # if a sac is held -- it is accurate
+sac.slowvel  <- 1        # same units as lat.minvel ASLXcord/60Hz
 #sac.maxlen   <- 250/1000 # maximum length of a sac should be 250 ms # NOTE. account for merged
 
 blink.mintimedrop  <- 100/1000
+blink.trim.samples <- 2
 
 ### Plot settings
 plot.endtime <- 1.75
@@ -159,7 +161,7 @@ savePlots <- function(sac.df,g,drv,filename,writetopdf) {
      outputdir<-dirname(filename)
      if(!file.exists(outputdir)) { dir.create(outputdir,recursive=T) }
 
-     cat('write to', outputdir, filename,"\n")
+     cat('write to', filename,"\n")
      pdf(filename,height=6, width=15)
   }
   else {
@@ -238,7 +240,7 @@ dropTrial <- function(subj,runtype,trl,xdatCode,reason,allsacs,showplot=F,saveda
    }
 }
 # returns 'allsacs' a list of all saccades in each trial
-getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writetopdf=F,savedas=NULL, showplot=F){
+getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writetopdf=F,savedas=NULL, showplot=F, funnybusiness=""){
   # setup dataframe to hold sacades from all trials
   allsacs     <- data.frame()
 
@@ -391,7 +393,10 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     }
 
     pretargetD   <- d[pretargetIDX, ] 
-    if ( length(which(is.na(pretargetD$xpos))) > .2*sampleHz) {
+    if(
+      length(which(is.na(pretargetD$xpos))) > .2*sampleHz &&
+      !any(grepl('preblinkok',funnybusiness))
+    ){
      allsacs <- dropTrial(subj,runtype,trl,xdatCode,'blink before target onset',allsacs,showplot=showplot,run=run,rundate=rundate)
      next
     }
@@ -413,10 +418,10 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     SeqStartIdx <- cumsum(naSeq$lengths) - naSeq$lengths + 1
     naStartIdx <- which( naSeq$values == T & naSeq$lengths > 10 ) 
 
-    nastarts <- SeqStartIdx[naStartIdx]-2
+    nastarts <- SeqStartIdx[naStartIdx]-blink.trim.samples
     nastarts[nastarts<1] <- 1
 
-    nastops  <-  SeqStartIdx[naStartIdx]+ naSeq$lengths[naStartIdx]+2 
+    nastops  <-  SeqStartIdx[naStartIdx]+ naSeq$lengths[naStartIdx]+blink.trim.samples 
     nastops[nastops>length(b.orig$x)] <- length(b.orig$x)
 
     start10nas <- unname(unlist(alply(cbind(nastarts,nastops),1, function(x) { x[1]:x[2]} )))
@@ -555,7 +560,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     #idxDirChange <-  which( c(F, sign(fst$y[1:(nsamp-1)]) !=  sign(fst$y[2:nsamp]) )  )
     
     # where they are moving, but less than requried for a saccade
-    slowpoints<-rle(abs(fst$y)<1)
+    slowpoints<-rle(abs(fst$y)< sac.slowvel)
     slowpntIdx <- cumsum(slowpoints$lengths)
 
     
@@ -588,7 +593,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
 
     ###### DROP TRIAL CONDITIONS
     # no saccades, also will trap no enough data
-    if( nsacs<1){
+    if( nsacs<1  ){
      allsacs <- dropTrial(subj,runtype,trl,xdatCode,'no saccades',allsacs,run=run,showplot=showplot,rundate=rundate)
      next
     }
@@ -599,7 +604,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     
     # actual time from target cue
     # est$x is in 60Hz samples, but est indexes are not!
-    sac.df$onset = est$x[sac.df$onsetIdx]/sampleHz
+    sac.df$onset  = est$x[sac.df$onsetIdx]/sampleHz
     sac.df$slowed = est$x[sac.df$slowedIdx]/sampleHz
     sac.df$end    = est$x[sac.df$endIdx]/sampleHz
     
@@ -723,15 +728,54 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     # drop if there is a long blink that ends before any good sacade begins
     NArle <- rle(is.na(b.approx$x))
     NArlecs <- cumsum(NArle$lengths)/sampleHz
-    blinkends <- NArlecs[ NArle$values==T & NArle$lengths/sampleHz > blink.mintimedrop ]
+    actualblinkidx <- NArle$values==T & NArle$lengths/sampleHz > blink.mintimedrop 
+    blinkends <- NArlecs[ actualblinkidx ]
     if(length(blinkends)==0){blinkends <- Inf}
+
+    # if a sac starts with a blink, add that blink to the start
+    # NB!!! onsetidx, min and max are now incorrect!!!
+    sac.df$onset <- sapply(sac.df$onset,
+            function(x){ 
+                 a=x-blinkends
+                 bidx=which(a<2/sampleHz&a>0)
+                 newstart=NArlecs[which(actualblinkidx)-1][bidx]
+                 #TODO: newstart should be null if this change doesn't change x position
+                 if(length(newstart)>0){ 
+                  newstart + blink.trim.samples/sampleHz 
+                 }else{
+                  x
+                 } 
+            })
     
-    firstsacstart <- sac.df[ sac.df$intime & sac.df$gtMinLen & sac.df$gtMinMag & sac.df$p.tracked>sac.trackingtresh, ]$onset[1]
+    firstgoodsacidx <-  sac.df$intime & sac.df$gtMinLen & sac.df$gtMinMag & sac.df$p.tracked>sac.trackingtresh
+    firstsacstart <- sac.df[firstgoodsacidx, ]$onset[1]
     if(is.na(firstsacstart)){firstsacstart <- -Inf}
 
-    if(any(blinkends < firstsacstart )){
-     allsacs <-  dropTrial(subj,runtype,trl,xdatCode,'blink ends before any saccades',allsacs,run=run,showplot=showplot,rundate=rundate)
-     next
+
+    if(any(blinkends < firstsacstart ) & !any(grepl('ignoreblinks',funnybusiness))){
+     # quick way to see if blink is held
+     # if xpos is more than 5 px from any other
+     unheldblinks <- max(abs(diff(b.orig[blinkends[blinkends<firstsacstart]*sampleHz+c(1:5),'x']))) > 5
+     # this checks that there isn't an immediate acceleration after the blink
+     # ... but the blink may be part of an acceleration and the start might be before
+     # so we should check the first derv
+     #unheldblinks <- any( sapply(blinkends[blinkends<firstsacstart], function(x){abs(x*sampleHz-startUp)<10}) )
+     #unheldblinks <- any(sapply(blinkends[blinkends<firstsacstart],
+     #                      function(x){
+     ##                       abs(fst$y[x]*sampleHz-startUp)<10
+     #                        max(fst$y[which(fst$x - x*sampleHz > 0)[1:20]]) > sac.slowvel
+     #                   }) )
+     if(unheldblinks) {
+        allsacs <-  dropTrial(subj,runtype,trl,xdatCode,'blink ends before any saccades',allsacs,run=run,showplot=showplot,rundate=rundate)
+        next
+     }
+
+     ## after the blink (or loss of tracking) the blink is held
+     ## move back the onset of a sac to the start of the closest blink onset
+     #firstsacstart[firstsacstart<]
+     # if actualbinkidx has a 1, this will fail, but hopefully that is a preblink and is cut anyway
+
+
 
     }
 
@@ -742,20 +786,23 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
 
     # output dir to save images/write dropped
     if(is.null(savedas)){ 
-       outputdir <- paste(saverootdir, subj,paste(run,runtype,'DROPPED',sep=".") ,sep="/")
+       #outputdir <- paste(saverootdir,paste(subj,rundate,run,trl,sep=".") ,sep="/")
+       #outputdir <- sprintf("%s/%d.%d.%d.%d",saverootdir,subj,rundate,run,trl)
+       outputdir <- saverootdir
     } else {
        outputdir <- dirname(savedas)
     }
  
     ## PLOT -- only if we are told to
-    if(showplot) {
+    if(showplot | writetopdf) {
        ptitle <- paste(subj,runtype, trl,xdatCode)
        g    <- ggplotXpos(est,d,trgt,sac.df,base.val,delt.x.scale,slowpnt.x.scale,ptitle)
        drv <- ggplotDrv(fst,scnd,slowpnt.x.scale,delt.x.scale)
 
        # write out plot
-       filename<-paste(sprintf("%02d",trl),xdatCode,sep="-")
-       filename<-paste(outputdir,'/img/', filename,'.pdf', sep="")
+       #filename<-paste(sprintf("%02d",trl),xdatCode,sep="-")
+       #filename<-paste(outputdir,'/img/', filename,'.pdf', sep="")
+       filename<-sprintf('%s/img/%d.%d.%d.%02d-%d.pdf',outputdir,subj,rundate,run,trl,xdatCode)
 
        savePlots(sac.df,g,drv,filename,writetopdf)
     }
@@ -787,7 +834,7 @@ scoreSac <- function(allsacs){
 
 
   # select only those saccades we will count
-  goodsacs <- subset(allsacs, subset=intime&gtMinLen&p.tracked>0)
+  goodsacs <- subset(allsacs, subset=intime&gtMinLen&p.tracked>sac.trackingtresh )
   # break into trials, do we have a first correct movement, correct movement after incorrect, an xdat that says Anti Saccade?
 
   # All Drops, nothing to score
