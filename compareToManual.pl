@@ -6,6 +6,7 @@ use warnings;
 use Data::Dumper;
 use File::Find;
 use File::Basename;
+use File::Path;
 #use File::Find::Rule;
 use Spreadsheet::ParseExcel;
 #use Getopt::Std;
@@ -111,14 +112,14 @@ for my $xlsfn (@scoreSheets){
       $manualT[$trial]={count=>$countToCorrect ,lat=>$lat }
      }
 
+     mkpath(dirname($xlstxtfn)) if( ! -d dirname($xlstxtfn) );
      # write to txt file for faster processing
      if($#manualT>0 and open my $txtfh, '>', $xlstxtfn){
         print "writting $xlstxtfn\n";
         print $txtfh "$scorer\n";
         print $txtfh join("\t",$_,@{$manualT[$_]}{qw/count lat/})."\n" for (1..$#manualT);
         close $txtfh;
-     }
-     else {
+     } else {
       print STDERR "$xlstxtfn not written!(have $#manualT trials in $xlsfn)\n";
      }
 

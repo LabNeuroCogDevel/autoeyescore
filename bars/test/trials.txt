@@ -9,17 +9,17 @@ BarsBehavioral	11159	20130425	1	21	NA	F	F	NA	weird NAs in front
 BarsBehavioral	10672	20101113	2	35	NA	F	F	NA	too few samples
 BarsBehavioral	10796	20100309	1	36	NA	F	F	NA	only one good sample
 BarsBehavioral	10765	20110803	1	17	NA	F	F	NA	bad estimastion, should drop!
-BarsBehavioral	11156	20130423	1	22	NA	F	F	NA	long blink before any saccades, drop
-BarsBehavioral	11146	20130313	1	47	NA	F	F	NA	blink before moving
+BarsBehavioral	11156	20130423	1	22	341	T	F	1	was long blink before any saccades, keep dil<1 and no blink
+BarsBehavioral	11146	20130313	1	47	561	T	F	1	blink if cutting at dil, shot incorrect movement not counted
 BarsBehavioral	10675	20090506	1	42	NA	F	F	NA	very poor tracking
 BarsBehavioral	11162	20130501	2	15	NA	F	F	NA	start is in the left insead of near baseline
 BarsBehavioral	11162	20130501	2	21	302	T	F	1	incorrect sac movement too quick, dont count and should not be absorbed
-BarsBehavioral	10853	20101123	1	8	393	T	F	1	bad tracking, 10px jump is not a sac
+BarsBehavioral	10853	20101123	1	8	488	T	F	1	bad tracking, 10px jump is not a sac
 BarsBehavioral	11156	20130423	2	32	534	T	F	1	missing first sample
-BarsBehavioral	11078	20121112	2	50	600	T	F	1	just at threshold for a saccade -- moving too slow
+BarsBehavioral	11078	20121112	2	50	345	F	T	2	just at threshold for a saccade -- was moving too slow
 BarsBehavioral	10870	20101217	1	19	270	F	T	2	hook blink(?)
 BarsBehavioral	10717	20110122	1	55	440	T	F	1	only one NA at end
 BarsBehavioral	11147	20130312	2	4	314	T	F	1	perfect, but sac back to base sample too early?
-BarsBehavioral	10851	20120904	2	30	648	F	F	0	direction vs fixation side -- AScorr should be F -- or drop
+BarsBehavioral	10851	20120904	2	30	837	F	F	0	direction vs fixation side -- AScorr should be F -- or drop
 BarsBehavioral	11147	20130312	1	14	313	T	F	1	ignore saccade if back to baseline?
 BarsBehavioral	11133	20130215	1	13	415	T	F	1	drop or count as single correct

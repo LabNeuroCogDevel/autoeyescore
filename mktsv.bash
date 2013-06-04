@@ -17,7 +17,8 @@ for f in $( find $basicdir -maxdepth 5 -mindepth 5 -iname \*.eyd ); do
  outdir="$(dirname "$f")/txt"
  tsv="$outdir/$(nameTSV $f)"
 
- [ -r $tsv ] && echo "skipping $tsv" && continue
+ #[ -r $tsv ] && echo "skipping $tsv" && continue
+ [ -r $tsv ] && continue
 
  [ ! -d $outdir ] && mkdir -p $outdir
 

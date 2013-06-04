@@ -91,6 +91,7 @@ getsubj <- function(i){
 
   # save summary as a one line file in subject directory
   summaryoutput <- sub('.trial.txt$','.summary.txt',pertrialoutput)
+  dir.create(dirname(summaryoutput),recursive=T)
   write.table(file=summaryoutput,r,row.names=F,quote=F,sep="\t")
   #print(c('wrote',subj))
 

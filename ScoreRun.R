@@ -50,7 +50,7 @@ sac.trackingtresh <- 0    # what percent of a sac has to have actual samples (ta
 
 ## latancy properties
 #  how fast the eye has to move before considering the movement a saccade (also heuristic overcompesating approximation)
-lat.minvel   <- 4.5      # ASLcoordx/60Hz 
+lat.minvel   <- 4      # ASLcoordx/60Hz 
 lat.fastest  <- 67/1000  # fastest latency allowed is 200ms
 
 ## saccade properties ##
@@ -106,7 +106,7 @@ ggplotXpos <- function(est,d,trgt,sac.df,base.val,delt.x.scale,slowpnt.x.scale,p
 
      g <- g + geom_point(data=d[trgt,],x=1:length(trgt), aes(y=xpos,color=as.factor(xdat),size=dil))  +
           scale_color_manual(values=c('green','red','blue','black')) + # should only ever see green -- otherwise more than one XDAT
-          scale_size_continuous(limits=c(1,100),range=c(.1,5)) + # limit dilation scale to 2 std of mean (for random subj)
+          scale_size_continuous(limits=c(1,100),range=c(.3,5)) + # limit dilation scale to 2 std of mean (for random subj)
           geom_vline(xintercept=sampleHz*lat.fastest,color=I('red')) +
           geom_vline(xintercept=sampleHz*sac.time,color=I('red'),linetype=I('dotdash'))
 
@@ -228,7 +228,7 @@ dropTrial <- function(subj,runtype,trl,xdatCode,reason,allsacs,showplot=F,saveda
 
    droppedTrial <- data.frame(
          subj=subj,run=run,trial=trl,
-         onset=0,slowed=0,end=0,startpos=0,endpos=0,cordir=F,corpos=F, # combined=F,
+         onset=0,slowed=0,end=0,startpos=0,endpos=0,corside=NA,cordir=F,corpos=F, # combined=F,
          held=F,gtMinLen=F, intime=F,p.tracked=0, xdat=xdatCode, maxpos=NA,minpos=NA,
          crossFix=NA,MaxMinX=NA,gtMinMag=F, startatFix=NA, distance=NA
          )
@@ -253,14 +253,14 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
   if(is.null(readeydsuccess)) {
     allsacs <- dropTrial(subj,runtype,1:expectedTrialLengths,0,'no data in eyd!',
                          allsacs,showplot=F,run=run,rundate=rundate)
-    return() 
+    return(allsacs) 
   }
 
 
   if(dim(d)[2] != 4) {
     allsacs <- dropTrial(subj,runtype,1:expectedTrialLengths,0,sprintf('eyd data does not make sense to me %dx%d',dim(d)[1],dim(d)[2]),
                          allsacs,showplot=F,run=run,rundate=rundate)
-    return() 
+    return(allsacs) 
   }
 
 
@@ -303,8 +303,16 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
   # TODO!!
   # if there is x and ypos and dil != 0
   # maybe we should keep?
-  badidxs=d$xpos>xmax|d$ypos>ymax|d$dil==0
+
+  # see scannerbars 10711.20121108.1.17 -- good xpos, no good dil or ypos
+  
+  if(any(grepl('extremefilter',funnybusiness))){
+   badidxs=d$xpos>xmax|d$ypos>ymax|d$dil==0
+  }else{
+   badidxs=d$xpos>xmax|(d$xpos==0&d$ypos==0&d$dil==0)
+  }
   d[which(badidxs),c('dil','xpos','ypos')] = c(NA,NA,NA)
+  if(any(na.omit(d$dil)<1)) { d$dil[which(d$dil<1)]<-1 }# so we can see something! 
   # which is need to not die on scanbars 10656.20090410.2
   
    # remove repeats
@@ -483,27 +491,9 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     # replace NAs so we can do polyfit
     b.all <- b.approx
     b.all$x <- na.approx(b.approx$x,x=b.approx$time) 
-    names(b.all) <- c('x','y') # bad code elsewhere wants x and y
-    # oldway replace NAs so we can do polyfit
-    ## if(length(naX)>0){
-    ##   esta  <-approx(b.all$x,b.all$y, naX)
-    ##   if(any(is.na(esta$y))){
-    ##     esta <- data.frame(x=c(),y=c())
-    ##     print(paste(sep=" ",subj,runtype, trl, xdatCode, 'estimation errored, has NAs')  )
-    ##   }
-    ## 
-    ##   # merge est approx with original
-    ##   # keep original so approx can easily be plotted
-    ##   b.all <- rbind(b.all,as.data.frame(esta))
-    ## 
-    ##   # check bind didn't introduce repeated x values
-    ##   if (   length(which( rle( sort( b.all$x ) )$lengths >1 ) ) != 0 ) {
-    ##      print(paste(sep=" ",subj,runtype, trl, xdatCode,'multiple X values after approximation!')  )
-    ##    }
-    ## 
-    ## }
-
     
+    names(b.all) <- c('x','y') # bad code elsewhere wants x and y
+
 
     # sanity check -- do we really only have target Idxs?
     obsvTrgCode <- unique(d$xdat[trgt])
@@ -728,27 +718,31 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
 
     # BLINK DROP
     # drop if there is a long blink that ends before any good sacade begins
+    # TODO: rename variables to someting saine
     NArle <- rle(is.na(b.approx$x))
     NArlecs <- cumsum(NArle$lengths)/sampleHz
-    actualblinkidx <- NArle$values==T & NArle$lengths/sampleHz > blink.mintimedrop 
+    actualblinkidx     <- NArle$values==T & NArle$lengths/sampleHz > blink.mintimedrop 
+    eyeidx.blinkstart  <- NArlecs[which(actualblinkidx)-1]*sampleHz
     blinkends <- NArlecs[ actualblinkidx ]
     if(length(blinkends)==0){blinkends <- Inf}
 
     # if a sac starts with a blink, add that blink to the start
     # NB!!! onsetidx, min and max are now incorrect!!!
-    sac.df$onset <- sapply(sac.df$onset,
-            function(x){ 
-                 a=x-blinkends
-                 bidx=which(a<2/sampleHz&a>0)
-                 newstart=NArlecs[which(actualblinkidx)-1][bidx]
-                 #TODO: newstart should be null if this change doesn't change x position
-                 if(length(newstart)>0){ 
-                  newstart + blink.trim.samples/sampleHz 
-                 }else{
-                  x
-                 } 
-            })
-    
+    if(!any(grepl('ignoreblinks',funnybusiness))){
+       sac.df$onset <- sapply(sac.df$onset,
+               function(x){ 
+                    a=x-blinkends
+                    bidx=which(a<2/sampleHz&a>0)
+                    newstart=NArlecs[which(actualblinkidx)-1][bidx]
+                    #TODO: newstart should be null if this change doesn't change x position
+                    if(length(newstart)>0 && x-newstart < .5 ){ 
+                     newstart + blink.trim.samples/sampleHz 
+                    }else{
+                     x
+                    } 
+               })
+    }
+
     firstgoodsacidx <-  sac.df$intime & sac.df$gtMinLen & sac.df$gtMinMag & sac.df$p.tracked>sac.trackingtresh
     firstsacstart <- sac.df[firstgoodsacidx, ]$onset[1]
     if(is.na(firstsacstart)){firstsacstart <- -Inf}
@@ -757,7 +751,22 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     if(any(blinkends < firstsacstart ) & !any(grepl('ignoreblinks',funnybusiness))){
      # quick way to see if blink is held
      # if xpos is more than 5 px from any other
-     unheldblinks <- max(abs(diff(b.orig[blinkends[blinkends<firstsacstart]*sampleHz+c(1:5),'x']))) > 5
+     unheldblinks <- unlist(lapply(which(blinkends<firstsacstart),
+       function(x){
+        # before and after blink ( with a two samples give for blink junk)
+        samples <- round(sac.held*sampleHz)
+        if(x<samples) { 
+          origIdxesBeforeBlink <- c() 
+        } else {
+          origIdxesBeforeBlink <- eyeidx.blinkstart[x]+c(-samples:-1)
+        }
+        origIdxesAfterBlink <- blinkends[x]*sampleHz+c(1:samples)
+        position <- b.orig[c(origIdxesBeforeBlink,origIdxesAfterBlink) ,'x']
+        cat(blinkends[x] - eyeidx.blinkstart[x]/sampleHz,"\n")
+        max(position)-min(position) > sac.minmag |         # positions of start and stop are far away
+         blinkends[x] - eyeidx.blinkstart[x]/sampleHz > .5 # sac is too long
+        # should let scannerbars 10701.20110323.2.30 pass, doesn't
+     }))
      # this checks that there isn't an immediate acceleration after the blink
      # ... but the blink may be part of an acceleration and the start might be before
      # so we should check the first derv
@@ -767,7 +776,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
      ##                       abs(fst$y[x]*sampleHz-startUp)<10
      #                        max(fst$y[which(fst$x - x*sampleHz > 0)[1:20]]) > sac.slowvel
      #                   }) )
-     if(unheldblinks) {
+     if(any(unheldblinks)) {
         allsacs <-  dropTrial(subj,runtype,trl,xdatCode,'blink ends before any saccades',allsacs,run=run,showplot=showplot,rundate=rundate)
         next
      }
@@ -836,7 +845,7 @@ scoreSac <- function(allsacs){
 
 
   # select only those saccades we will count
-  goodsacs <- subset(allsacs, subset=intime&gtMinLen&p.tracked>sac.trackingtresh )
+  goodsacs <- subset(allsacs, subset=intime&gtMinLen&p.tracked>sac.trackingtresh&!(crossFix!=0&!corside) )
   # break into trials, do we have a first correct movement, correct movement after incorrect, an xdat that says Anti Saccade?
 
   # All Drops, nothing to score

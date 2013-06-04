@@ -173,6 +173,14 @@ fi;
 
 ## wrap up
 echo "done: $(date)" | tee -a results/timing
-rm Rplots.pdf
+
+## if we have Rplots.pdf, remove it (ggsave leftover)
+## if we dont, something went wrong, so print the end of the file
+if [ -f Rplots.pdf ]; then 
+ rm Rplots.pdf
+else 
+ tail score.Rout
+fi
+
 mv score.Rout results/
 [ -n "$COMPARE" ] && mv checkAgainstManual_trial.csv results/
