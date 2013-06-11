@@ -43,15 +43,16 @@ getFiles  <- function() {
  files     <- Sys.glob(sprintf('%s/*/*/Raw/EyeData/txt/*data.tsv',filebasedir))
  splitfile <- strsplit(basename(files),'\\.')
  splitfile <- as.data.frame(t(sapply(splitfile,rbind)))[,-5]
- names(splitfile)  <- c('subj','date','type','run')
+ names(splitfile)  <- c('subj','date','run')
  splitfile$subj    <- as.character(splitfile$subj)
  splitfile$date    <- as.character(splitfile$date)
- splitfile$type    <- as.character(splitfile$type)
+ #splitfile$type    <- as.character(splitfile$type)
+ #should always be 1?
  splitfile$run     <- as.numeric(as.character(splitfile$run))
  splitfile$file    <- files
  splitfile$id      <- paste( splitfile$date,splitfile$run, sep=".")  
  splitfile$savedas <- paste(dirname(dirname(dirname(dirname(files)))), '/Scored/txt/',
-                            paste(splitfile$subj,splitfile$date,splitfile$type,splitfile$run,'sac.txt',sep="."),
+                            paste(splitfile$subj,splitfile$date,splitfile$run,'sac.txt',sep="."),
                             sep="" )
  return(splitfile)
 }

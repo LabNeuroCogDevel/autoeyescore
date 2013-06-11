@@ -10,24 +10,26 @@
 library(plyr)
 library(foreach)
 library(reshape2)
+library(ggplot2)
 # do this after sourcing the approp. settings file and Run scoring functions
 #  source('*.settings.R')
 #  source('ScoreRun.R')
 
 
-args<-commandArgs(TRUE)
-if(length(args)>0) {
- files    <- args[1]
-} else {
- files    <- Sys.glob('txt/*.tsv')
-}
-plotTrial=F
-if(length(args)>1) {
- plotTrial=T
-}
+#args<-commandArgs(TRUE)
+#if(length(args)>0) {
+# files    <- args[1]
+#} else {
+# files    <- Sys.glob('txt/*.tsv')
+#}
+#plotTrial=F
+#if(length(args)>1) {
+# plotTrial=T
+#}
 
-# get files to act on
-splitfile <- getFiles()  # sourced from task specific settings file
+#files    <- Sys.glob('txt/*.tsv')
+plotTrial=T
+
 
 # show subjects that have insufficent run numer
 # MIX is not named well
@@ -36,6 +38,18 @@ splitfile <- getFiles()  # sourced from task specific settings file
 
 #r<-rle(sort(paste(splitfile$subj, splitfile$type)))
 
+dropScore <- function(subj,rundate,run,type,reason) {
+   cat(subj,run,type, reason,"\n")
+   output<-list('PSCor'=NaN,'PSCorErr'=NaN,'PSErr'=NaN,'ASCor'=NaN,'ASErrCor'=NaN,'ASErr'=NaN, 'Dropped'=NaN,
+                'AScor.lat'=NaN,'ASErrCor.lat'=NaN,'ASErr.lat'=NaN,'PScor.lat'=NaN,'PSErrCor.lat'=NaN,'PSErr.lat'=NaN)
+   output$total <- 0
+   output$xdat  <- NaN
+   output$subj  <- subj
+   output$date  <- rundate
+   output$type  <- type
+   output$run   <- run
+   return(output)
+}
 
 getsubj <- function(i){
   filename <- splitfile$file[i]
@@ -58,28 +72,48 @@ getsubj <- function(i){
   #print(filename)
   #print(savedas)
   if(file.exists(savedas) ) {
-    print(paste('reading',savedas))
-    allsacs <- read.table(sep="\t",header=T, file=savedas)
+    print(paste(i,'reading',savedas))
+    readfilesuccess <-
+     tryCatch({ 
+         allsacs <- read.table(sep="\t",header=T, file=savedas)
+        },error=function(e){
+            cat('error! cant read input\n')
+            NULL
+        })
+
   } else{
-    cat(sprintf('running: getSacs("%s",%s,%s,"%s",rundate=%s,writetopdf=%s,savedas="%s")\n',filename, subj,run, type,rundate,plotTrial,savedas))
-    allsacs <- getSacs( filename, subj,run, type,rundate=rundate,writetopdf=plotTrial,savedas=savedas) 
+
+    cat(sprintf('%d: running: getSacs("%s",%s,%s,"%s",rundate=%s,writetopdf=%s,savedas="%s")\n',
+                i,filename, subj,run, type,rundate,plotTrial,savedas))
+
+     allsacs <- tryCatch({ 
+        getSacs( filename, subj,run, type,rundate=rundate,writetopdf=plotTrial,savedas=savedas) 
+        },error=function(e){
+            cat(sprintf('getSacs failed on %s.%s.%d\n',subj,rundate,run))
+            NULL
+        })
+
   }
   
-  if(length(allsacs)<1) {
-   cat(subj,run,type, "no info\n")
-   output<-list('PSCor'=NaN,'PSCorErr'=NaN,'PSErr'=NaN,'ASCor'=NaN,'ASErrCor'=NaN,'ASErr'=NaN, 'Dropped'=NaN,
-                'AScor.lat'=NaN,'ASErrCor.lat'=NaN,'ASErr.lat'=NaN,'PScor.lat'=NaN,'PSErrCor.lat'=NaN,'PSErr.lat'=NaN)
-   output$total <- 0
-   output$xdat  <- NaN
-   output$subj  <- subj
-   output$run   <- run
-   output$date  <- rundate
-   output$type  <- type
+  if(length(allsacs)<1|is.null(allsacs)) {
+   output<-dropScore(subj,rundate,run,type,'no info')
    return(as.data.frame(output))
   }
 
-  # TODO: score sac goes here
-  cor.ErrCor.AS <- scoreSac(allsacs)
+  # SCORE SACCADES
+  
+  cor.ErrCor.AS<-tryCatch({ 
+      scoreSac(allsacs)
+     },error=function(e){
+         cat(sprintf('scoreSac failed on %s.%s.%d\n',subj,rundate,run))
+     })
+
+  #if(!scorable){
+  # output<-dropScore(subj,run,type,sprintf('scoreSac failed on %d.%d.%d\n',subj,rundate,run))
+  # return(as.data.frame(output))
+  #}
+
+  if(!file.exists(dirname(pertrialoutput))) { dir.create(dirname(pertrialoutput),recursive=T)}
   write.table(file=pertrialoutput,cor.ErrCor.AS,row.names=F,quote=F,sep="\t")
   
   r <- scoreRun(cor.ErrCor.AS, expectedTrialLengths  ) #was ( , unique(allsacs$trial))
@@ -91,7 +125,8 @@ getsubj <- function(i){
 
   # save summary as a one line file in subject directory
   summaryoutput <- sub('.trial.txt$','.summary.txt',pertrialoutput)
-  dir.create(dirname(summaryoutput),recursive=T)
+
+  if(!file.exists(dirname(summaryoutput))) { dir.create(dirname(summaryoutput),recursive=T)}
   write.table(file=summaryoutput,r,row.names=F,quote=F,sep="\t")
   #print(c('wrote',subj))
 
@@ -105,28 +140,47 @@ getsubj <- function(i){
   
   #break
 }
-perRunStats <- foreach(i=1:nrow(splitfile),.combine=rbind ) %do% getsubj(i)
-#perRunStats <- getsubj(1)
-#for( i in 2:nrow(splitfile) ){
-# print(i)
-# s <-getsubj(i)
-# perRunStats <- rbind(perRunStats,s )
-#}
 
-# only do final summaries if we actually grabbed everyone
-if(length(args) == 0 ) {
-   #print(perRunStats)
-   p<-ggplot(perRunStats, aes(x=as.factor(total),fill=type))+geom_histogram(position='dodge')
-   ggsave(p,file='results/totalsHist.png')
+scoreEveryone <- function(splitfile,plotfigs=T){
+   #mtrace('getsubj')
+   # TODO: wrap this in an tryCatch so no errors at the end
+   perRunStats <- foreach(i=1:nrow(splitfile),.combine=rbind ) %dopar% getsubj(i)
+   # this will have written a .sac.txt and .trial.txt for every subject
 
-   png('results/droppedHist.png')
-   hist(perRunStats$Dropped)
-   dev.off()
+   #perRunStats <- getsubj(1)
+   #for( i in 2:nrow(splitfile) ){
+   # print(i)
+   # s <-getsubj(i)
+   # perRunStats <- rbind(perRunStats,s )
+   #}
 
-   sums<-aggregate(. ~ subj, perRunStats[,c(1:8,match('subj',names(perRunStats))  )],sum)
-   # need to includ run in perrunstats[] >> #sums<-aggregate(. ~ subj+run, perRunStats[,c(1:8,match('subj',names(perRunStats))  )],sum)
-   write.table(sums,file='results/sums.tsv',sep="\t",quote=F,row.names=F)
-   p <- ggplot( melt(sums[,names(sums)!='total']  ,id.vars='subj') ) + ggtitle('per subject breakdown of collected data')
-   p <- p+geom_histogram(aes(x=subj,y=value,fill=variable,stat='identity'))
-   ggsave(p,file='results/perSubjHist.png')
+   # only do final summaries if we actually grabbed everyone
+   if(plotfigs ) {
+      #print(perRunStats)
+      p<-ggplot(perRunStats, aes(x=as.factor(total),fill=type))+geom_histogram(position='dodge')
+      ggsave(p,file='results/totalsHist.png')
+
+      png('results/droppedHist.png')
+      hist(perRunStats$Dropped)
+      dev.off()
+
+      sums<-aggregate(. ~ subj, perRunStats[,c(1:8,match('subj',names(perRunStats))  )],sum)
+      # need to includ run in perrunstats[] >> #sums<-aggregate(. ~ subj+run, perRunStats[,c(1:8,match('subj',names(perRunStats))  )],sum)
+      write.table(sums,file='results/sums.tsv',sep="\t",quote=F,row.names=F)
+      p <- ggplot( melt(sums[,names(sums)!='total']  ,id.vars='subj') ) + ggtitle('per subject breakdown of collected data')
+      p <- p+geom_histogram(aes(x=subj,y=value,fill=variable,stat='identity'))
+      ggsave(p,file='results/perSubjHist.png')
+   }
+   return(perRunStats)
 }
+
+# get files to act on
+splitfile <- getFiles()  # sourced from task specific settings file
+
+#score everyone in those files
+perRunStats <- scoreEveryone(splitfile,plotTrial)
+
+#failed to run:
+missingRuns <- setdiff(paste(splitfile$subj,splitfile$date,splitfile$run,sep='.'),paste(perRunStats$subj,perRunStats$date,perRunStats$run,sep='.'))
+cat('failed to run:\n')
+print(missingRuns)

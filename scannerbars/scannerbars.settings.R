@@ -58,6 +58,11 @@ filebasedir <- '/mnt/B/bea_res/Data/Tasks/BarsScan/Basic/'
 getFiles <- function() {
  #/mnt/B/bea_res/Data/Tasks/Anti/Basic/11146/20130313/Raw/EyeData/txt/11146.20130313.anti.1.tsv
  files     <- Sys.glob(sprintf('%s/*/*/Raw/EyeData/txt/*.data.tsv',filebasedir))
+ #files <-c(
+ # '/mnt/B/bea_res/Data/Tasks/BarsScan/Basic/10590/20080815/Raw/EyeData/txt/10590.20080815.1.data.tsv',
+ # '/mnt/B/bea_res/Data/Tasks/BarsScan/Basic/11162/20130521/Raw/EyeData/txt/11162.20130521.3.data.tsv',
+ # '/mnt/B/bea_res/Data/Tasks/BarsScan/Basic/11162/20130521/Raw/EyeData/txt/11162.20130521.4.data.tsv'
+ #)
  splitfile <- strsplit(basename(files),'\\.')
  splitfile <- as.data.frame(t(sapply(splitfile,rbind)))[,-4]
  names(splitfile)  <- c('subj','date','run')
@@ -65,7 +70,8 @@ getFiles <- function() {
  splitfile$subj    <- as.character(splitfile$subj)
  splitfile$date    <- as.character(splitfile$date)
 # splitfile$type    <- as.character(splitfile$type)
- splitfile$run     <- as.numeric(as.character(splitfile$run))
+ # run should be 1 to 4 but might have _corrected, so only take the first bit
+ splitfile$run     <- as.numeric(substr(as.character(splitfile$run),1,1))
  splitfile$file    <- files
  splitfile$id      <- paste( splitfile$date,splitfile$run, sep=".")  
  splitfile$savedas <- paste(dirname(dirname(dirname(dirname(files)))), '/Scored/txt/',

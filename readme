@@ -1,6 +1,7 @@
 RUNNING
   
   each task has it's own directory (anti,bars,scannerbars) with subdirectories for results and tests
+  from this directory, '../score.R' is run which sources settings and scores. but use runme.bash 
  
   see runme.bash for help
 

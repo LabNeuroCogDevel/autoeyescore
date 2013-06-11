@@ -228,9 +228,9 @@ dropTrial <- function(subj,runtype,trl,xdatCode,reason,allsacs,showplot=F,saveda
 
    droppedTrial <- data.frame(
          subj=subj,run=run,trial=trl,
-         onset=0,slowed=0,end=0,startpos=0,endpos=0,corside=NA,cordir=F,corpos=F, # combined=F,
+         onset=0,slowed=0,end=0,startpos=0,endpos=0,corside=F,cordir=F,corpos=F, # combined=F,
          held=F,gtMinLen=F, intime=F,p.tracked=0, xdat=xdatCode, maxpos=NA,minpos=NA,
-         crossFix=NA,MaxMinX=NA,gtMinMag=F, startatFix=NA, distance=NA
+         crossFix=F,MaxMinX=F,gtMinMag=F, startatFix=F, distance=NA
          )
 
   if(dim(allsacs)[1] > 1 ) {
@@ -365,7 +365,8 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     numTargetCodes<-diff(targetIdxs[trl,])
     ##TODO: THIS 85 SHOULD NOT BE HARDCODED
     # it is the min number of samples accepted for a target code  
-    if(numTargetCodes < 85 ) cat(sprintf('WARNING: have only %d target codes\n',numTargetCodes))
+    # # replaced with 85 with 55 while looking at anti
+    if(numTargetCodes < 55 ) cat(sprintf('WARNING: have only %d samples of the target codes\n',numTargetCodes))
 
 
     # this particular threshold
@@ -394,6 +395,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     # test for tracking before target onset
     # we want to drop (b/c lat will be useless) if they blinked for more than .2s within .3s of target onset
     # TODO: remove hardcoded sample freq
+    # FIX FIX FIX
     pretargetIDX <- trgt[1]-.3*sampleHz + 1:(.3*sampleHz)
     if (any(pretargetIDX<1)) {
      allsacs <- dropTrial(subj,runtype,trl,xdatCode,'weird! no eye position data before trial onset! cannot tell if pretrial blink',allsacs,showplot=F,run=run,rundate=rundate)
@@ -776,7 +778,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
      ##                       abs(fst$y[x]*sampleHz-startUp)<10
      #                        max(fst$y[which(fst$x - x*sampleHz > 0)[1:20]]) > sac.slowvel
      #                   }) )
-     if(any(unheldblinks)) {
+     if(is.na(unheldblinks) || any(unheldblinks)) {
         allsacs <-  dropTrial(subj,runtype,trl,xdatCode,'blink ends before any saccades',allsacs,run=run,showplot=showplot,rundate=rundate)
         next
      }

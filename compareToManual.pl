@@ -51,13 +51,25 @@ for my $xlsfn (@scoreSheets){
   # manual scoring parse
   ################################
   next if $xlsfn =~ /^$/;
+  next if $xlsfn =~ /bak/;
   my ($subj,$rundate,$run,$scorer)=(0)x4;
   $subj    = $1 if $xlsfn =~ m:/(\d{5})/:;
   $rundate = $1 if $xlsfn =~ m:/(\d{8})/:;
-  $run     = $1 if $xlsfn =~ m:Run0?(\d):;
 
+  my $hasrundir = $xlsfn =~ m:/Run:;
+  if($hasrundir) {
+   $run     = $1 if $xlsfn =~ m:Run0?(\d):;
+  }else{
+   #$run     = $1 if $xlsfn =~ m:(\d).xls.*:;
+   $run=1;
+  }
 
-  my $xlstxtfn = dirname(dirname($xlsfn)) ."/txt/$subj.$rundate.$run.manual.txt";
+  my $basename = dirname($xlsfn);
+  $basename = dirname($basename) if $hasrundir;
+
+  # for anti this is in subj/date dir b/c there is no rundir
+  # for bars and scannerbars this is in subj/date/run#/
+  my $xlstxtfn = "$basename/txt/$subj.$rundate.$run.manual.txt";
   
   my @trialsacs; # array of trials with an array of hashes lat dlat dacc
   my @manualT;   # array of trials with hash for countToCorrect and fist lat
@@ -141,7 +153,7 @@ for my $xlsfn (@scoreSheets){
   ################################
   # get auto scoring
   ################################
-  my $autofnpath = dirname(dirname($xlsfn)) ."/txt/*$run.trial.txt";
+  my $autofnpath = "$basename/txt/*$run.trial.txt";
   my @autofn = glob( $autofnpath );
 
   # initialze

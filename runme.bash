@@ -56,10 +56,10 @@ while [ -n "$1" ]; do
  arg=$1; shift;
  case $arg in
  
-  -t) type=$1; shift;;         # type; eg. scanner base
-  -T) type=$1; TEST=1; shift;; # type; eg. scanner base
-  -R) REDO=1        ;;         # REDO everything; useful when code changes
-  -C) COMPARE=1     ;;         # COMPARE against manual
+  -t) type=$1; shift;;                          # type; eg. scanner base
+  -T) TEST=1; [ -n "$1" ] && type=$1 && shift;; # type; eg. scanner base
+  -R) REDO=1        ;;                          # REDO everything; useful when code changes
+  -C) COMPARE=1     ;;                          # COMPARE against manual
   *)  printhelp     ;;
  esac
 done
@@ -130,6 +130,11 @@ while [ -d $old ]; do
  let i++
 done
 
+
+#if [ -n "$REDO" ]; then
+#  echo "===== TESTING BEFORE REDO ===="
+#  $0 -T $type
+#fi
 ### Remove old score files
 ### only do this if scoring R scripts have changed has changed
 ### todo: check that they pass tests
@@ -138,9 +143,14 @@ mkdir -p $old
 mv results $old/
 
 if [ -n "$REDO" ]; then
+   echo "  ==== old TSVs too! ==="
    mkdir -p tsv/$old
    ls -1d  $filebasedir/*/*/Scored/txt/ |while read file; do
-     mv "$file" tsv/$old/$(echo "$file" |perl -lne 'print "$1.$2" if m:(\d{5})/(\d{8}):;');
+     oldscore=tsv/$old/$(echo "$file" |perl -lne 'print "$1.$2" if m:(\d{5})/(\d{8}):;');
+     mkdir $oldscore
+     # move sac and trial scoret txt files
+     # but keep manual scored txt files
+     mv "$file"/*{sac,trial}.txt $oldscore/
    done
    mv aux tsv/$old/
 fi
@@ -155,7 +165,9 @@ echo "start: $(date)" | tee results/timing
 
 ### rescore everyone
 echo "===== Running scoring for everyone ===="
-R CMD BATCH ../score.R
+R CMD BATCH ../score.R 
+grep 'Execution halted' score.Rout  && echo "ERROR: could not finish!! see score.Rout" && exit 1
+
 
 if [ -n "$COMPARE" ]; then
    ### check against manual scores
