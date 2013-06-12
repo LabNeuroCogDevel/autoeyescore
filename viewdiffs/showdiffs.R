@@ -30,7 +30,9 @@ getSacDot <- function(dotnotation) {
 }
 
 
-n<-read.table(pertrialCSV,sep="\t",header=T)
+n.org<-read.table(pertrialCSV,sep="\t",header=T)
+# remove those that start with a *
+n<-n.org[!grepl('^\\*',n$trial),]
 #sampleDifferences <-function(auto,manual) {
 #  sapply(sample(as.character(n[n$count_a==auto&n$count_m==manual,'trial']),10), function(x){a<-getSacDot(x);readline();dev.off();scoreSac(a)})
 #}
