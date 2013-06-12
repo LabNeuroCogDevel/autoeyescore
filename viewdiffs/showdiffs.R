@@ -30,9 +30,9 @@ getSacDot <- function(dotnotation) {
 }
 
 
-n.org<-read.table(pertrialCSV,sep="\t",header=T)
+n.orig<-read.table(pertrialCSV,sep="\t",header=T)
 # remove those that start with a *
-n<-n.org[!grepl('^\\*',n$trial),]
+n<-n.orig[!grepl('^\\*',n.orig$trial),]
 #sampleDifferences <-function(auto,manual) {
 #  sapply(sample(as.character(n[n$count_a==auto&n$count_m==manual,'trial']),10), function(x){a<-getSacDot(x);readline();dev.off();scoreSac(a)})
 #}
@@ -55,10 +55,15 @@ setwd(dirname(settingsfile))
 source('../compareToManual.R')
 setwd(oldwd)
 
-cat('
+cat(sprintf('
 
 showdiffs(-1,1,10) 
     to see 10 instances  where auto says drop (-1), manual says correct (1)
 
-')
+getSacDot("%s")
+    to see sac graph
+
+scoreSac(getSacDot("%s"))
+    to score and graph
+',as.character(n$trial[1]),as.character(n$trial[1]) ) )
 
