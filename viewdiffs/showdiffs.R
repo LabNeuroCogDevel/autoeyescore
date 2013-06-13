@@ -26,13 +26,17 @@ getSacDot <- function(dotnotation) {
  eyetrack <- sprintf("%s/Raw/EyeData/txt/%s.%s.%s.data.tsv",dirbase,parts['subj'],parts['date'],parts['run'])
  saveto   <- sprintf("%s/Scored/txt/%s.%s.%s.sac.tsv",dirbase,parts['subj'],parts['date'],parts['run'])
 
- getSacs(eyetrack,parts['subj'],parts['run'],"BarsScan",onlyontrials=parts['trial'],savedas=saveto,writetopdf=F,showplot=T,rundate=parts['date'])
+ getSacs(eyetrack,parts['subj'],parts['run'],bname,onlyontrials=parts['trial'],savedas=saveto,writetopdf=F,showplot=T,rundate=parts['date'])
 }
 
 
 n.orig<-read.table(pertrialCSV,sep="\t",header=T)
 # remove those that start with a *
 n<-n.orig[!grepl('^\\*',n.orig$trial),]
+
+n$run <- substr(n$trial,1,17)
+n <- ddply(n, .(run ), function(x){ l<-length(which(x$count_a==-1)); if(l<expectedTrialLengths-1)  {x} })
+
 #sampleDifferences <-function(auto,manual) {
 #  sapply(sample(as.character(n[n$count_a==auto&n$count_m==manual,'trial']),10), function(x){a<-getSacDot(x);readline();dev.off();scoreSac(a)})
 #}
