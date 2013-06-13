@@ -520,13 +520,17 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     }
 
     # is trackign smooth?
-    averageChange <- sd(abs(diff(na.omit(d$xpos[trgt[3:(sac.majorRegionEnd*sampleHz) ]  ]))))
-    if(is.na(averageChange) || averageChange > 23) {
-     allsacs <-  dropTrial(subj,runtype,trl,xdatCode,
-                     sprintf('poor tracking: sd of xpos Δ=%f',averageChange),
-                     allsacs,run=run,showplot=showplot,rundate=rundate)
-     next
-    }
+    # THIS FILTER IS TOO STRONG
+    #averageChange <- sd(abs(diff(na.omit(d$xpos[trgt[3:(sac.majorRegionEnd*sampleHz) ]  ]))))
+    #if(is.na(averageChange) || averageChange > 23) {
+    # allsacs <-  dropTrial(subj,runtype,trl,xdatCode,
+    #                 sprintf('poor tracking: sd of xpos Δ=%f',averageChange),
+    #                 allsacs,run=run,showplot=showplot,rundate=rundate)
+    # next
+    #}
+    # TODO: DROP odd ball data points instead of doing SD
+    # l <- diff(d$xpos); r <- diff(a$xpos, reverse)
+    # sign(l*r) < 0 & min(abs(c(l,r))) --> drop
 
    # target codes didn't match, we ate the whole file
    # or way too many

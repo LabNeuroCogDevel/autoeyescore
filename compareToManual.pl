@@ -1,5 +1,16 @@
 #!/usr/bin/env perl
 
+## NORMAL ULSAGE
+# need to export
+# export expectedTrialLengths=48
+# export filebasedir='/mnt/B/bea_res/Data/Tasks/Anti/Basic/'
+# compareToManual.pl 
+#
+## DEGUBING
+# export DEBUG=1
+# export expectedTrialLengths=48
+# compareToManual.pl  /mnt/B/bea_res/Data/Tasks/Anti/Basic/10166/20050804/Scored/fs_10166_anti.xls
+
 use strict;
 use warnings;
 
@@ -40,11 +51,15 @@ my $header=join("\t",qw/trial count_a lat_a count_m lat_m scorer/)."\n";
 print $OUTFH $header;
 
 my @scoreSheets;
-sub wanted {push @scoreSheets, $File::Find::name if  m:fs.*xls:i};
-find( {wanted => \&wanted,no_chdir=>1,follow=>1}, $basedir );
-#@scoreSheets=qw(/mnt/B/bea_res/Data/Tasks/BarsBehavioral/Basic/10156/20110810/Scored/Run02/fs_10156_bars2.xls
-#                );
-#                #/mnt/B/bea_res/Data/Tasks/BarsBehavioral/Basic/10847/20100920/Scored/Run01/fs_10847_bars1.xls
+if(@ARGV) { 
+ @scoreSheets=@ARGV; 
+} else {
+  sub wanted {push @scoreSheets, $File::Find::name if  m:fs.*xls:i};
+  find( {wanted => \&wanted,no_chdir=>1,follow=>1}, $basedir );
+  #@scoreSheets=qw(/mnt/B/bea_res/Data/Tasks/BarsBehavioral/Basic/10156/20110810/Scored/Run02/fs_10156_bars2.xls
+  #                );
+  #                #/mnt/B/bea_res/Data/Tasks/BarsBehavioral/Basic/10847/20100920/Scored/Run01/fs_10847_bars1.xls
+}
 
 for my $xlsfn (@scoreSheets){
   ################################
@@ -52,6 +67,8 @@ for my $xlsfn (@scoreSheets){
   ################################
   next if $xlsfn =~ /^$/;
   next if $xlsfn =~ /bak/;
+  next if  $xlsfn =~ /fs_10165_anti.xls/; # hung
+  print "looking at: $xlsfn\n" if $ENV{DEBUG};
   my ($subj,$rundate,$run,$scorer)=(0)x4;
   $subj    = $1 if $xlsfn =~ m:/(\d{5})/:;
   $rundate = $1 if $xlsfn =~ m:/(\d{8})/:;
