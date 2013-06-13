@@ -28,7 +28,7 @@ library(ggplot2)
 #}
 
 #files    <- Sys.glob('txt/*.tsv')
-plotTrial=T
+plotTrial=F
 
 
 # show subjects that have insufficent run numer
@@ -88,6 +88,7 @@ getsubj <- function(i){
 
      allsacs <- tryCatch({ 
         getSacs( filename, subj,run, type,rundate=rundate,writetopdf=plotTrial,savedas=savedas) 
+        #sprintf('getSacs(%s,%s,%d,%d,rundate=%s,writetopdf=F,savedas=%s)')
         },error=function(e){
             cat(sprintf('getSacs failed on %s.%s.%d\n',subj,rundate,run))
             NULL
@@ -178,7 +179,8 @@ scoreEveryone <- function(splitfile,plotfigs=T){
 splitfile <- getFiles()  # sourced from task specific settings file
 
 #score everyone in those files
-perRunStats <- scoreEveryone(splitfile,plotTrial)
+plotFigs <- T
+perRunStats <- scoreEveryone(splitfile,plotFigs)
 
 #failed to run:
 missingRuns <- setdiff(paste(splitfile$subj,splitfile$date,splitfile$run,sep='.'),paste(perRunStats$subj,perRunStats$date,perRunStats$run,sep='.'))

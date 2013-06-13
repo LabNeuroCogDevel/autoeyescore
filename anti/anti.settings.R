@@ -46,7 +46,7 @@ getFiles  <- function() {
  names(splitfile)  <- c('subj','date','run')
  splitfile$subj    <- as.character(splitfile$subj)
  splitfile$date    <- as.character(splitfile$date)
- #splitfile$type    <- as.character(splitfile$type)
+ splitfile$type    <- 'Anti'
  #should always be 1?
  splitfile$run     <- as.numeric(as.character(splitfile$run))
  splitfile$file    <- files

@@ -15,6 +15,10 @@ RUNNING
   parsing eyds: ../eyds/dataFromAnyEyd.pl (which needs ../eyds/EyeTracking-EYD/EyeTracking-EYD-0.1.2/lib/EyeTracking/EYD.pm)
 
 
+ Results
+   check score.Rout (in results if succesful) for errors!
+   the bottom of the file lists all subjects.date.runs that were not processed
+
 TESTING
 
   in R

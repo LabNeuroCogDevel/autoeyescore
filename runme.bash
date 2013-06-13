@@ -168,6 +168,14 @@ echo "===== Running scoring for everyone ===="
 R CMD BATCH ../score.R 
 grep 'Execution halted' score.Rout  && echo "ERROR: could not finish!! see score.Rout" && exit 1
 
+## if we have Rplots.pdf, remove it (ggsave leftover)
+## if we dont, something went wrong, so print the end of the file
+if [ -f Rplots.pdf ]; then 
+ rm Rplots.pdf
+else 
+ tail score.Rout
+fi
+
 
 if [ -n "$COMPARE" ]; then
    ### check against manual scores
@@ -180,19 +188,15 @@ if [ -n "$COMPARE" ]; then
    grep -v '^*' checkAgainstManual_trial.csv |perl -slane 'next  unless /20\d\d/; $i++; if($F[1] != $F[3]){$a++}elsif(abs($F[2]-$F[4])>50){ $o++ }END{print join("\t", map{$_/($i-1)}($a,$o))}'| tee -a results/accuracy-overall.txt
 
    echo;echo;echo;
+   # plot
    grep -v '^*' checkAgainstManual_trial.csv |cut -f 2,4 -d"	" |sort|uniq -c|sort -n | tee results/accuracy-breakdown.txt
+   R CMD BATCH ../compareToManual.R
+   mv Rplots.pdf results/accuracy-breakdown.pdf
 fi;
 
 ## wrap up
 echo "done: $(date)" | tee -a results/timing
 
-## if we have Rplots.pdf, remove it (ggsave leftover)
-## if we dont, something went wrong, so print the end of the file
-if [ -f Rplots.pdf ]; then 
- rm Rplots.pdf
-else 
- tail score.Rout
-fi
 
 mv score.Rout results/
 [ -n "$COMPARE" ] && mv checkAgainstManual_trial.csv results/

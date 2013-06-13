@@ -241,6 +241,12 @@ dropTrial <- function(subj,runtype,trl,xdatCode,reason,allsacs,showplot=F,saveda
 }
 # returns 'allsacs' a list of all saccades in each trial
 getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writetopdf=F,savedas=NULL, showplot=F, funnybusiness=""){
+  
+  # this inputs might not come in as numbers
+  subj   <-as.numeric(subj)
+  run    <-as.numeric(run)
+  rundate<-as.numeric(rundate)
+
   # setup dataframe to hold sacades from all trials
   allsacs     <- data.frame()
 

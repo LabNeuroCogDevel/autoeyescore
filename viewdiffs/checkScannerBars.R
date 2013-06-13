@@ -1,46 +1,14 @@
 library(plyr)
-source('scannerbars/scannerbars.settings.R')
-source('ScoreRun.R')
 
-filebasedir <- '/mnt/B/bea_res/Data/Tasks/BarsScan/Basic/'
-if(!file.exists(filebasedir)) { filebasedir <- '/Users/lncd/rcn/bea_res/Data/Tasks/BarsScan/Basic/'}
-if(!file.exists(filebasedir)) { error('cannot find good location for B') }
+willname <- 'scannerbars'
+bname    <- 'BarsScan'
 
-getSacDot <- function(dotnotation) {
- parts <- unlist(strsplit(dotnotation, '\\.'))
- parts <- as.numeric(parts);
- names(parts) <- c('subj','date','run','trial')
- # filebasedir come from *settings.R file
- dirbase  <- sprintf("%s/%s/%s",filebasedir,parts['subj'],parts['date'])
- eyetrack <- sprintf("%s/Raw/EyeData/txt/%s.%s.%s.data.tsv",dirbase,parts['subj'],parts['date'],parts['run'])
- saveto   <- sprintf("%s/Scored/txt/%s.%s.%s.sac.tsv",dirbase,parts['subj'],parts['date'],parts['run'])
+# path to settings file is relative, so lets try to be in the right place
+if(any(grepl('viewdiff',getwd()))) { setwd('..'); cat('trying to move you to the correct directory\n') }
+if(!any(grepl('score/?$',getwd()))) { stop('WRONG DIR: run me from the correct directory!') }
 
- getSacs(eyetrack,parts['subj'],parts['run'],"BarsScan",onlyontrials=parts['trial'],savedas=saveto,writetopdf=F,showplot=T,rundate=parts['date'])
-}
+settingsfile<- sprintf('%s/%s.settings.R',willname,willname)
+taskdir     <- sprintf('bea_res/Data/Tasks/%s/Basic/',bname)
+pertrialCSV <- sprintf('%s/results/checkAgainstManual_trial.csv',willname)
 
-
-n<-read.table('scannerbars/results/checkAgainstManual_trial.csv',sep="\t",header=T)
-#sampleDifferences <-function(auto,manual) {
-#  sapply(sample(as.character(n[n$count_a==auto&n$count_m==manual,'trial']),10), function(x){a<-getSacDot(x);readline();dev.off();scoreSac(a)})
-#}
-#
-
-showdiffs <-function(auto,manual,size=10) {
-  d <- n[sample(which(n$count_a==auto&n$count_m==manual),size),]
-  ddply(d,.(trial), function(x){
-     print(x);
-     print(x$trail)
-     a<-getSacDot(as.character(x$trial));
-     readline();
-     dev.off();
-     scoreSac(a);
-   })
-}
-
-cat('
-
-showdiffs(-1,1,10) 
-    to see 10 instances  where auto says drop (-1), manual says correct (1)
-
-')
-
+source('viewdiffs/showdiffs.R')
