@@ -539,6 +539,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
      allsacs <-  dropTrial(subj,runtype,trl,xdatCode,
                      sprintf('early saccade? Poor tracking? too far from base.val at start'),
                      allsacs,run=run,showplot=showplot,rundate=rundate)
+     next
     }
 
     # is trackign smooth?
@@ -869,7 +870,7 @@ scoreSac <- function(allsacs){
   goodsacs <- subset(allsacs, subset=intime&gtMinLen&p.tracked>sac.trackingtresh)
 
   # drop if the first good sac has poor tracking
-  if(goodsacs$p.tracked < .8) { goodsacs <- NULL }
+  if(nrow(goodsacs)<1 || goodsacs$p.tracked[1] < .8) { goodsacs <- NULL }
 
   # All Drops, nothing to score
   if(is.null(goodsacs) || dim(goodsacs)[1] < 1){

@@ -54,6 +54,7 @@ showdiffs <-function(auto,manual,size=10) {
    })
 }
 
+# show a plot scoring distributions
 oldwd<-getwd()
 setwd(dirname(settingsfile))
 source('../compareToManual.R')
