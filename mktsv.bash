@@ -24,6 +24,8 @@ for f in $( find $basicdir -maxdepth 5 -mindepth 5 -iname \*.eyd ); do
 
  echo $f \> $tsv
  ../../eyds/dataFromAnyEyd.pl $f > $tsv
+ # remove if cannot understand it's format
+ [ $(wc -l $tsv|cut -f1 -d' ') -lt 10 ] && echo "Removed $tsv!" && rm $tsv
 done
 
 ## OLD: sort by age

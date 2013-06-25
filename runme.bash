@@ -147,7 +147,7 @@ if [ -n "$REDO" ]; then
    mkdir -p tsv/$old
    ls -1d  $filebasedir/*/*/Scored/txt/ |while read file; do
      oldscore=tsv/$old/$(echo "$file" |perl -lne 'print "$1.$2" if m:(\d{5})/(\d{8}):;');
-     mkdir $oldscore
+     mkdir -p $oldscore
      # move sac and trial scoret txt files
      # but keep manual scored txt files
      mv "$file"/*{sac,trial}.txt $oldscore/

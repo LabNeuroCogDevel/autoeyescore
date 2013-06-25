@@ -48,9 +48,9 @@ showdiffs <-function(auto,manual,size=10) {
      print(x);
      print(x$trail)
      a<-getSacDot(as.character(x$trial));
+     print(scoreSac(a));
      readline();
      dev.off();
-     scoreSac(a);
    })
 }
 

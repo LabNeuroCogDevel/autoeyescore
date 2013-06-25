@@ -519,26 +519,6 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
      next 
     }
 
-    # is trackign smooth?
-    # THIS FILTER IS TOO STRONG
-    #averageChange <- sd(abs(diff(na.omit(d$xpos[trgt[3:(sac.majorRegionEnd*sampleHz) ]  ]))))
-    #if(is.na(averageChange) || averageChange > 23) {
-    # allsacs <-  dropTrial(subj,runtype,trl,xdatCode,
-    #                 sprintf('poor tracking: sd of xpos Δ=%f',averageChange),
-    #                 allsacs,run=run,showplot=showplot,rundate=rundate)
-    # next
-    #}
-    # TODO: DROP odd ball data points instead of doing SD
-    # l <- diff(d$xpos); r <- diff(a$xpos, reverse)
-    # sign(l*r) < 0 & min(abs(c(l,r))) --> drop
-
-   # target codes didn't match, we ate the whole file
-   # or way too many
-   # 200 might be too low of a threshold
-   if (   length(b.all$x ) > 200 ) {
-     dropTrial(subj,runtype,trl,xdatCode,paste('too many samples in trial', dim(b.all$x)[1]),allsacs,showplot=showplot,run=run,rundate=rundate) 
-     next 
-    }
     
     #TODO: determine baseline and sac.* iteratively
     #      error out if cannot be done
@@ -551,6 +531,34 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
                    sprintf('average fixpos(%f) is off from baseline(%f)!\n',base.val,screen.x.mid ),
                    allsacs,run=run,showplot=showplot,rundate=rundate)
      next;
+    }
+
+    # is there big movement before the start?
+    averageChangeBeforePhysOnset <- abs(na.omit(d$xpos[trgt[1:(lat.fastest*sampleHz) ]  ])- base.val)
+    if(any(averageChangeBeforePhysOnset > sac.minmag  )) {
+     allsacs <-  dropTrial(subj,runtype,trl,xdatCode,
+                     sprintf('early saccade? Poor tracking? too far from base.val at start'),
+                     allsacs,run=run,showplot=showplot,rundate=rundate)
+    }
+
+    # is trackign smooth?
+    averageChange <- sd(abs(diff(na.omit(d$xpos[trgt[3:(sac.majorRegionEnd*sampleHz) ]  ]))))
+    if(is.na(averageChange) || averageChange > 40  ) {
+     allsacs <-  dropTrial(subj,runtype,trl,xdatCode,
+                     sprintf('poor tracking: sd of xpos Δ=%f',averageChange),
+                     allsacs,run=run,showplot=showplot,rundate=rundate)
+     next
+    }
+    # TODO: DROP odd ball data points instead of doing SD
+    # l <- diff(d$xpos); r <- diff(a$xpos, reverse)
+    # sign(l*r) < 0 & min(abs(c(l,r))) --> drop
+
+   # target codes didn't match, we ate the whole file
+   # or way too many
+   # 200 might be too low of a threshold
+   if (   length(b.all$x ) > 200 ) {
+     dropTrial(subj,runtype,trl,xdatCode,paste('too many samples in trial', dim(b.all$x)[1]),allsacs,showplot=showplot,run=run,rundate=rundate) 
+     next 
     }
     
     
@@ -857,11 +865,14 @@ scoreSac <- function(allsacs){
 
 
   # select only those saccades we will count
-  goodsacs <- subset(allsacs, subset=intime&gtMinLen&p.tracked>sac.trackingtresh&!(crossFix!=0&!corside) )
-  # break into trials, do we have a first correct movement, correct movement after incorrect, an xdat that says Anti Saccade?
+  #goodsacs <- subset(allsacs, subset=intime&gtMinLen&p.tracked>sac.trackingtresh&!(crossFix!=0&!corside) )
+  goodsacs <- subset(allsacs, subset=intime&gtMinLen&p.tracked>sac.trackingtresh)
+
+  # drop if the first good sac has poor tracking
+  if(goodsacs$p.tracked < .8) { goodsacs <- NULL }
 
   # All Drops, nothing to score
-  if(dim(goodsacs)[1] < 1){
+  if(is.null(goodsacs) || dim(goodsacs)[1] < 1){
    
    #warning(sprintf('%d %d %d no good saccades!',allsacs[1,c('subj','run','trial')]))
    cat(allsacs$subj[1],allsacs$trial[1], 'no good saccades!\n')
@@ -874,6 +885,10 @@ scoreSac <- function(allsacs){
                              )
    return(cor.ErrCor.AS)
   }else {
+   # break into trials, do we have 
+   #  1) a first correct movement?
+   #  2) correct movement after incorrect?
+   #  3) an xdat that says Anti Saccade?
    cor.ErrCor.AS <- ddply(goodsacs, .(trial), function(x) { c(
                                  x$xdat[1],
                                  round(x$onset[1]*1000),
