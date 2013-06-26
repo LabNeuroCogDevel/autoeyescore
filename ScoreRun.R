@@ -543,8 +543,9 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     }
 
     # is trackign smooth?
+    xposStdDevMax <- 30
     averageChange <- sd(abs(diff(na.omit(d$xpos[trgt[3:(sac.majorRegionEnd*sampleHz) ]  ]))))
-    if(is.na(averageChange) || averageChange > 40  ) {
+    if(is.na(averageChange) || averageChange > xposStdDevMax   ) {
      allsacs <-  dropTrial(subj,runtype,trl,xdatCode,
                      sprintf('poor tracking: sd of xpos Δ=%f',averageChange),
                      allsacs,run=run,showplot=showplot,rundate=rundate)
