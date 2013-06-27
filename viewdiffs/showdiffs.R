@@ -17,7 +17,7 @@ if(!file.exists(Bdir)) { stop('cannot find good location for B') }
 filebasedir <- sprintf('%s/%s',Bdir,taskdir)
 if(!file.exists(filebasedir)) { stop(sprintf('cannot find task directory: %s',filebasedir)) }
 
-getSacDot <- function(dotnotation) {
+getSacDot <- function(dotnotation, showplot=T,funnybusiness='') {
  parts <- unlist(strsplit(dotnotation, '\\.'))
  parts <- as.numeric(parts);
  names(parts) <- c('subj','date','run','trial')
@@ -26,7 +26,7 @@ getSacDot <- function(dotnotation) {
  eyetrack <- sprintf("%s/Raw/EyeData/txt/%s.%s.%s.data.tsv",dirbase,parts['subj'],parts['date'],parts['run'])
  saveto   <- sprintf("%s/Scored/txt/%s.%s.%s.sac.tsv",dirbase,parts['subj'],parts['date'],parts['run'])
 
- getSacs(eyetrack,parts['subj'],parts['run'],bname,onlyontrials=parts['trial'],savedas=saveto,writetopdf=F,showplot=T,rundate=parts['date'])
+ getSacs(eyetrack,parts['subj'],parts['run'],bname,onlyontrials=parts['trial'],savedas=saveto,writetopdf=F,showplot=showplot,rundate=parts['date'],funnybusiness=funnybusiness)
 }
 
 

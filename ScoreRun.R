@@ -3,6 +3,12 @@
 #  ** NEED TO SOURCE a settings file before running this!!!
 #     e.g. anti/anti.settings.R 
 #
+# TESTING:
+#   funnybusiness ='ignoreblinks,dontcutspikes,preblinkok,useextremefilter'
+#     ignoreblinks: 
+#     dontcutspikes: 
+#     preblinkok:
+#     useextremefilter:
 #
 #TODO:
 #NOTES: 
@@ -32,7 +38,7 @@ library(KernSmooth)
 library(ggplot2)
 library(gridExtra)
 library(plyr)
-library(zoo) # for na.approx
+library(zoo) # for na.approx, rollapply
 
 #### Settings ######
 saverootdir  <- 'aux'
@@ -312,7 +318,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
 
   # see scannerbars 10711.20121108.1.17 -- good xpos, no good dil or ypos
   
-  if(any(grepl('extremefilter',funnybusiness))){
+  if(any(grepl('useextremefilter',funnybusiness))){
    badidxs=d$xpos>xmax|d$ypos>ymax|d$dil==0
   }else{
    badidxs=d$xpos>xmax|(d$xpos==0&d$ypos==0&d$dil==0)
@@ -426,6 +432,8 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     b.nona<- na.omit(b.orig)
     b.all <-b.nona
     names(b.all) <- c('x','y')
+    # plot which points are used by changing the shape
+    #b.all$used <- T
 
 
     ###### BLINK
@@ -443,15 +451,31 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     start10nas <- unname(unlist(alply(cbind(nastarts,nastops),1, function(x) { x[1]:x[2]} )))
     b.cutblink <- b.orig
     b.cutblink$x[start10nas] <- NA
+    #b.cuttblink$used[start10nas] <- F
+
+
+    b.approx <- b.cutblink;
+
+    ###### Remove crazy points that can be nothing other than tracking errors
+    # eg, xpos like: 10 10 *200* 10 10; see behbars: 10827.20100617.1.34
+    if(!any(grepl('dontcutspikes',funnybusiness))){
+      e<-length(b.approx$x)
+      xposΔ <- c(0,diff(b.approx$x));
+      # change is different on both sides (spike) and is greater than threshold
+      spikypointsIdx <- which(rollapply(xposΔ,2,function(x){sign(prod(x,na.rm=T))==-1 & abs(min(x,na.rm=T))>30}))
+
+      b.approx$x[spikypointsIdx ] <- NA
+      #b.approx$used[start10nas] <- F
+    }
 
     
+
     ###### TRIM
     # drop all NAs at the end (b/c they can't be estimtated)
     naX   <- which(is.na(b.cutblink$x))
 
     lastNA <- ifelse(length(naX)==0, 0 , lastNA <- naX[length(naX)] )
 
-    b.approx <- b.cutblink;
 
 
     # trim last 
@@ -488,12 +512,16 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
      firstNA <-ifelse(length(naX)==0,  0, naX[1] )
     }
 
+
+
     ###### CHECKS
     # if we take out the NAs and there is nothing left!
     if(length(b.approx$x)<=1){
      allsacs <- dropTrial(subj,runtype,trl,xdatCode,'no data',allsacs,showplot=showplot,run=run,rundate=rundate)
      next 
     }
+
+
 
     ####### Estimate away NAs
     # replace NAs so we can do polyfit
@@ -543,7 +571,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     }
 
     # is trackign smooth?
-    xposStdDevMax <- 30
+    xposStdDevMax <- 40
     averageChange <- sd(abs(diff(na.omit(d$xpos[trgt[3:(sac.majorRegionEnd*sampleHz) ]  ]))))
     if(is.na(averageChange) || averageChange > xposStdDevMax   ) {
      allsacs <-  dropTrial(subj,runtype,trl,xdatCode,
@@ -551,9 +579,6 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
                      allsacs,run=run,showplot=showplot,rundate=rundate)
      next
     }
-    # TODO: DROP odd ball data points instead of doing SD
-    # l <- diff(d$xpos); r <- diff(a$xpos, reverse)
-    # sign(l*r) < 0 & min(abs(c(l,r))) --> drop
 
    # target codes didn't match, we ate the whole file
    # or way too many
