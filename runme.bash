@@ -70,7 +70,7 @@ done
 basedir=$(cd $(dirname $0);pwd)
 
 function list {
- find $basedir -name \*settings.R | xargs -n1 dirname | xargs -n1 basename
+ find $basedir  -maxdepth 2 -name \*settings.R | xargs -n1 dirname | xargs -n1 basename
 }
 ## list all types we can find
 if [ "$type" = "list" ]; then
