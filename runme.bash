@@ -189,7 +189,7 @@ if [ -n "$COMPARE" ]; then
 
    echo;echo;echo;
    # plot
-   grep -v '^*' checkAgainstManual_trial.csv |cut -f 2,4 -d"	" |sort|uniq -c|sort -n | tee results/accuracy-breakdown.txt
+   grep -v '^*' checkAgainstManual_trial.csv |cut -f 2,4 -d"	" |sort|uniq -c|sort -k2r | grep -v 'NA' | tee results/accuracy-breakdown.txt
    R CMD BATCH ../compareToManual.R
    mv Rplots.pdf results/accuracy-breakdown.pdf
 fi;

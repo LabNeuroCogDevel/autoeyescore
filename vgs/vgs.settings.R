@@ -64,5 +64,6 @@ getExpPos <- function(sac.thresholds,xdatCode){
 
 # is this xdat an antisaccde xdat?
 xdatIsAS <- function(xdat){
- return(TRUE)
+ # these are all prosacs
+ return(FALSE)
 }
