@@ -1,6 +1,8 @@
 library(plyr)
 library(ggplot2)
 # expect to be run from task subdir, and that results/accuracy-breakdown.txt exists in there
+# a<-read.table('results/checkAgainstManual_trial.csv',header=T)
+# counts<-ddply(a,.(count_a,count_m),function(x){c(occurance=nrow(x))})
 a<-read.table('results/accuracy-breakdown.txt',header=T)
 # "count" refers to how many movements until the correct is made ( count per trial)
 # a=automatic, m=manual

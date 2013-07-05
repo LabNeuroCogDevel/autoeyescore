@@ -66,7 +66,10 @@ lat.fastest  <- 67/1000  # fastest latency allowed is 200ms
 
 #minium distance to be considered a saccade
 sac.minmag   <-  10      # min abs of x position change -- set very low
-sac.minlen   <-  50/1000 # saccades less than 50ms are merged/ignored
+
+########## this was 50 --- samples are 1/60, so 3 are 50ms but approx are made at finer resolution. want to exclude 2 or less samples (33ms) so round up the half way btwn pt.
+sac.minlen   <-  42/1000 # saccades less than 50ms are merged/ignored
+
 sac.mingap   <-  50/1000 # saccades must be at mimumum this time appart, merged otherwise
 sac.held     <- 100/1000 # if a sac is held -- it is accurate
 sac.slowvel  <- 1        # same units as lat.minvel ASLXcord/60Hz
