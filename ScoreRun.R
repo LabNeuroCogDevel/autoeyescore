@@ -897,9 +897,38 @@ scoreSac <- function(allsacs){
   # select only those saccades we will count
   #goodsacs <- subset(allsacs, subset=intime&gtMinLen&p.tracked>sac.trackingtresh&!(crossFix!=0&!corside) )
   goodsacs <- subset(allsacs, subset=intime&gtMinLen&p.tracked>sac.trackingtresh)
+  #goodsacsIdx <- which(with(allsacs,{intime&gtMinLen&p.tracked>sac.trackingtresh}))
+  #goodsacs <- allsacs[goodsacsIdx, ]
 
   # drop if the first good sac has poor tracking
   if(nrow(goodsacs)<1 || goodsacs$p.tracked[1] < .8) { goodsacs <- NULL }
+
+
+  #if(!is.null(goodsacs) ) {
+  # # if the first good saccade is not the first saccade
+  # # check that the start of the first good sac is 
+  # # not all that much different from the start of the very first sac
+  # # -- earlier invocation check this for all sacs, but it doesn't much matter after the first
+  # goodsacidxdiffidx <- which(diff(c(0,goodsacsIdx))>1) 
+  # if(goodsacidxdiffidx==1 ) {
+  #  goodsacsIdx_afterbad <- goodsacsIdx[ goodsacidxdiffidx ]
+  #  good<-allsacs[ goodsacsIdx_afterbad[1]    , ]
+  #  bad <-allsacs[ goodsacsIdx_afterbad[1] -1 , ]
+  #  if(any(abs(good$startpos - bad$startpos)> 25 & good$cordir != bad$cordir    ){
+  #    #DROP TRIAL, a good saccade is preced by a bad sac that moves the position by a lot
+  #    # AND they do not go in the same direction
+  #    goodacs <- NULL
+  #  }
+  # }
+  #}
+  
+  # do we have a good sac that explains how we got where we are from baseline
+  # if not, drop trial
+
+  # drop if first sac is not close to baseline (use same value as used to drop trials that start too far from baseline)
+  #  means the first sac doesn't inform the initial movement, so this trial is bogus
+  if(is.null(goodsacs) || abs(goodsacs$startpos[1] - screen.x.mid) > 50 ) { goodsacs <- NULL }
+  
 
   # All Drops, nothing to score
   if(is.null(goodsacs) || dim(goodsacs)[1] < 1){
