@@ -914,26 +914,26 @@ scoreSac <- function(allsacs){
 
   # do we have a good sac that explains how we got where we are from baseline
   # if not, drop trial
-  }else if(any(which(diff(c(0,goodsacsIdx))>1))) { 
+  #}else if(any(which(diff(c(0,goodsacsIdx))>1))) { 
 
-   # if the first good saccade is not the first saccade
-   # check that the start of the first good sac is 
-   # not all that much different from the start of the very first sac
-   # -- earlier invocation check this for all sacs, but it doesn't much matter after the first
-   goodsacidxdiffidx <- which(diff(c(0,goodsacsIdx))>1) 
-   if( goodsacidxdiffidx[1] == 1 ) {
-    goodsacsIdx_afterbad <- goodsacsIdx[ goodsacidxdiffidx ]
-    #good<-allsacs[ goodsacsIdx_afterbad    , ]
-    #bad <-allsacs[ goodsacsIdx_afterbad -1 , ]
-    good<-allsacs[ goodsacsIdx_afterbad[1]    , ]
-    bad <-allsacs[ 1 , ]
-    if(any(abs(good$startpos - bad$startpos)> 25 & good$cordir != bad$cordir    )){
-      #DROP TRIAL, a good saccade is preced by a bad sac that moves the position by a lot
-      # AND they do not go in the same direction
-      failreason <- sprintf('first good sac at %f too far from first bad sac start position %f', good$startpos, bad$startpos)
-      goodsacs <- NULL
-    }
-   }
+  # # if the first good saccade is not the first saccade
+  # # check that the start of the first good sac is 
+  # # not all that much different from the start of the very first sac
+  # # -- earlier invocation check this for all sacs, but it doesn't much matter after the first
+  # goodsacidxdiffidx <- which(diff(c(0,goodsacsIdx))>1) 
+  # if( goodsacidxdiffidx[1] == 1 ) {
+  #  goodsacsIdx_afterbad <- goodsacsIdx[ goodsacidxdiffidx ]
+  #  #good<-allsacs[ goodsacsIdx_afterbad    , ]
+  #  #bad <-allsacs[ goodsacsIdx_afterbad -1 , ]
+  #  good<-allsacs[ goodsacsIdx_afterbad[1]    , ]
+  #  bad <-allsacs[ 1 , ]
+  #  if(any(abs(good$startpos - bad$startpos)> 25 & good$cordir != bad$cordir    )){
+  #    #DROP TRIAL, a good saccade is preced by a bad sac that moves the position by a lot
+  #    # AND they do not go in the same direction
+  #    failreason <- sprintf('first good sac at %f too far from first bad sac start position %f', good$startpos, bad$startpos)
+  #    goodsacs <- NULL
+  #  }
+  # }
 
   }else {
     failreason <- 'unexpected fail!';
