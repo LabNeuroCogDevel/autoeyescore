@@ -566,9 +566,10 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
 
     # is there big movement before the start?
     averageChangeBeforePhysOnset <- abs(na.omit(d$xpos[trgt[1:(lat.fastest*sampleHz) ]  ])- base.val)
-    if(any(averageChangeBeforePhysOnset > sac.minmag  )) {
+    numtoofarfrombaseline <- length(which(averageChangeBeforePhysOnset > sac.minmag  ) )
+    if(numtoofarfrombaseline) {
      allsacs <-  dropTrial(subj,runtype,trl,xdatCode,
-                     sprintf('early saccade? Poor tracking? too far from base.val at start'),
+                     sprintf('%d samples > %d px from %.2f (base)',numtoofarfrombaseline,sac.minmag,base.val),
                      allsacs,run=run,showplot=showplot,rundate=rundate)
      next
     }
