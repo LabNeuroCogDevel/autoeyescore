@@ -65,7 +65,7 @@ lat.fastest  <- 67/1000  # fastest latency allowed is 200ms
 # beyond threshold == saccad to expected region
 
 #minium distance to be considered a saccade
-sac.minmag   <-  10      # min abs of x position change -- set very low
+sac.minmag   <-  20      # min abs of x position change -- set very low, inc to 20 at LR request :)
 
 ########## this was 50 --- samples are 1/60, so 3 are 50ms but approx are made at finer resolution. want to exclude 2 or less samples (33ms) so round up the half way btwn pt.
 sac.minlen   <-  42/1000 # saccades less than 50ms are merged/ignored
@@ -567,9 +567,12 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     # is there big movement before the start?
     averageChangeBeforePhysOnset <- abs(na.omit(d$xpos[trgt[1:(lat.fastest*sampleHz) ]  ])- base.val)
     numtoofarfrombaseline <- length(which(averageChangeBeforePhysOnset > sac.minmag  ) )
-    if(numtoofarfrombaseline) {
+    if(numtoofarfrombaseline>2) {
      allsacs <-  dropTrial(subj,runtype,trl,xdatCode,
-                     sprintf('%d samples > %d px from %.2f (base)',numtoofarfrombaseline,sac.minmag,base.val),
+                     sprintf('%.0f samples > %.0f px (%.2f max) from %.2f (base)',
+                           numtoofarfrombaseline,
+                           max(averageChangeBeforePhysOnset),
+                           sac.minmag,base.val),
                      allsacs,run=run,showplot=showplot,rundate=rundate)
      next
     }
