@@ -60,12 +60,12 @@ lat.minvel   <- 4      # ASLcoordx/60Hz
 lat.fastest  <- 67/1000  # fastest latency allowed is 200ms
 
 ## saccade properties ##
+#minium distance to be considered a saccade
+#sac.minmag   <-  10      # NOW DEFINED IN each tasks settings file (eg. vgs.settings.R -- vgs is 20, everywhere else is 10)
                                
 # target position thresholds
 # beyond threshold == saccad to expected region
 
-#minium distance to be considered a saccade
-sac.minmag   <-  20      # min abs of x position change -- set very low, inc to 20 at LR request :)
 
 ########## this was 50 --- samples are 1/60, so 3 are 50ms but approx are made at finer resolution. want to exclude 2 or less samples (33ms) so round up the half way btwn pt.
 sac.minlen   <-  42/1000 # saccades less than 50ms are merged/ignored

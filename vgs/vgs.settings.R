@@ -8,6 +8,9 @@ stopcodes    <- c(250)
 # number of trials
 expectedTrialLengths  <- 48
 
+#minium distance to be considered a saccade
+sac.minmag   <-  20      # min abs of x position change -- set very low, inc to 20 at LR request :)
+
 ## xpos ##
 # saccade left thresholds
 sac.right.large  <- 2 
