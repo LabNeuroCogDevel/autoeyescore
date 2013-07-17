@@ -545,7 +545,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     SOI.actual <- length(which(b.all$x/sampleHz < sac.majorRegionEnd & b.all$x/sampleHz > lat.fastest) )
     #print(c(SOI.actual,SOI.expect))
     #print(b.all)
-    if(SOI.actual < SOI.expect*.30) {
+    if(SOI.actual < SOI.expect*.30 && !any(grepl('soipercent',funnybusiness))) {
      allsacs <- dropTrial(subj,runtype,trl,xdatCode,'< 30% tracking for samples of interest',allsacs,showplot=showplot,run=run,rundate=rundate)
      next 
     }
@@ -580,7 +580,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     # is trackign smooth?
     xposStdDevMax <- 40
     averageChange <- sd(abs(diff(na.omit(d$xpos[trgt[3:(sac.majorRegionEnd*sampleHz) ]  ]))))
-    if(is.na(averageChange) || averageChange > xposStdDevMax   ) {
+    if(is.na(averageChange) || (averageChange > xposStdDevMax && !any(grepl('ignorexpossd',funnybusiness)) )   ) {
      allsacs <-  dropTrial(subj,runtype,trl,xdatCode,
                      sprintf('poor tracking: sd of xpos Δ=%f',averageChange),
                      allsacs,run=run,showplot=showplot,rundate=rundate)
@@ -665,14 +665,6 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     sac.df$end    = est$x[sac.df$endIdx]/sampleHz
     
 
-    # if the first sacc is too soon
-    #browser()
-    # is something the scoring function should do!? -- dropTrial is easier to run from here
-    if(sac.df$onset[1]<lat.fastest  ){
-     allsacs <-  dropTrial(subj,runtype,trl,xdatCode,'1st sac too soon',allsacs,run=run,showplot=showplot,rundate=rundate)
-     next
-
-    }
 
     
     ## TODO:
@@ -895,7 +887,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
 } 
 
 # score a saccades per trial (or feed just one trial)
-scoreSac <- function(allsacs){
+scoreSac <- function(allsacs,funnybusiness=''){
 
 
   # select only those saccades we will count
@@ -907,6 +899,11 @@ scoreSac <- function(allsacs){
   # drop if the first good sac has poor tracking
   if(is.null(goodsacs) || nrow(goodsacs)<1 ||dim(goodsacs)[1] < 1) { 
      goodsacs <- NULL; failreason <- 'no good saccades found' 
+
+  # if the first sacc is too soon
+  # is something the scoring function should do!? -- dropTrial is easier to run from here
+  } else if(goodsacs$onset[1]<lat.fastest && !any(grepl('nothingistoofast',funnybusiness)) ){
+     goodsacs <- NULL; failreason <- '1st good sac too soon' 
 
   } else if( goodsacs$p.tracked[1] < .8) { 
      goodsacs <- NULL; failreason <- 'first good sac has poor tracking' 

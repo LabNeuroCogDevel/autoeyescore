@@ -142,7 +142,7 @@ getsubj <- function(i){
   #break
 }
 
-scoreEveryone <- function(splitfile,plotfigs=T){
+scoreEveryone <- function(splitfile,plotfigs=T,saveoutput=T){
    #mtrace('getsubj')
    # TODO: wrap this in an tryCatch so no errors at the end
    perRunStats <- foreach(i=1:nrow(splitfile),.combine=rbind ) %dopar% getsubj(i)
@@ -158,19 +158,29 @@ scoreEveryone <- function(splitfile,plotfigs=T){
    # only do final summaries if we actually grabbed everyone
    if(plotfigs ) {
       #print(perRunStats)
-      p<-ggplot(perRunStats, aes(x=as.factor(total),fill=type))+geom_histogram(position='dodge')
-      ggsave(p,file='results/totalsHist.png')
+      p.all<-ggplot(perRunStats, aes(x=as.factor(total),fill=type))+geom_histogram(position='dodge')
 
-      png('results/droppedHist.png')
-      hist(perRunStats$Dropped)
-      dev.off()
 
       sums<-aggregate(. ~ subj, perRunStats[,c(1:8,match('subj',names(perRunStats))  )],sum)
-      # need to includ run in perrunstats[] >> #sums<-aggregate(. ~ subj+run, perRunStats[,c(1:8,match('subj',names(perRunStats))  )],sum)
-      write.table(sums,file='results/sums.tsv',sep="\t",quote=F,row.names=F)
-      p <- ggplot( melt(sums[,names(sums)!='total']  ,id.vars='subj') ) + ggtitle('per subject breakdown of collected data')
-      p <- p+geom_histogram(aes(x=subj,y=value,fill=variable,stat='identity'))
-      ggsave(p,file='results/perSubjHist.png')
+      longsums <- melt(sums[,names(sums) != 'total'],id.vars="subj")
+      p.subj<- ggplot( longsums ) + ggtitle('per subject breakdown of collected data')
+      p.subj<- p.subj +geom_histogram(aes(x=subj,y=value,fill=variable,stat='identity'))
+
+      if(saveoutput){
+       write.table(sums,file='results/sums.tsv',sep="\t",quote=F,row.names=F)
+       ggsave(p.all,file='results/totalsHist.png')
+       ggsave(p.subj,file='results/perSubjHist.png')
+       png('results/droppedHist.png')
+      } else {
+       print(p.all)
+       x11()
+       print(p.subj)
+       x11()
+      }
+
+      hist(perRunStats$Dropped)
+
+      if(saveoutput){ dev.off() }
    }
    return(perRunStats)
 }
