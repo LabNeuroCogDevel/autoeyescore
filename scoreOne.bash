@@ -52,8 +52,7 @@ TASKDIR="/mnt/B/bea_res/Data/Tasks/"
 if [ -n "$usedir" -a -d "$usedir" ]; then
  visitdir=$usedir
 else
- echo "you provided a bad dir?";
- unset AUTO
+ [ -n "$usedir" ] && echo "you provided a bad dir?" && unset AUTO
  subjdir=$(ls -td $TASKDIR/{VGS,Bars*,Anti}/Basic/*/ | head -n1)
  visitdir=$(ls -td $subjdir/*/ | head -n1)
 fi
