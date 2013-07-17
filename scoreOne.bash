@@ -133,7 +133,7 @@ for f in $dir/Raw/EyeData/*eyd; do
 
  [ -r $tsv ] && continue
  [ ! -d $outdir ] && mkdir -p $outdir
- ../../eyds/dataFromAnyEyd.pl $f > $tsv
+ dataFromAnyEyd.pl $f > $tsv
  # remove if cannot understand it's format
  [ $(wc -l $tsv|cut -f1 -d' ') -lt 10 ] && echo "Removed $tsv! $f looks bad" && rm $tsv
 done
