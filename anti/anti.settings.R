@@ -20,6 +20,10 @@ sac.left.small  <- 87
 sac.right.small <- 172
 sac.right.large <- 258
 
+# if there are spikes in fixation, bad tracking, drop
+# 99 means don't worry about it
+maxSamplesFromBaseline <- 99
+
 # padding to give to expected positions
 sac.padding     <- 30
 

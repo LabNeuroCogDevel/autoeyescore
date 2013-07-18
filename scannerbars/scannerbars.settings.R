@@ -21,6 +21,9 @@ sac.right.small <- 172
 sac.right.mid   <- 216
 sac.right.large <- 258
 
+# if there are spikes in fixation, bad tracking, drop
+maxSamplesFromBaseline <- 2
+
 # padding to give to expected positions
 sac.padding     <- 30
 

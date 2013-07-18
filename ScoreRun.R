@@ -570,9 +570,10 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     }
 
     # is there big movement before the start?
+    # don't do this for fix or anti (maxSamp... = 99, bars scanbars=2)
     averageChangeBeforePhysOnset <- abs(na.omit(d$xpos[trgt[1:(lat.fastest*sampleHz) ]  ])- base.val)
     numtoofarfrombaseline <- length(which(averageChangeBeforePhysOnset > sac.minmag  ) )
-    if(numtoofarfrombaseline>2) {
+    if(numtoofarfrombaseline> maxSamplesFromBaseline) {
      allsacs <-  dropTrial(subj,runtype,trl,xdatCode,
                      sprintf('%.0f samples > %.0f px (%.2f max) from %.2f (base)',
                            numtoofarfrombaseline,
