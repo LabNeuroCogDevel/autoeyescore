@@ -102,6 +102,7 @@ getsubj <- function(i){
   }
 
   # SCORE SACCADES
+  # get a line per trial dataframe
   
   cor.ErrCor.AS<-tryCatch({ 
       scoreSac(allsacs)
@@ -117,7 +118,7 @@ getsubj <- function(i){
   if(!file.exists(dirname(pertrialoutput))) { dir.create(dirname(pertrialoutput),recursive=T)}
   write.table(file=pertrialoutput,cor.ErrCor.AS,row.names=F,quote=F,sep="\t")
   
-  r <- scoreRun(cor.ErrCor.AS, expectedTrialLengths  ) #was ( , unique(allsacs$trial))
+  r <- scoreRun(cor.ErrCor.AS, 1:expectedTrialLengths  ) #was ( , unique(allsacs$trial))
   r$subj  <- subj
   r$date  <- rundate 
   r$run   <- run

@@ -155,18 +155,20 @@ Rscript --vanilla  --verbose <(echo "
  # plot
  sums     <- aggregate(. ~ subj, perRunStats[,c(1:8,match('subj',names(perRunStats))  )],sum)
  longsums <- melt(sums[,names(sums) != 'total'],id.vars='subj') 
- p.all  <- ggplot(perRunStats, aes(x=as.factor(total),fill=type))+geom_histogram(position='dodge') +ggtitle('total seen')
- p.allbd<- ggplot( perRunStats ) + geom_histogram(aes(x=run,y=value,fill=variable,stat='identity')) +ggtitle('per run')
+ byrun    <- melt(perRunStats[,!grepl('lat|total|type',names(perRunStats))], id.vars=c('subj','date','run') )
+
+ p.allbd<- ggplot(byrun) + geom_histogram(aes(x=variable,y=value,fill=variable),stat='identity') +
+           facet_grid(.~run)+ggtitle('per run')+ theme(axis.text.x = element_text(angle = 90)) 
  p.subj <- ggplot( longsums ) + ggtitle('per subject breakdown of collected data') +
-          geom_histogram(aes(x=subj,y=value,fill=variable,stat='identity'))
+          geom_histogram(aes(x=subj,y=value,fill=variable),stat='identity')
  #p.drpd<- ggplot(perRunStats) + geom_histogram(aes(x=Dropped))
 
 
  # show each plot
- x11()
- cat('\npress anykey to plot');
- readLines(file('stdin'),1)
- for(p in list(p.subj, p.all,p.subj, p.allbd)){
+  x11()
+  cat('\npress anykey to plot');
+  readLines(file('stdin'),1)
+ for(p in list(p.allbd,p.subj)){
   print(p)
   cat('\npress anykey');
   readLines(file('stdin'),1)

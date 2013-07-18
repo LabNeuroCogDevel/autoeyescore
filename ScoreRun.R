@@ -324,6 +324,11 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
   if(any(grepl('useextremefilter',funnybusiness))){
    badidxs=d$xpos>xmax|d$ypos>ymax|d$dil==0
   }else{
+   # allow for some over/under shooting (xmax+50->xmax, -50 -> 0)
+   allowedovershoot <- 0
+   d$xpos[d$xpos>xmax&d$xpos<xmax+allowedovershoot] <- xmax
+   d$xpos[d$xpos<0&d$xpos>-allowedovershoot] <- 0
+
    badidxs=d$xpos>xmax|(d$xpos==0&d$ypos==0&d$dil==0)
   }
   d[which(badidxs),c('dil','xpos','ypos')] = c(NA,NA,NA)
