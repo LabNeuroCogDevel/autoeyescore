@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-
+set -ex
 ##
 #
 # score just one set of eyd files
@@ -41,7 +41,9 @@ while [ -n "$1" ]; do
 done
 
 ## get to script directory (for later bash and R source)
-cd $(dirname $0)
+scriptdir=$(cd $(dirname $0); pwd)
+cd $scriptdir
+
 
 ## where is the data?
 TASKDIR="/mnt/B/bea_res/Data/Tasks/"
@@ -53,7 +55,7 @@ if [ -n "$usedir" -a -d "$usedir" ]; then
  visitdir=$usedir
 else
  [ -n "$usedir" ] && echo "you provided a bad dir?" && unset AUTO
- subjdir=$(ls -td $TASKDIR/{VGS,Bars*,Anti}/Basic/*/ | head -n1)
+ subjdir=$(ls -td $TASKDIR/{VGS,Bars*,Anti*}/Basic/*/ | head -n1)
  visitdir=$(ls -td $subjdir/*/ | head -n1)
 fi
 
@@ -117,7 +119,7 @@ done
 
 echo "using $dir"
 # convert from bea_res name to will's naming convention (stupid Will)
-declare -A beaTowill=([VGS]='vgs' [BarsScan]='scannerbars' [BarsBehavioral]='bars' [Anti]='anti')
+declare -A beaTowill=([VGS]='vgs' [BarsScan]='scannerbars' [BarsBehavioral]='bars' [Anti]='anti' [AntiState]="antistate")
 paradigm=${default[paradigm]}
 paradigm=${paradigm%%/*}
 willtask=${beaTowill[$paradigm]}
@@ -132,7 +134,7 @@ for f in $dir/Raw/EyeData/*eyd; do
 
  [ -r $tsv ] && continue
  [ ! -d $outdir ] && mkdir -p $outdir
- dataFromAnyEyd.pl $f > $tsv
+ $scriptdir/dataFromAnyEyd.pl $f > $tsv
  # remove if cannot understand it's format
  [ $(wc -l $tsv|cut -f1 -d' ') -lt 10 ] && echo "Removed $tsv! $f looks bad" && rm $tsv
 done
