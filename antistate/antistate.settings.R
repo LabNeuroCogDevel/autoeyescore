@@ -35,11 +35,11 @@ sac.majorRegionEnd <- .75
   
 sac.thresholds <- c(
       c  (sac.right.large,
-      	  sac.right.medium,
+      	  sac.right.middle,
           sac.right.small  ) ,
 
       c(  sac.left.small,
-      	  sac.left.medium,
+      	  sac.left.middle,
           sac.left.large )
 )
 
