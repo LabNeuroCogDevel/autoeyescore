@@ -30,35 +30,45 @@ getSacDot <- function(dotnotation, showplot=T,funnybusiness='') {
 }
 
 
-n.orig<-read.table(pertrialCSV,sep="\t",header=T)
-# remove those that start with a *
-n<-n.orig[!grepl('^\\*',n.orig$trial),]
 
-n$run <- substr(n$trial,1,17)
-n <- ddply(n, .(run ), function(x){ l<-length(which(x$count_a==-1)); if(l<expectedTrialLengths-1)  {x} })
+if(file.exists(pertrialCSV )){
+  ### format the diff between scorer and algor.
 
-#sampleDifferences <-function(auto,manual) {
-#  sapply(sample(as.character(n[n$count_a==auto&n$count_m==manual,'trial']),10), function(x){a<-getSacDot(x);readline();dev.off();scoreSac(a)})
-#}
-#
-
-showdiffs <-function(auto,manual,size=10) {
-  d <- n[sample(which(n$count_a==auto&n$count_m==manual),size),]
-  ddply(d,.(trial), function(x){
-     print(x);
-     print(x$trail)
-     a<-getSacDot(as.character(x$trial));
-     print(scoreSac(a));
-     readline();
-     dev.off();
-   })
+  n.orig<-read.table(pertrialCSV,sep="\t",header=T)
+  # remove those that start with a *
+  n<-n.orig[!grepl('^\\*',n.orig$trial),]
+  
+  n$run <- substr(n$trial,1,17)
+  n <- ddply(n, .(run ), function(x){
+         l<-length(which(x$count_a==-1));
+         if(l<expectedTrialLengths-1)  {x} 
+      })
+  
+  #sampleDifferences <-function(auto,manual) {
+  #  sapply(sample(as.character(n[n$count_a==auto&n$count_m==manual,'trial']),10), function(x){a<-getSacDot(x);readline();dev.off();scoreSac(a)})
+  #}
+  
+  # make function to show how scorer and algorithm disagree
+  showdiffs <-function(auto,manual,size=10) {
+    d <- n[sample(which(n$count_a==auto&n$count_m==manual),size),]
+    ddply(d,.(trial), function(x){
+       print(x);
+       print(x$trail)
+       a<-getSacDot(as.character(x$trial));
+       print(scoreSac(a));
+       readline();
+       dev.off();
+     })
+  }
+  
+  # show a plot scoring distributions
+  oldwd<-getwd()
+  setwd(dirname(settingsfile))
+  source('../compareToManual.R')
+  setwd(oldwd)
+} else{
+ warning(sprintf('%s doesnt exist, showdiffs function not loaded',pertrialCSV))
 }
-
-# show a plot scoring distributions
-oldwd<-getwd()
-setwd(dirname(settingsfile))
-source('../compareToManual.R')
-setwd(oldwd)
 
 cat(sprintf('
 
