@@ -80,7 +80,7 @@ xdatIsAS <- function(xdat){
 getExpPos <- function(sac.thresholds,xdatCode){
     ## xdatCode is 16x or 17x where x is xpos of dot: 1 (far right) to 6  (far left)
     # we only want to look at last (3rd) digit (threshIDX)
-    threshIDX <- substr(xdatCode,3,3) 
+    threshIDX <- as.numeric(substr(xdatCode,3,3))
 
     # but if we are on an antisac trial, we need to reverse the expectation
     # so 1->6, 2->5, ..., 6->1
