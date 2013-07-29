@@ -68,11 +68,6 @@ getFiles <- function(filesFrom=sprintf('%s/*/*/Raw/EyeData/txt/*.data.tsv',fileb
                             sep="" )
  return(splitfile)
 }
-# what is the threshold for left/right position
-getExpPos <- function(sac.thresholds,xdatCode){
-    # xdatCode is index for thesholds (1 -> right short, 2-> right long, 3->left short, 4->left long)
-    return(sac.thresholds[ substr(xdatCode,3,3) ] )
-}
 
 # is this xdat an antisaccde xdat?
 xdatIsAS <- function(xdat){
@@ -80,3 +75,19 @@ xdatIsAS <- function(xdat){
  return(xdat > 170)
 
 }
+
+# what is the threshold for left/right position
+getExpPos <- function(sac.thresholds,xdatCode){
+    ## xdatCode is 16x or 17x where x is xpos of dot: 1 (far right) to 6  (far left)
+    # we only want to look at last (3rd) digit (threshIDX)
+    threshIDX <- substr(xdatCode,3,3) 
+
+    # but if we are on an antisac trial, we need to reverse the expectation
+    # so 1->6, 2->5, ..., 6->1
+    if(xdatIsAS(xdatCode)) {
+      return(sac.thresholds[7-threshIDX ] ) 
+    } else {
+      return(sac.thresholds[ threshIDX ] )
+    }
+}
+
