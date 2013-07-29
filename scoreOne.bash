@@ -1,17 +1,19 @@
 #!/usr/bin/env bash
-set -ex
+set -e
 ##
 #
 # score just one set of eyd files
 #
 # USAGE:
 # 
-#  ./scoreOne.bash -N
+#  ./scoreOne.bash -n # run on newest
 #  ./scoreOne.bash -D /mnt/B/bea_res/Data/Tasks/BarsBehavioral/Basic/11198/20130711
+#  ./scoreOne.bash -D ~/rcn/bea_res/Data/Tasks/BarsBehavioral/Basic/11198/20130711/
 #  ./scoreOne.bash -p BarsBehavioral -s 11198 -d 20130711
 # 
 #  options:
-#   -N [act on newest]
+#   -n [act on newest]
+#   -N [only print the newest update, don't run]
 #   -D DIR [path to visit
 #  OR
 #   -p PARADIGM
@@ -34,7 +36,8 @@ while [ -n "$1" ]; do
   -s) subject=$1;  shift;;
   -d) date=$1;     shift;;
   -p) paradigm=$1; shift;;
-  -N) AUTO=1;;
+  -n) AUTO=1;;
+  -N) ONLYSHOWNEW=1;;
   -D) usedir=$1; AUTO=1; shift;;
    *) sed -n 's/# //p;/#end/q;' $0; exit 1;;
  esac
@@ -69,6 +72,7 @@ default=([paradigm]="$task" [subject]="$subj" [date]="$vis")
 
 echo "Most recently changed: ${default[@]}"
 
+[ -n "$ONLYSHOWNEW" ] && exit
 # if we don't want to do any work
 # at least make sure the dir exits
 if [ -n "$AUTO" ]; then
@@ -127,6 +131,7 @@ willtask=${beaTowill[$paradigm]}
 #
 # convert to tsv
 #
+[ -z "$willtask" ] && echo "Unknown paradigm:$paradigm ($willtask)" && exit 1
 source $willtask/nameTSV.bash
 for f in $dir/Raw/EyeData/*eyd; do
  outdir="$(dirname "$f")/txt"
