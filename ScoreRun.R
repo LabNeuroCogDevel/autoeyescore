@@ -395,9 +395,10 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     # targetcodes are in pairs of 4, first 2 are right, second 2 are down. But this is always anti
     #  -- find which index the targetcode matches in the list, find which number in the pair of four it is
     #  use that (i^th) index of threshold
-    sacidx <- which(targetcodes %in% xdatCode) %% 4 
-    if(sacidx == 0) sacidx=4
-    sac.thres <<- sac.thresholds[sacidx]
+
+    # getExpPos comes from *.settings.R.
+    # where the eye should look (opposite of dot if AntiSac, loc of dot if pro. sac)
+    sac.thres <- getExpPos(xdatCode)
     
     
     #expected  mag and direction of saccade
