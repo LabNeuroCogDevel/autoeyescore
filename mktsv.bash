@@ -23,7 +23,7 @@ for f in $( find $basicdir -maxdepth 5 -mindepth 5 -iname \*.eyd ); do
  [ ! -d $outdir ] && mkdir -p $outdir
 
  echo $f \> $tsv
- dataFromAnyEyd.pl $f > $tsv
+ ../dataFromAnyEyd.pl $f > $tsv
  # remove if cannot understand it's format
  [ $(wc -l $tsv|cut -f1 -d' ') -lt 10 ] && echo "Removed $tsv!" && rm $tsv
 done

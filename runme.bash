@@ -181,7 +181,12 @@ if [ -n "$COMPARE" ]; then
    ### check against manual scores
    echo "===== comparing manual to automatic ===="
    # need expectedTrialLengths and filebasedir exported
-   $basedir/compareToManual.pl
+   if [ "$type" == "antistate"   ]; then
+     echo "running compareToManual specially made for AntiState"
+     $basedir/compareToManual_AntiState.pl
+   else
+     $basedir/compareToManual.pl
+   fi
 
    echo "===== %incorrect against scorers ===="
    echo "scores_off	lats_off" | tee results/accuracy-overall.txt
