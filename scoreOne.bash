@@ -7,14 +7,16 @@ set -e
 # USAGE:
 # 
 #  ./scoreOne.bash -n # run on newest
+#  ./scoreOne.bash -i # run interactively (will prompt for paradigm, subject and  date)
 #  ./scoreOne.bash -D /mnt/B/bea_res/Data/Tasks/BarsBehavioral/Basic/11198/20130711
 #  ./scoreOne.bash -D ~/rcn/bea_res/Data/Tasks/BarsBehavioral/Basic/11198/20130711/
 #  ./scoreOne.bash -p BarsBehavioral -s 11198 -d 20130711
 # 
 #  options:
+#   -i [prompt for what to do]
 #   -n [act on newest]
 #   -N [only print the newest update, don't run]
-#   -D DIR [path to visit
+#   -D DIR [path to visit dir you want to parse]
 #  OR
 #   -p PARADIGM
 #   -s SUBJECT
@@ -27,8 +29,11 @@ set -e
 #end
 ##
 
+function helpandexit { 
+ sed -n 's/# //p;/#end/q;' $0 ; exit 1;
+}
 
-[ -z "$1" ] && sed -n 's/# //p;/#end/q;' $0 && exit 1;
+[ -z "$1" ] && helpandexit
 
 while [ -n "$1" ]; do
  opt=$1; shift;
@@ -39,7 +44,8 @@ while [ -n "$1" ]; do
   -n) AUTO=1;;
   -N) ONLYSHOWNEW=1;;
   -D) usedir=$1; AUTO=1; shift;;
-   *) sed -n 's/# //p;/#end/q;' $0; exit 1;;
+  -i) interactive=1;;
+   *) helpandexit;;
  esac
 done
 
