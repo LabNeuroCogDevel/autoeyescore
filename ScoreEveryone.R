@@ -51,7 +51,7 @@ dropScore <- function(subj,rundate,run,type,reason) {
    return(output)
 }
 
-getsubj <- function(i){
+getsubj <- function(i,reuse=T){
   filename <- splitfile$file[i]
   type     <- splitfile$type[i]
   rundate  <- splitfile$date[i]
@@ -71,7 +71,7 @@ getsubj <- function(i){
 
   #print(filename)
   #print(savedas)
-  if(file.exists(savedas) ) {
+  if(file.exists(savedas) && reuse) {
     print(paste(i,'reading',savedas))
     readfilesuccess <-
      tryCatch({ 
@@ -145,10 +145,10 @@ getsubj <- function(i){
   #break
 }
 
-scoreEveryone <- function(splitfile,plotfigs=T,saveoutput=T){
+scoreEveryone <- function(splitfile,plotfigs=T,saveoutput=T,reuse=T){
    #mtrace('getsubj')
    # TODO: wrap this in an tryCatch so no errors at the end
-   perRunStats <- foreach(i=1:nrow(splitfile),.combine=rbind ) %dopar% getsubj(i)
+   perRunStats <- foreach(i=1:nrow(splitfile),.combine=rbind ) %dopar% getsubj(i,reuse=reuse)
    # this will have written a .sac.txt and .trial.txt for every subject
 
    #perRunStats <- getsubj(1)

@@ -41,7 +41,7 @@ sac.thresholds <- c(
       c(  sac.left.small,
       	  sac.left.middle,
           sac.left.large )
-)
+)/(800/261) # convert from PC resolution (800x600 -> ASL 261x240)
 
 names(sac.thresholds)<-c(1:6)
 
@@ -72,7 +72,7 @@ getFiles <- function(filesFrom=sprintf('%s/*/*/Raw/EyeData/txt/*.data.tsv',fileb
 # is this xdat an antisaccde xdat?
 xdatIsAS <- function(xdat){
  # these are all prosacs
- return(xdat > 170)
+ return(as.numeric(xdat) > 170)
 
 }
 
@@ -85,9 +85,12 @@ getExpPos <- function(sac.thresholds,xdatCode){
     # but if we are on an antisac trial, we need to reverse the expectation
     # so 1->6, 2->5, ..., 6->1
     if(xdatIsAS(xdatCode)) {
-      return(sac.thresholds[7-threshIDX ] ) 
+      exppos <- sac.thresholds[7-threshIDX ] 
     } else {
-      return(sac.thresholds[ threshIDX ] )
+      exppos <- sac.thresholds[ threshIDX ] 
     }
+
+    cat(sprintf('xdat: %.0f, expos: %.0f, AS: %s\n',xdatCode,exppos,xdatIsAS(xdatCode))) 
+    return(exppos)
 }
 

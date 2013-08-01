@@ -163,7 +163,7 @@ Rscript --vanilla  --verbose <(echo "
  # get the run files and score
  print('looking in $dir/Raw/EyeData/txt/${default[subject]}.${default[date]}.*.data.tsv');
  splitfile<-getFiles('$dir/Raw/EyeData/txt/${default[subject]}.${default[date]}.*.data.tsv');
- perRunStats <- scoreEveryone(splitfile,F);
+ perRunStats <- scoreEveryone(splitfile,F,reuse=F);
 
  # plot
  sums     <- aggregate(. ~ subj, perRunStats[,c(1:8,match('subj',names(perRunStats))  )],sum)
