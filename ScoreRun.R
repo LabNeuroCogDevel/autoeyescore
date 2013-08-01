@@ -893,94 +893,105 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
   return(allsacs)
 } 
 
+scoreSingleTrial<-function(x,failreason=NA,funnybusiness='') { # x is good sacs for that trial
+     failreason <- NA
+     # if the first sacc is too soon
+     # is something the scoring function should do!? -- dropTrial is easier to run from here
+     if(x$onset[1]<lat.fastest && !any(grepl('nothingistoofast',funnybusiness)) ){
+        failreason <- '1st good sac too soon' 
+
+     # drop if the first good sac has poor tracking
+     } else if( x$p.tracked[1] < .8) { 
+        failreason <- 'first good sac has poor tracking' 
+
+     # drop if first sac is not close to baseline (use same value as used to drop trials that start too far from baseline)
+     #  means the first sac doesn't inform the initial movement, so this trial is bogus
+     } else if(abs(x$startpos[1] - screen.x.mid) > 50 ) { 
+       failreason <- 'start pos too far from center fix' 
+
+     # do we have a good sac that explains how we got where we are from baseline
+     # if not, drop trial
+     #}else if(any(which(diff(c(0,goodsacsIdx))>1))) { 
+
+     # # if the first good saccade is not the first saccade
+     # # check that the start of the first good sac is 
+     # # not all that much different from the start of the very first sac
+     # # -- earlier invocation check this for all sacs, but it doesn't much matter after the first
+     # goodsacidxdiffidx <- which(diff(c(0,goodsacsIdx))>1) 
+     # if( goodsacidxdiffidx[1] == 1 ) {
+     #  goodsacsIdx_afterbad <- goodsacsIdx[ goodsacidxdiffidx ]
+     #  #good<-allsacs[ goodsacsIdx_afterbad    , ]
+     #  #bad <-allsacs[ goodsacsIdx_afterbad -1 , ]
+     #  good<-allsacs[ goodsacsIdx_afterbad[1]    , ]
+     #  bad <-allsacs[ 1 , ]
+     #  if(any(abs(good$startpos - bad$startpos)> 25 & good$cordir != bad$cordir    )){
+     #    #DROP TRIAL, a good saccade is preced by a bad sac that moves the position by a lot
+     #    # AND they do not go in the same direction
+     #    failreason <- sprintf('first good sac at %f too far from first bad sac start position %f', good$startpos, bad$startpos)
+     #    goodsacs <- NULL
+     #  }
+     # }
+
+     }else { }
+
+     # We want to drop!
+     if(!is.na(failreason)   ){
+      cat(x$subj[1],x$trial[1], failreason,'\n');
+
+      return( data.frame(trial=x$trial[1],
+         xdat=x$xdat[1],
+         lat=NA,
+         fstCorrect=F,ErrCorr=F,
+         AS=xdatIsAS(x$xdat[1])
+         ) )
+     ### EVERYTHING IS GOOD SO FAR
+     } else {
+       # break into trials, do we have 
+       #  1) a first correct movement?
+       #  2) correct movement after incorrect?
+       #  3) an xdat that says Anti Saccade?
+       return(data.frame( 
+         trial=x$trial[1],
+         xdat=x$xdat[1],
+         lat=round(x$onset[1]*1000),
+         fstCorrect=x$cordir[1], #!x$cordir[1]&any(x$cordir & (x$MaxMinX | x$startatFix) ),
+         ErrCorr=!x$cordir[1]&any(x$cordir &  x$corside  ),
+         AS=xdatIsAS(mean(x$xdat)) 
+       ) )
+     }
+}
 # score a saccades per trial (or feed just one trial)
 scoreSac <- function(allsacs,funnybusiness=''){
 
 
   # select only those saccades we will count
   #goodsacs <- subset(allsacs, subset=intime&gtMinLen&p.tracked>sac.trackingtresh&!(crossFix!=0&!corside) )
-  goodsacs <- subset(allsacs, subset=intime&gtMinLen&p.tracked>sac.trackingtresh)
+  #goodsacs <- subset(allsacs, subset=intime&gtMinLen&p.tracked>sac.trackingtresh)
   goodsacsIdx <- which(with(allsacs,{intime&gtMinLen&p.tracked>sac.trackingtresh}))
+  if(length(goodsacsIdx)<1){
+      cat(allsacs[1]$trial,'no good sacs!')
+      return( data.frame(trial=NA,
+         xdat=NA,
+         lat=NA,
+         fstCorrect=F,ErrCorr=F,
+         AS=NA,
+         Count=NA
+         ) )
+  }
   goodsacs <- allsacs[goodsacsIdx, ]
-
-  # drop if the first good sac has poor tracking
-  if(is.null(goodsacs) || nrow(goodsacs)<1 ||dim(goodsacs)[1] < 1) { 
-     goodsacs <- NULL; failreason <- 'no good saccades found' 
-
-  # if the first sacc is too soon
-  # is something the scoring function should do!? -- dropTrial is easier to run from here
-  } else if(goodsacs$onset[1]<lat.fastest && !any(grepl('nothingistoofast',funnybusiness)) ){
-     goodsacs <- NULL; failreason <- '1st good sac too soon' 
-
-  } else if( goodsacs$p.tracked[1] < .8) { 
-     goodsacs <- NULL; failreason <- 'first good sac has poor tracking' 
-
-  # drop if first sac is not close to baseline (use same value as used to drop trials that start too far from baseline)
-  #  means the first sac doesn't inform the initial movement, so this trial is bogus
-  } else if(abs(goodsacs$startpos[1] - screen.x.mid) > 50 ) { 
-    goodsacs <- NULL;  failreason <- 'start pos too far from center fix' 
-
-  # do we have a good sac that explains how we got where we are from baseline
-  # if not, drop trial
-  #}else if(any(which(diff(c(0,goodsacsIdx))>1))) { 
-
-  # # if the first good saccade is not the first saccade
-  # # check that the start of the first good sac is 
-  # # not all that much different from the start of the very first sac
-  # # -- earlier invocation check this for all sacs, but it doesn't much matter after the first
-  # goodsacidxdiffidx <- which(diff(c(0,goodsacsIdx))>1) 
-  # if( goodsacidxdiffidx[1] == 1 ) {
-  #  goodsacsIdx_afterbad <- goodsacsIdx[ goodsacidxdiffidx ]
-  #  #good<-allsacs[ goodsacsIdx_afterbad    , ]
-  #  #bad <-allsacs[ goodsacsIdx_afterbad -1 , ]
-  #  good<-allsacs[ goodsacsIdx_afterbad[1]    , ]
-  #  bad <-allsacs[ 1 , ]
-  #  if(any(abs(good$startpos - bad$startpos)> 25 & good$cordir != bad$cordir    )){
-  #    #DROP TRIAL, a good saccade is preced by a bad sac that moves the position by a lot
-  #    # AND they do not go in the same direction
-  #    failreason <- sprintf('first good sac at %f too far from first bad sac start position %f', good$startpos, bad$startpos)
-  #    goodsacs <- NULL
-  #  }
-  # }
-
-  }else {
-    failreason <- 'unexpected fail!';
-  }
-
-  
   
 
-  # We want to drop!
-  if(is.null(goodsacs)   ){
-   cat(allsacs$subj[1],allsacs$trial[1], failreason,'\n')
-   cor.ErrCor.AS <- data.frame(trial=allsacs$trial[1],
-                             xdat=allsacs$xdat[1],
-                             lat=NA,
-                             fstCorrect=F,ErrCorr=F,
-                             AS=xdatIsAS(allsacs$xdat[1]),
-                             Count=as.numeric(NA)
-                             )
-   return(cor.ErrCor.AS)
-  
-  ### EVERYTHING IS GOOD SO FAR
-  } else {
-   # break into trials, do we have 
-   #  1) a first correct movement?
-   #  2) correct movement after incorrect?
-   #  3) an xdat that says Anti Saccade?
-   cor.ErrCor.AS <- ddply(goodsacs, .(trial), function(x) { c(
-                                 x$xdat[1],
-                                 round(x$onset[1]*1000),
-                                 x$cordir[1]==TRUE,
-                                 #!x$cordir[1]&any(x$cordir & (x$MaxMinX | x$startatFix) ),
-                                 !x$cordir[1]&any(x$cordir &  x$corside  ),
-                                 xdatIsAS(mean(x$xdat))
-                              ) } )
-   names(cor.ErrCor.AS) <- c('trial','xdat','lat','fstCorrect','ErrCorr','AS')
-  }
+  #if(is.null(goodsacs) || nrow(goodsacs)<1 ||dim(goodsacs)[1] < 1) { 
+  #   failreason <- 'no good saccades found' 
+  #}
 
+  cor.ErrCor.AS <- ddply(goodsacs, .(trial), scoreSingleTrial, funnybusiness=funnybusiness)
+
+
+  #names(cor.ErrCor.AS) <- c('trial','xdat','lat','fstCorrect','ErrCorr','AS')
   cor.ErrCor.AS[,c('fstCorrect','ErrCorr','AS')]<-sapply(cor.ErrCor.AS[,c('fstCorrect','ErrCorr','AS')],as.logical)
-  cor.ErrCor.AS$Count <- 0
+  cor.ErrCor.AS$Count[is.na(cor.ErrCor.AS$lat )] <- -1
+  cor.ErrCor.AS$Count[!is.na(cor.ErrCor.AS$lat )] <- 0
   cor.ErrCor.AS$Count[ which(cor.ErrCor.AS$fstCorrect == T ) ] <- 1
   cor.ErrCor.AS$Count[ which(cor.ErrCor.AS$ErrCorr    == T ) ] <- 2
   #fstCorrect&ErrCor

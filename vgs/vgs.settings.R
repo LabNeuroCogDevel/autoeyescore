@@ -67,7 +67,8 @@ getFiles <- function(filesFrom=sprintf('%s/*/*/Raw/EyeData/txt/*.data.tsv',fileb
 # what is the threshold for left/right position
 getExpPos <- function(sac.thresholds,xdatCode){
     # xdatCode is index for thesholds (1 -> right short, 2-> right long, 3->left short, 4->left long)
-    return(sac.thresholds[ xdatCode - 130 ] )
+    idx <- as.numeric(substr(xdatCode,3,3))
+    return(sac.thresholds[ idx ] )
 }
 
 # is this xdat an antisaccde xdat?

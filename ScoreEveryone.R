@@ -91,6 +91,8 @@ getsubj <- function(i){
         #sprintf('getSacs(%s,%s,%d,%d,rundate=%s,writetopdf=F,savedas=%s)')
         },error=function(e){
             cat(sprintf('getSacs failed on %s.%s.%d\n',subj,rundate,run))
+            #dropTrial(subj,runtype,1:expectedTrialLengths,0,'no data in eyd!',
+            #             NA,showplot=F,run=run,rundate=rundate)
             NULL
         })
 
