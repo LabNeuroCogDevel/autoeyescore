@@ -21,6 +21,9 @@ sac.right.small <- 172
 sac.right.mid   <- 216
 sac.right.large <- 258
 
+# acceleration -- needs to be this many pixels per sample before considering saccade
+lat.minvel   <- 4      # ASLcoordx/60Hz 
+
 # if there are spikes in fixation, bad tracking, drop
 maxSamplesFromBaseline <- 2
 

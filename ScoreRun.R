@@ -56,7 +56,7 @@ sac.trackingtresh <- 0    # what percent of a sac has to have actual samples (ta
 
 ## latancy properties
 #  how fast the eye has to move before considering the movement a saccade (also heuristic overcompesating approximation)
-lat.minvel   <- 4      # ASLcoordx/60Hz 
+#lat.minvel   <- 4      # ASLcoordx/60Hz , per paradigm
 lat.fastest  <- 67/1000  # fastest latency allowed is 200ms
 
 ## saccade properties ##
