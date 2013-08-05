@@ -50,7 +50,7 @@ screen.x.mid <- 261/2    # xpos of eye, not x axis! -- this is where we expect t
 sampleHz     <- 60
 
 ## experimental design
-sac.time          <- 1.45 # how long is the target up before we see the fixation cross again?
+sac.time          <- 1.45 # how long is the target up before we see the fixation cross again? -- why isn't this in each paraigms setting
 
 sac.trackingtresh <- 0    # what percent of a sac has to have actual samples (tacked) to be counted
 
@@ -80,6 +80,7 @@ blink.trim.samples <- 2
 
 ### Plot settings
 plot.endtime <- 1.75
+#plot.endtime <- 4
 
 # Green:   means correct direction to the correct place
 # Blue:    good dir, over or under shot position
@@ -408,7 +409,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
 
 
     
-    # grab the eye data for thsi trials traget code
+    # grab the eye data for this trials traget code
     #trgt <-targetIdxs[trl,1]:targetIdxs[trl,2] 
     #print(trl)
     trgt <<-(targetIdxs[trl,1]+1):targetIdxs[trl,2]  # +1 to skip the last cue xdat code
@@ -672,6 +673,15 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     sac.df$end    = est$x[sac.df$endIdx]/sampleHz
     
 
+    # remove sacs that are too far away
+    sac.df    =  sac.df[which(sac.df$onset < sac.time), ]
+    nsacs      <- dim(sac.df)[1]
+    # test again for no sacs
+    if( nsacs<1  ){
+     allsacs <- dropTrial(subj,runtype,trl,xdatCode,sprintf('no saccades within sac.time(%.3f)',sac.time),
+                          allsacs,run=run,showplot=showplot,rundate=rundate)
+     next
+    }
 
     
     ## TODO:
@@ -732,7 +742,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     sac.df$corside   = sign(sac.df$endpos - base.val ) == sign(sac.thres - base.val)
     sac.df$gtMinLen  = sac.df$end - sac.df$onset > sac.minlen
     sac.df$intime    = sac.df$onset < sac.time & sac.df$end > lat.fastest
-
+    # first clause of intime (within xdat, isn't needed)
     sac.df$distance  = sac.df$endpos - sac.df$startpos 
     sac.df$crossFix  = as.numeric(sac.df$startpos < base.val) - as.numeric(sac.df$endpos < base.val)
     # want to test against both the base.val (where we think center is) and screen.x.mid (where center fix should be)
@@ -955,7 +965,11 @@ scoreSingleTrial<-function(x,failreason=NA,funnybusiness='') { # x is good sacs 
          xdat=x$xdat[1],
          lat=round(x$onset[1]*1000),
          fstCorrect=x$cordir[1], #!x$cordir[1]&any(x$cordir & (x$MaxMinX | x$startatFix) ),
-         ErrCorr=!x$cordir[1]&any(x$cordir &  x$corside  ),
+         #ErrCorr=!x$cordir[1]&any(x$cordir &  x$corside  ),
+         # this way error corrected is calcuted such that it is corrected if min and max
+         # are on opposite side of the center, we asssume a correction's been made
+         #   this could be complicated by the subject being off baseline (max 50px)
+         ErrCorr=!x$cordir[1]&length(x$cordir)>1&(max(x$maxpos-screen.x.mid)*min(x$minpos - screen.x.mid))<0,
          AS=xdatIsAS(mean(x$xdat)) 
        ) )
      }

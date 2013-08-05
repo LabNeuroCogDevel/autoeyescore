@@ -43,7 +43,7 @@ dropScore <- function(subj,rundate,run,type,reason) {
    output<-list('PSCor'=NaN,'PSCorErr'=NaN,'PSErr'=NaN,'ASCor'=NaN,'ASErrCor'=NaN,'ASErr'=NaN, 'Dropped'=NaN,
                 'AScor.lat'=NaN,'ASErrCor.lat'=NaN,'ASErr.lat'=NaN,'PScor.lat'=NaN,'PSErrCor.lat'=NaN,'PSErr.lat'=NaN)
    output$total <- 0
-   output$xdat  <- NaN
+   #output$xdat  <- NaN # how'd this get in there?
    output$subj  <- subj
    output$date  <- rundate
    output$type  <- type
