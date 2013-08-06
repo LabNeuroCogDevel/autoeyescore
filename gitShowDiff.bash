@@ -20,4 +20,4 @@ current=HEAD
 # if change matches scorer, say good
 # if change doesn't AND previous was good, say BAD
 # if change doesn't help or hurt, write meh
-git diff -U0 --minimal $prev $current $paradigm/results/checkAgainstManual_trial.csv | perl -slane 'next unless /^[+-]\d/; $F[0]=~s/^([+-])//; $a{$F[0]}->{$1}=$F[1]; $a{$F[0]}->{score}=$F[3];END{print join("\t",$_,$a{$_}->{"-"}, $a{$_}->{"+"},$a{$_}->{score},$a{$_}->{score}==$a{$_}->{"+"}?"ok":($a{$_}->{score}==$a{$_}->{"-"}?"BAD":"meh") ) for (keys %a)}'
+git diff -U0 --minimal $prev $current $paradigm/results/checkAgainstManual_trial.csv | perl -slane 'next unless /^[+-]\d/; $F[0]=~s/^([+-])//; $a{$F[0]}->{$1}=$F[1]; $a{$F[0]}->{score}=$F[3];END{for (keys %a) { print join("\t",$_,$a{$_}->{"-"}, $a{$_}->{"+"},$a{$_}->{score},$a{$_}->{score}==$a{$_}->{"+"}?"ok":($a{$_}->{score}==$a{$_}->{"-"}?"BAD":"meh") ) if $a{$_}->{"-"} ne $a{$_}->{"+"} } }'
