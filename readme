@@ -1,3 +1,29 @@
+These scripts score eye movements collected by ASL model 5000 or 6000, saved as ASL eyd v602
+input is expected at
+   [required] Data/Task/$paradigm/Basic/$lunaid/$date/EyeData/Raw/*eyd
+   [optional] Data/Task/$paradigm/Basic/$lunaid/$date/EyeData/Scored/fs*xls
+
+PARADIGM
+
+Each trial asks the participant to make a saccades toward (pro) or away (anti) from a vertically centered target along the width of the presentation screen. Eye position, pupil dilation, and an XDAT code are sampled at 60Hz. While eye position and dilation are raw recordings of the participant from the eyetracker, XDATs are sent by the presentation and denote the start of a trial, onset of a cue (target), and end of a trial. Each trial should have 3 associated codes (where the last, stop code, is always 250).
+The  direction and final position of the correct saccade for a trial are given by the trial's middle, "target", XDAT. A "correct" trial is one where the first saccade is in this direction. Trials can also be classified as an "error," when the first saccade is in the opposite direction and no saccades go to the correct position, or as a "corrected error," when the first saccade is in the wrong direction, but a subsequent saccade moves in the correct direction (eye position moves beyond baseline toward the correct position).  The latency of a trial always refers to the initiation of the first saccade, regardless of it's label as correct or error.
+
+The target position is given in ASL coordinates. The subject sees a presentation screen that is 800px wide. ASL is 261 px.
+
+
+At the start of a trial, eye position should be centered until .067seconds after the onset of the cue. 50px/261px leway is given for this center fixation to allow for center drift. Trials are dropped if fixation is further than this, if there is no tracking (x position), or if there is not fixation.
+
+Saccades are identified if the change in horizontal gaze position is greater than 4px/60Hz. The initiation of a saccade is then set when the change in horz gaze pos first reached above 1px/60Hz. Initiation of the first saccade describes latency. The saccade's end position is extended similarly, and minimally effects scoring logic (extends values to determine max or min horz position)
+
+Saccades moving toward the target position are labeled correct; those moving away are label "error." Saccades are further classified to be within or outside of the proximity of the exact target location. This more specific classification is not used.
+
+The horz position 5 samples before target onset and 2 samples after are used to set the trials baseline. The trial baseline must be within 50px of true center. On trials where the first saccade is an error, the trail is labeled as "error." However, if any subsequent saccade then crosses this baseline, the trail label is changed to "corrected error."
+
+Trails are dropped when the standard deviation of the difference in horz gaze position of neighboring samples is greater than 40 to remove trials with unreliable or unusable tracking of eye position. When the first saccades in a trial has less than 75% tracking, the whole trial is dropped. If there is no tracking for ___ seconds before the first saccade or ___ seconds within the 5 samples before and 2 after target onset, the trial is dropped. 
+
+Parameters (particularly velocity and stddev xpos) have been set to maximize agreement with ___XXXX___ trials scored by human inspection. Of the ___XXX__ trials where this algorithm disagrees with human scoring, further manual inspection estimates  ___% can be attributed to human error.
+
+
 RUNNING SINGLE SUBJECT
 see scoreOne.bash
 
@@ -22,11 +48,19 @@ RUNNING BATCH
    check score.Rout (in results if succesful) for errors!
    the bottom of the file lists all subjects.date.runs that were not processed
 
+ITERATIVE CHANGES
+  in R
+    # for behav bars
+    source('viewdiffs/checkBarsBeh.R')
+
 TESTING
 
   in R
-    # for scanner bars
-    source('checkBars.R')
+    # for behav bars
+    source('bars/bars.settings.R')
+    source('ScoreRun.R')
+    source('getSacsbyDot.R')
+    source('scoreTests.R')
   
   and
     runme.sh -T

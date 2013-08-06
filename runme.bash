@@ -202,6 +202,6 @@ fi;
 ## wrap up
 echo "done: $(date)" | tee -a results/timing
 
-
 mv score.Rout results/
-[ -n "$COMPARE" ] && mv checkAgainstManual_trial.csv results/
+# compare to auto scoring to scorers (results/checkAgainstManual_trial.csv), see what's changed (results/trailChanges.txt)
+[ -n "$COMPARE" ] && mv checkAgainstManual_trial.csv results/ && $basedir/gitShowDiff.bash $type " " " " > results/trialChanges.txt

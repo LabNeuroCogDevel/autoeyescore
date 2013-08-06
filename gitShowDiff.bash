@@ -9,6 +9,8 @@
 #   $0 antistate  # same as antistate HEAD~1 HEAD
 #   $0 vgs HEAD~2 HEAD~1 |grep BAD
 #  
+cd $(dirname $0)
+
 [ -z "$1" -o ! -d "$1" ] && sed -n "s:\$0:$0:g;s/^# //p;/END/q" $0 && exit 1
 
 prev=HEAD~1

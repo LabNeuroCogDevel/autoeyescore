@@ -746,7 +746,8 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     sac.df$distance  = sac.df$endpos - sac.df$startpos 
     sac.df$crossFix  = as.numeric(sac.df$startpos < base.val) - as.numeric(sac.df$endpos < base.val)
     # want to test against both the base.val (where we think center is) and screen.x.mid (where center fix should be)
-    sac.df$MaxMinX   = as.numeric(sac.df$minpos < min(base.val,screen.x.mid)) - as.numeric(sac.df$maxpos < max(base.val,screen.x.mid))
+    #sac.df$MaxMinX   = as.numeric(sac.df$minpos < min(base.val,screen.x.mid)) - as.numeric(sac.df$maxpos < max(base.val,screen.x.mid))
+    sac.df$MaxMinX   = sign(sac.df$minpos - base.val) != sign(sac.df$maxpos - base.val)
     sac.df$gtMinMag  = abs(sac.df$distance) > sac.minmag
     sac.df$startatFix= sac.df$startpos > base.val -10 & sac.df$startpos < base.val + 10
     #  0 if sac did not cross sides
@@ -969,7 +970,11 @@ scoreSingleTrial<-function(x,failreason=NA,funnybusiness='') { # x is good sacs 
          # this way error corrected is calcuted such that it is corrected if min and max
          # are on opposite side of the center, we asssume a correction's been made
          #   this could be complicated by the subject being off baseline (max 50px)
-         ErrCorr=!x$cordir[1]&length(x$cordir)>1&(max(x$maxpos-screen.x.mid)*min(x$minpos - screen.x.mid))<0,
+         #ErrCorr=!x$cordir[1]&length(x$cordir)>1&(max(x$maxpos-screen.x.mid)*min(x$minpos - screen.x.mid))<0,
+         # this takes baseline into account instead of absolute 1/2screen
+         # will still fail if there is a sac with no tracking dropped
+         # before the good saccades get counted
+         ErrCorr=!x$cordir[1]&length(x$cordir)>1&any(x$MaxMinX[-1]),
          AS=xdatIsAS(mean(x$xdat)) 
        ) )
      }
