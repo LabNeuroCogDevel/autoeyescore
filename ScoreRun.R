@@ -416,7 +416,6 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
 
     # test for tracking before target onset
     # we want to drop (b/c lat will be useless) if they blinked for more than .2s within .3s of target onset
-    # TODO: remove hardcoded sample freq
     # FIX FIX FIX
     pretargetIDX <- trgt[1]-.3*sampleHz + 1:(.3*sampleHz)
     if (any(pretargetIDX<1)) {
@@ -611,11 +610,25 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     fst  <- locpoly(b.all$x,b.all$y,bandwidth=1,drv=1)
     scnd <- locpoly(b.all$x,b.all$y,bandwidth=1,drv=2)
     
+
+    # catch movement before actual onset 
+    # fst$x is in samples, we want the y value before the sample capturing closest time a sac can be made
+    meanBeforeOnset <- mean(fst$y[fst$x< lat.fastest*sampleHz ],na.rm=T)
+    # sac.slowvel is probably 1px/60Hz
+    # lat.minvel  is probably 4px/60Hz
+    if( (is.nan(meanBeforeOnset) || meanBeforeOnset >lat.minvel) && !any(grepl('highvelstartok',funnybusiness))
+    ){
+     allsacs <- dropTrial(subj,runtype,trl,xdatCode,
+                 sprintf('moving (%.3f px/60Hz) before target onset',meanBeforeOnset),
+                 allsacs,showplot=showplot,run=run,rundate=rundate)
+     next
+    }
+
+
     # run length encode when the change in sacad postion is faster
     # than the min velocity for a saccade
     # ** First sacade attribute
 
-    ## WARNING: if something broke -- it's because i put not na here
     rlePastDrv <- rle(abs(fst$y)>lat.minvel & !is.na(fst$y))
     delt.x <- cumsum( rlePastDrv$lengths )
 
@@ -663,9 +676,6 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     }
 
 
-    ##print(b.all$x)
-    #print(est$x
-    
     # actual time from target cue
     # est$x is in 60Hz samples, but est indexes are not!
     sac.df$onset  = est$x[sac.df$onsetIdx]/sampleHz
