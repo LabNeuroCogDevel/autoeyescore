@@ -399,7 +399,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
 
     # getExpPos comes from *.settings.R.
     # where the eye should look (opposite of dot if AntiSac, loc of dot if pro. sac)
-    sac.thres <- getExpPos(sac.thresholds,xdatCode)
+    sac.thres <<- getExpPos(sac.thresholds,xdatCode)
     
     
     #expected  mag and direction of saccade

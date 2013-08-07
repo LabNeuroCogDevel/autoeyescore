@@ -1,0 +1,30 @@
+source('ScoreRun.R')
+# arnold (users/lncd/rnc/ vs reese (mnt/b)
+taskdir <- gsub('.*/Data/Tasks','',filebasedir)
+Bdir <- '/mnt/B/'
+if(!file.exists(Bdir)) { Bdir <- '/Users/lncd/rcn/' }
+if(!file.exists(Bdir)) { stop('cannot find good location for B') }
+
+# rewrite filebasedir based on Bdir so it function works on arnold as well as reese
+filebasedir <- sprintf('%s/bea_res/Data/Tasks/%s',Bdir,taskdir)
+
+# get bname (bea_res name) of the paradigm/task
+bname <- gsub('.*/Data/Tasks/', '',
+               gsub('/Basic.*', '', filebasedir) 
+             )
+if(!file.exists(filebasedir)) { stop(sprintf('cannot find task directory: %s',filebasedir)) }
+
+getSacDot <- function(dotnotation, showplot=T,funnybusiness='',showcmd=F) {
+ parts <- unlist(strsplit(dotnotation, '\\.'))
+ parts <- as.numeric(parts);
+ names(parts) <- c('subj','date','run','trial')
+ # filebasedir come from *settings.R file
+ dirbase  <- sprintf("%s/%s/%s",filebasedir,parts['subj'],parts['date'])
+ eyetrack <- sprintf("%s/Raw/EyeData/txt/%s.%s.%s.data.tsv",dirbase,parts['subj'],parts['date'],parts['run'])
+ saveto   <- sprintf("%s/Scored/txt/%s.%s.%s.sac.tsv",dirbase,parts['subj'],parts['date'],parts['run'])
+
+ if(showcmd) {cat(sprintf("getSacs('%s','%s','%s','%s',onlyontrials='%s',savedas='%s',writetopdf=F,showplot=%s,rundate='%s')\n",eyetrack,parts['subj'],parts['run'],bname,parts['trial'],saveto,showplot,parts['date']))  }
+
+ getSacs(eyetrack,parts['subj'],parts['run'],bname,onlyontrials=parts['trial'],savedas=saveto,writetopdf=F,showplot=showplot,rundate=parts['date'],funnybusiness=funnybusiness)
+}
+
