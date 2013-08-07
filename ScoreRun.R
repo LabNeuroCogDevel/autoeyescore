@@ -984,7 +984,8 @@ scoreSingleTrial<-function(x,failreason=NA,funnybusiness='') { # x is good sacs 
          # this takes baseline into account instead of absolute 1/2screen
          # will still fail if there is a sac with no tracking dropped
          # before the good saccades get counted
-         ErrCorr=!x$cordir[1]&length(x$cordir)>1&any(x$MaxMinX[-1]),
+         #  -- or if any saccade ends on the correct side of base.val (not screen.x.mid)  -- even if its the incorrect sac
+         ErrCorr=!x$cordir[1]&length(x$cordir)>1&(any(x$MaxMinX[-1])||any(x$corside)),
          AS=xdatIsAS(mean(x$xdat)) 
        ) )
      }
