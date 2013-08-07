@@ -613,13 +613,13 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
 
     # catch movement before actual onset 
     # fst$x is in samples, we want the y value before the sample capturing closest time a sac can be made
-    meanBeforeOnset <- mean(fst$y[fst$x< lat.fastest*sampleHz ],na.rm=T)
+    maxBeforeOnset <- max(fst$y[fst$x< lat.fastest*sampleHz ],na.rm=T)
     # sac.slowvel is probably 1px/60Hz
     # lat.minvel  is probably 4px/60Hz
-    if( (is.nan(meanBeforeOnset) || meanBeforeOnset >lat.minvel) && !any(grepl('highvelstartok',funnybusiness))
+    if( (is.nan(maxBeforeOnset) || maxBeforeOnset >lat.minvel) && !any(grepl('highvelstartok',funnybusiness))
     ){
      allsacs <- dropTrial(subj,runtype,trl,xdatCode,
-                 sprintf('moving (%.3f px/60Hz) before target onset',meanBeforeOnset),
+                 sprintf('moving (%.3f px/60Hz) before target onset',maxBeforeOnset),
                  allsacs,showplot=showplot,run=run,rundate=rundate)
      next
     }
