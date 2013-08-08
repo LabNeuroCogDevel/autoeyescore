@@ -613,7 +613,9 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
 
     # catch movement before actual onset 
     # fst$x is in samples, we want the y value before the sample capturing closest time a sac can be made
-    maxBeforeOnset <- max(fst$y[fst$x< lat.fastest*sampleHz ],na.rm=T)
+    # avoid points up to the first sample to all things to settle
+    # fst$x starts at 1, 1.9 is enough time to settle down from initial
+    maxBeforeOnset <- max(abs( fst$y[fst$x< lat.fastest*sampleHz & fst$x> 1.9 ] ),na.rm=T)
     # sac.slowvel is probably 1px/60Hz
     # lat.minvel  is probably 4px/60Hz
     if( (is.nan(maxBeforeOnset) || maxBeforeOnset >lat.minvel) && !any(grepl('highvelstartok',funnybusiness))
@@ -1005,7 +1007,7 @@ scoreSac <- function(allsacs,funnybusiness=''){
          lat=NA,
          fstCorrect=F,ErrCorr=F,
          AS=NA,
-         Count=NA
+         Count=-1
          ) )
   }
   goodsacs <- allsacs[goodsacsIdx, ]
