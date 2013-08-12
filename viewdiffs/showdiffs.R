@@ -11,7 +11,11 @@ source('ScoreRun.R')
 source('getSacsDot.R')
 
 
-
+diffs.file <- file.path(dirname(pertrialCSV), 'trialChanges.txt')
+if(file.exists(diffs.file)){
+ diffs.data <- read.table(diffs.file,sep="\t",header=F)
+ names(diffs.data) <- c('trial', 'before','current','scorer','status')
+}
 if(file.exists(pertrialCSV )){
   ### format the diff between scorer and algor.
 
@@ -24,24 +28,12 @@ if(file.exists(pertrialCSV )){
          l<-length(which(x$count_a==-1));
          if(l<expectedTrialLengths-1)  {x} 
       })
-  
+  n.all <- n
   #sampleDifferences <-function(auto,manual) {
   #  sapply(sample(as.character(n[n$count_a==auto&n$count_m==manual,'trial']),10), function(x){a<-getSacDot(x);readline();dev.off();scoreSac(a)})
   #}
   
-  # make function to show how scorer and algorithm disagree
-  showdiffs <-function(auto,manual,size=10) {
-    d <- n[sample(which(n$count_a==auto&n$count_m==manual),size),]
-    ddply(d,.(trial), function(x){
-       print(x);
-       print(x$trail)
-       a<-getSacDot(as.character(x$trial));
-       print(scoreSac(a));
-       readline();
-       dev.off();
-     })
-  }
-  
+  source('viewdiffs/showdiffs.func.R')
   # show a plot scoring distributions
   oldwd<-getwd()
   setwd(dirname(settingsfile))
@@ -53,13 +45,21 @@ if(file.exists(pertrialCSV )){
 
 cat(sprintf('
 
-showdiffs(-1,1,10) 
+showdiffs(-1,1,10) # same as showdiffs(auto=-1,manual=1,size=10)
     to see 10 instances  where auto says drop (-1), manual says correct (1)
+
+ showdiffs(size=10) 
+    to see 10 instances where manual and auto are different
+
+ showdiffs(auto=1,xdat=133)
+    to see where algorithm says 1 on xdats of 133 (shows 10 by default)
 
 getSacDot("%s")
     to see sac graph
 
 scoreSac(getSacDot("%s"))
     to score and graph
+
+see also diff.data
 ',as.character(n$trial[1]),as.character(n$trial[1]) ) )
 

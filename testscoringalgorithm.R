@@ -11,7 +11,7 @@ for(i in 1:dim(ttt)[1]) {
 	source('getSacsDot.R')
 	saccades <- getSacDot(as.character(ttt$Trial[i]),showplot=F)
 	scored.trial <- scoreSac(saccades)
-	print(as.numeric(scored.trial[7]))
-	print(ttt$ExpectedScore[i])
+	#print(as.numeric(scored.trial[7]))
+	#print(ttt$ExpectedScore[i])
 	test_that(ttt$Description[i], { expect_equal(as.numeric(scored.trial[7]), ttt$ExpectedScore[i]) } )
 }

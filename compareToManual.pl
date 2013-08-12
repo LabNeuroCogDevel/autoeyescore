@@ -188,8 +188,9 @@ for my $xlsfn (@scoreSheets){
      open my $autoFH, $autofn[0];
      while(<$autoFH>) {
        next if $.==1;
-       my ($trial,$xdat,$lat,$fstCorrect,$ErrCorr,$AS,$Count)=split/\W+/;
-       $autoT[$trial] = {count=>$Count ,lat=>$lat,xdat=>$xdat }
+       my ($trial,$xdat,$lat,$fstCorrect,$ErrCorr,$AS,$Count,$desc)=split/\t/;
+       $autoT[$trial] = {count=>$Count ,lat=>$lat,xdat=>$xdat };
+       print "line:${_}parsed:$trial $xdat $lat $fstCorrect $ErrCorr $AS $Count $desc\n" if $ENV{DEBUG}==1;
      }
      #print STDERR "$trial has ", $.-1, "entries\n" if $. != 61;
      close $autoFH;

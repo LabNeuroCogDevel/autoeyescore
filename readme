@@ -19,7 +19,9 @@ Saccades moving toward the target position are labeled correct; those moving awa
 
 The horz position 5 samples before target onset and 2 samples after are used to set the trials baseline. The trial baseline must be within 50px of true center. On trials where the first saccade is an error, the trail is labeled as "error." However, if any subsequent saccade then crosses this baseline, the trail label is changed to "corrected error."
 
-Trails are dropped when the standard deviation of the difference in horz gaze position of neighboring samples is greater than 40 to remove trials with unreliable or unusable tracking of eye position. When the first saccades in a trial has less than 75% tracking, the whole trial is dropped. If there is no tracking for ___ seconds before the first saccade or ___ seconds within the 5 samples before and 2 after target onset, the trial is dropped. 
+Trails are dropped when the standard deviation of the difference in horz gaze position of neighboring samples is greater than 40 to remove trials with unreliable or unusable tracking of eye position. Missing samples (potential blinks) that immediately perceed a saccade are incorparted in saccade calcuations.  When the first saccades in a trial has less than 80% tracking (80% of the expected samples or less report a horizontal gaze value), the whole trial is dropped.  If there is no tracking for ___ seconds before the first saccade or ___ seconds within the 5 samples before and 2 after target onset, the trial is dropped. 
+
+If there is a xpos velocity over 4samples/60Hz in the .067s after onset before a participant is able to process the cue, the trial is dropped.
 
 Parameters (particularly velocity and stddev xpos) have been set to maximize agreement with ___XXXX___ trials scored by human inspection. Of the ___XXX__ trials where this algorithm disagrees with human scoring, further manual inspection estimates  ___% can be attributed to human error.
 

@@ -71,6 +71,7 @@ getsubj <- function(i,reuse=T){
 
   #print(filename)
   #print(savedas)
+  allsacs<-NULL
   if(file.exists(savedas) && reuse) {
     print(paste(i,'reading',savedas))
     readfilesuccess <-
@@ -81,27 +82,29 @@ getsubj <- function(i,reuse=T){
             NULL
         })
 
-  } else{
+  } 
+  if(is.null(allsacs)){
 
     cat(sprintf('%d: running: getSacs("%s",%s,%s,"%s",rundate=%s,writetopdf=%s,savedas="%s")\n',
                 i,filename, subj,run, type,rundate,plotTrial,savedas))
 
      allsacs <- tryCatch({ 
-        getSacs( filename, subj,run, type,rundate=rundate,writetopdf=plotTrial,savedas=savedas) 
         #sprintf('getSacs(%s,%s,%d,%d,rundate=%s,writetopdf=F,savedas=%s)')
+        getSacs( filename, subj,run, type,rundate=rundate,writetopdf=plotTrial,savedas=savedas) 
         },error=function(e){
-            cat(sprintf('getSacs failed on %s.%s.%d\n',subj,rundate,run))
-            #dropTrial(subj,runtype,1:expectedTrialLengths,0,'no data in eyd!',
-            #             NA,showplot=F,run=run,rundate=rundate)
-            NULL
+            # from ScoreRun,
+            cat('getSacs failed\n')
+            dropTrialSacs(subj,runtype,1:expectedTrialLengths,0,'no data in eyd!',
+                         NA,showplot=F,run=run,rundate=rundate)
         })
 
   }
   
-  if(length(allsacs)<1|is.null(allsacs)) {
-   output<-dropScore(subj,rundate,run,type,'no info')
-   return(as.data.frame(output))
-  }
+  # if it's still null, -- dont need this because dropTrialSacs should populate errors
+  #if(is.null(allsacs)||length(allsacs)<1||is.na(allsacs$trial[1])) {
+  # output<-dropScore(subj,rundate,run,type,'no info')
+  # return(as.data.frame(output))
+  #}
 
   # SCORE SACCADES
   # get a line per trial dataframe
@@ -110,6 +113,7 @@ getsubj <- function(i,reuse=T){
       scoreSac(allsacs)
      },error=function(e){
          cat(sprintf('scoreSac failed on %s.%s.%d\n',subj,rundate,run))
+         dropTrialScore(0)  # defined in ScoreRun.R
      })
 
   #if(!scorable){
@@ -120,7 +124,14 @@ getsubj <- function(i,reuse=T){
   if(!file.exists(dirname(pertrialoutput))) { dir.create(dirname(pertrialoutput),recursive=T)}
   write.table(file=pertrialoutput,cor.ErrCor.AS,row.names=F,quote=F,sep="\t")
   
-  r <- scoreRun(cor.ErrCor.AS, 1:expectedTrialLengths  ) #was ( , unique(allsacs$trial))
+  r <- tryCatch({ 
+       scoreRun(cor.ErrCor.AS, 1:expectedTrialLengths  ) #was ( , unique(allsacs$trial))
+     },error=function(e){
+         cat(sprintf('scoreRun failed on %s.%s.%d\n',subj,rundate,run))
+         cat(sprintf('\tscoreRun(scoreSac(getSacDot("%s.%s.%d.*",showplot=F)),1:%d)\n',subj,rundate,run,expectedTrialLengths))
+         dropRun()  # defined in ScoreRun.R
+     })
+
   r$subj  <- subj
   r$date  <- rundate 
   r$run   <- run

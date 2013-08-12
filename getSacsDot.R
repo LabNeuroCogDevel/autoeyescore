@@ -23,8 +23,15 @@ getSacDot <- function(dotnotation, showplot=T,funnybusiness='',showcmd=F) {
  eyetrack <- sprintf("%s/Raw/EyeData/txt/%s.%s.%s.data.tsv",dirbase,parts['subj'],parts['date'],parts['run'])
  saveto   <- sprintf("%s/Scored/txt/%s.%s.%s.sac.tsv",dirbase,parts['subj'],parts['date'],parts['run'])
 
+ # if we want subj.date.run.* # all trials
+ if(grepl('\\*$',dotnotation)){
+  #trial=sprintf('1:%d',expectedTrialLengths)
+  trial=1:expectedTrialLengths
+ }else{
+  trial=parts['trial'] 
+ }
  if(showcmd) {cat(sprintf("getSacs('%s','%s','%s','%s',onlyontrials='%s',savedas='%s',writetopdf=F,showplot=%s,rundate='%s')\n",eyetrack,parts['subj'],parts['run'],bname,parts['trial'],saveto,showplot,parts['date']))  }
 
- getSacs(eyetrack,parts['subj'],parts['run'],bname,onlyontrials=parts['trial'],savedas=saveto,writetopdf=F,showplot=showplot,rundate=parts['date'],funnybusiness=funnybusiness)
+ getSacs(eyetrack,parts['subj'],parts['run'],bname,onlyontrials=trial,savedas=saveto,writetopdf=F,showplot=showplot,rundate=parts['date'],funnybusiness=funnybusiness)
 }
 
