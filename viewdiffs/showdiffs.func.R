@@ -1,6 +1,6 @@
 # make function to show how scorer and algorithm disagree
 showdiffs <-function(auto=NA,manual=NA,size=10,xdat=NA) {
- savetxt<-sprintf('%s.%s.csv',Sys.Date(),Sys.Time());
+ savetxt<-sprintf('%s.%s.csv',Sys.Date(),Sys.time());
  if(!is.na(auto) || !is.na(manual)) {
    viewBOOL <- n$count_a!=n$count_m
  }else{
