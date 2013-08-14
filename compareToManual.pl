@@ -46,7 +46,7 @@ my $basedir =$ENV{filebasedir};
 my $p = Spreadsheet::ParseExcel->new();
 
 # print header
-my $header=join("\t",qw/trial count_a lat_a count_m lat_m scorer xdat/)."\n";
+my $header=join("\t",qw/trial count_a lat_a count_m lat_m scorer xdat reason/)."\n";
 #print $header;
 print $OUTFH $header;
 
@@ -188,9 +188,10 @@ for my $xlsfn (@scoreSheets){
      open my $autoFH, $autofn[0];
      while(<$autoFH>) {
        next if $.==1;
+       chomp;
        my ($trial,$xdat,$lat,$fstCorrect,$ErrCorr,$AS,$Count,$desc)=split/\t/;
-       $autoT[$trial] = {count=>$Count ,lat=>$lat,xdat=>$xdat };
-       print "line:${_}parsed:$trial $xdat $lat $fstCorrect $ErrCorr $AS $Count $desc\n" if $ENV{DEBUG}==1;
+       $autoT[$trial] = {count=>$Count ,lat=>$lat,xdat=>$xdat, desc=>$desc };
+       print "line:${_}parsed:$trial $xdat $lat $fstCorrect $ErrCorr $AS $Count $desc\n" if $ENV{DEBUG};
      }
      #print STDERR "$trial has ", $.-1, "entries\n" if $. != 61;
      close $autoFH;
@@ -205,7 +206,7 @@ for my $xlsfn (@scoreSheets){
    #   $autoT[$t]->{count} != $manualT[$t]->{count} ||
    #   abs($autoT[$t]->{lat} - $manualT[$t]->{lat}) > 30 
    #) {
-     my $output=join("\t","$runname.$t", @{$autoT[$t]}{qw/count lat/},@{$manualT[$t]}{qw/count lat/},$scorer,${$autoT[$t]}{xdat})."\n";
+     my $output=join("\t","$runname.$t", @{$autoT[$t]}{qw/count lat/},@{$manualT[$t]}{qw/count lat/},$scorer,@{$autoT[$t]}{qw/xdat desc/})."\n";
      print $OUTFH $output;
      #print $output;
    #}
