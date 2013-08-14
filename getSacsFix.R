@@ -1,5 +1,5 @@
 getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writetopdf=F,savedas=NULL, showplot=F, funnybusiness=""){
-  
+
   # this inputs might not come in as numbers
   subj   <-as.numeric(subj)
   run    <-as.numeric(run)
@@ -8,112 +8,21 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
   # setup dataframe to hold sacades from all trials
   allsacs     <- data.frame()
 
-  cat('using ', eydfile ,'\n')
+  ## updates "d" in global scope
+  # returns a fail reason or targetIdxs
+  targetIdxs <- parseRawForTargets(eydfile,funnybusiness)
 
-  ### load data
-  #load xdat, eye position and dialation data for parsed eydfile
-  readeydsuccess <- tryCatch( { d        <<- read.table( eydfile, sep="\t",header=T) },error=function(e){cat('error! cant read input\n')})
-
-  if(is.null(readeydsuccess)) {
-    allsacs <- dropTrialSacs(subj,runtype,1:expectedTrialLengths,0,'no data in eyd!',
+  if(is.character(targetIdxs)) {
+    allsacs <- dropTrialSacs(subj,runtype,1:expectedTrialLengths,0,samples,
                          allsacs,showplot=F,run=run,rundate=rundate)
     return(allsacs) 
   }
 
-
-  if(dim(d)[2] != 4) {
-    allsacs <- dropTrialSacs(subj,runtype,1:expectedTrialLengths,0,sprintf('eyd data does not make sense to me %dx%d',dim(d)[1],dim(d)[2]),
-                         allsacs,showplot=F,run=run,rundate=rundate)
-    return(allsacs) 
-  }
-
-
-  names(d) <<- c("xdat","dil","xpos","ypos")
-
-  ## fix bars zero'ed xdats
-  zeroxdat        <- rle(d$xdat==0)
   
-  if(zeroxdat$values[1] == T) { 
-    minzeroxdatlen <-2 
-  } else {
-   minzeroxdatlen <- 1
-  }
-
-  if(length(zeroxdat$lengths)>minzeroxdatlen) {
-     xdatswitchidx   <- cumsum(zeroxdat$lengths)
-     zeroxdatidx     <- which(zeroxdat$values==TRUE)
-
-     #if the very first xdat is 0, we're in trouble, so ingore that one
-     if(zeroxdatidx[1] == 1) {
-        zeroxdatidx <- zeroxdatidx[-1]
-     }
-
-     replacementXdat <- d$xdat[xdatswitchidx[zeroxdatidx-1]]
-     #needReplaced    <- d$xdat[xdatswitchidx[zeroxdatidx]:(xdatswitchidx[zeroxdatidx]+zeroxdat$lengths[zeroxdatidx])]
-     zerostartend    <- cbind(  end=xdatswitchidx[zeroxdatidx], 
-                              start=(xdatswitchidx[zeroxdatidx]-zeroxdat$lengths[zeroxdatidx]+1)
-                             )
-
-     zeroIdxinD      <- apply(zerostartend,1,function(x){x['start']:x['end']})
-     shouldbeXdat    <- d$xdat[xdatswitchidx[zeroxdatidx-1]]
-
-     if(length(shouldbeXdat) != length(zeroIdxinD) ) warning('zero xdats and replacement not the same length!! something very funny is going on')
-     for( i in 1:length(shouldbeXdat)){ d$xdat[zeroIdxinD[[i]]] <- shouldbeXdat[i]}
-  }
-
-  
-  ##### Remove bad data #####
-  # both x and y are out of range, or there is no dilation measure
-  # TODO!!
-  # if there is x and ypos and dil != 0
-  # maybe we should keep?
-
-  # see scannerbars 10711.20121108.1.17 -- good xpos, no good dil or ypos
-  
-  if(any(grepl('useextremefilter',funnybusiness))){
-   badidxs=d$xpos>xmax|d$ypos>ymax|d$dil==0
-  }else{
-   # allow for some over/under shooting (xmax+50->xmax, -50 -> 0)
-   allowedovershoot <- 0
-   d$xpos[d$xpos>xmax&d$xpos<xmax+allowedovershoot] <- xmax
-   d$xpos[d$xpos<0&d$xpos>-allowedovershoot] <- 0
-
-   badidxs=d$xpos>xmax|(d$xpos==0&d$ypos==0&d$dil==0)
-  }
-  d[which(badidxs),c('dil','xpos','ypos')] = c(NA,NA,NA)
-  if(any(na.omit(d$dil)<1)) { d$dil[which(d$dil<1)]<-1 }# so we can see something! 
-  # which is need to not die on scanbars 10656.20090410.2
-  
-   # remove repeats
-  xdats             <- rle(d$xdat)            # run length encode
-  xdats$cs          <- cumsum(xdats$lengths)  # index in d where xdat happends
-  
-  #### Split eye positions by target code
-  # use only targetcodes that are preceded by startcodes and followed by end codes
-  tarCodePos       <- which(xdats$values %in% targetcodes)
-  goodTargPos      <- tarCodePos[  xdats$values[tarCodePos  - 1]  %in%  startcodes ]
-  goodTargPos      <- goodTargPos[ xdats$values[goodTargPos + 1]  %in%  stopcodes  ]
-  
-  # x by 2 matrix of target onset and offset indicies
-  targetIdxs       <- cbind(xdats$cs[goodTargPos-1],xdats$cs[goodTargPos])
-
   # if onlyontrials is specified, we only want to look at those/that trial
   # but we want to keep onlyontrials null/not null for write.csv check later
   if( is.null(onlyontrials) ) { runontrials <- 1:dim(targetIdxs)[1] }
   else                        { runontrials <- onlyontrials }
-
-  if(length(goodTargPos) <= 0) {
-    allsacs <- dropTrialSacs(subj,runtype,runontrials,0,'no understandable start/stop xdats!',allsacs,showplot=F,run=run,rundate=rundate)
-    return() 
-  }
-
-  if(! length(goodTargPos) %in% expectedTrialLengths ) {
-    cat(subj,runtype,'WARNING: unexpected num of trials', length(goodTargPos),'\n')
-  }
-  
-
-  
-
   for(trl in runontrials ) {
     #print(c(trl,length(runontrials)))
     #trl  <- 8
@@ -422,10 +331,10 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
 
     ###### DROP TRIAL CONDITIONS
     # no saccades, also will trap no enough data
-#    if( nsacs<1  ){
- #    allsacs <- dropTrialSacs(subj,runtype,trl,xdatCode,'no saccades (getSacs)',allsacs,run=run,showplot=showplot,rundate=rundate)
-  #   next
-   # }
+    #if( nsacs<1  ){
+    # allsacs <- dropTrialSacs(subj,runtype,trl,xdatCode,'no saccades (getSacs)',allsacs,run=run,showplot=showplot,rundate=rundate)
+    # next
+    #}
 
 
     # actual time from target cue

@@ -27,6 +27,7 @@ getSacDot <- function(dotnotation, showplot=T,funnybusiness='',showcmd=F) {
  if(grepl('\\*$',dotnotation)){
   #trial=sprintf('1:%d',expectedTrialLengths)
   trial=1:expectedTrialLengths
+  parts['trial']=sprintf('1:%d',expectedTrialLengths);
  }else{
   trial=parts['trial'] 
  }
