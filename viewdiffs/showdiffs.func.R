@@ -2,9 +2,9 @@
 showdiffs <-function(auto=NA,manual=NA,size=10,xdat=NA) {
  savetxt<-sprintf('%s.%s.csv',Sys.Date(),Sys.time());
  if(!is.na(auto) || !is.na(manual)) {
-   viewBOOL <- n$count_a!=n$count_m
- }else{
    viewBOOL <- rep(T, length(n$count_a))
+ }else{
+   viewBOOL <- n$count_a!=n$count_m
  }
  if(!is.na(auto)  ) { 
     viewBOOL <- viewBOOL&n$count_a==auto 
