@@ -401,7 +401,7 @@ interoplateSamples <- function(trl, funnybusiness=''){
     ){
      #allsacs <- dropTrialSacs(subj,runtype,trl,xdatCode,'blink before target onset',allsacs,showplot=showplot,run=run,rundate=rundate)
      #next
-     retrun('blink before target onset')
+     return('blink before target onset')
     }
 
 
@@ -528,7 +528,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
 
   ## updates "d" in global scope
   # returns a fail reason or targetIdxs
-  targetIdxs <- parseRawForTargets(eydfile,funnybusiness)
+  targetIdxs <<- parseRawForTargets(eydfile,funnybusiness)
 
   if(is.character(targetIdxs)) {
     allsacs <- dropTrialSacs(subj,runtype,1:expectedTrialLengths,0,samples,
