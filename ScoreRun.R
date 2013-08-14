@@ -55,6 +55,7 @@ sac.time          <- 1.45 # how long is the target up before we see the fixation
 sac.trackingtresh <- 0    # what percent of a sac has to have actual samples (tacked) to be counted, set to 0 to ignore
 sac.firstmincoverage  <- .8 # first saccade has to be this much tracked or trial is dropped
 
+
 ## latancy properties
 #  how fast the eye has to move before considering the movement a saccade (also heuristic overcompesating approximation)
 #lat.minvel   <- 4      # ASLcoordx/60Hz , per paradigm
@@ -244,22 +245,17 @@ dropTrialSacs <- function(subj,runtype,trl,xdatCode,reason,allsacs,showplot=F,sa
          crossFix=F,MaxMinX=F,gtMinMag=F, startatFix=F, distance=NA, reason=reason
          )
 
-  if(!is.null(allsacs) && !is.na(allsacs) && dim(allsacs)[1] > 1 ) {
-    allsacs <- rbind( allsacs, droppedTrial)
-   } else {
+  if(all(is.null(allsacs)) || all(is.na(allsacs)) || dim(allsacs)[1] < 1 ) {
     allsacs <- droppedTrial
+   } else {
+    allsacs <- rbind( allsacs, droppedTrial)
    }
+   return(allsacs)
 }
-# returns 'allsacs' a list of all saccades in each trial
-getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writetopdf=F,savedas=NULL, showplot=F, funnybusiness=""){
-  
-  # this inputs might not come in as numbers
-  subj   <-as.numeric(subj)
-  run    <-as.numeric(run)
-  rundate<-as.numeric(rundate)
 
-  # setup dataframe to hold sacades from all trials
-  allsacs     <- data.frame()
+parseRawForTargets <- function(eydfile, funnybusiness=''){
+  # reset d
+  d <<-data.frame(xdat=NA,dil=NA,xpos=NA,ypos=NA)
 
   cat('using ', eydfile ,'\n')
 
@@ -268,16 +264,18 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
   readeydsuccess <- tryCatch( { d        <<- read.table( eydfile, sep="\t",header=T) },error=function(e){cat('error! cant read input\n')})
 
   if(is.null(readeydsuccess)) {
-    allsacs <- dropTrialSacs(subj,runtype,1:expectedTrialLengths,0,'no data in eyd!',
-                         allsacs,showplot=F,run=run,rundate=rundate)
-    return(allsacs) 
+    #allsacs <- dropTrialSacs(subj,runtype,1:expectedTrialLengths,0,'no data in eyd!',
+    #                     allsacs,showplot=F,run=run,rundate=rundate)
+    #return(allsacs) 
+    return('no data in eyd!') 
   }
 
 
   if(dim(d)[2] != 4) {
-    allsacs <- dropTrialSacs(subj,runtype,1:expectedTrialLengths,0,sprintf('eyd data does not make sense to me %dx%d',dim(d)[1],dim(d)[2]),
-                         allsacs,showplot=F,run=run,rundate=rundate)
-    return(allsacs) 
+    #allsacs <- dropTrialSacs(subj,runtype,1:expectedTrialLengths,0,sprintf('eyd data does not make sense to me %dx%d',dim(d)[1],dim(d)[2]),
+    #                     allsacs,showplot=F,run=run,rundate=rundate)
+    #return(allsacs) 
+    return('eyd data does not make sense!')
   }
 
 
@@ -289,7 +287,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
   if(zeroxdat$values[1] == T) { 
     minzeroxdatlen <-2 
   } else {
-   minzeroxdatlen <- 1
+    minzeroxdatlen <-1
   }
 
   if(length(zeroxdat$lengths)>minzeroxdatlen) {
@@ -301,7 +299,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
         zeroxdatidx <- zeroxdatidx[-1]
      }
 
-     replacementXdat <- d$xdat[xdatswitchidx[zeroxdatidx-1]]
+     #replacementXdat <- d$xdat[xdatswitchidx[zeroxdatidx-1]]
      #needReplaced    <- d$xdat[xdatswitchidx[zeroxdatidx]:(xdatswitchidx[zeroxdatidx]+zeroxdat$lengths[zeroxdatidx])]
      zerostartend    <- cbind(  end=xdatswitchidx[zeroxdatidx], 
                               start=(xdatswitchidx[zeroxdatidx]-zeroxdat$lengths[zeroxdatidx]+1)
@@ -311,7 +309,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
      shouldbeXdat    <- d$xdat[xdatswitchidx[zeroxdatidx-1]]
 
      if(length(shouldbeXdat) != length(zeroIdxinD) ) warning('zero xdats and replacement not the same length!! something very funny is going on')
-     for( i in 1:length(shouldbeXdat)){ d$xdat[zeroIdxinD[[i]]] <- shouldbeXdat[i]}
+     for( i in 1:length(shouldbeXdat)){ d$xdat[zeroIdxinD[[i]]] <<- shouldbeXdat[i]}
   }
 
   
@@ -328,13 +326,13 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
   }else{
    # allow for some over/under shooting (xmax+50->xmax, -50 -> 0)
    allowedovershoot <- 0
-   d$xpos[d$xpos>xmax&d$xpos<xmax+allowedovershoot] <- xmax
-   d$xpos[d$xpos<0&d$xpos>-allowedovershoot] <- 0
+   d$xpos[d$xpos>xmax&d$xpos<xmax+allowedovershoot] <<- xmax
+   d$xpos[d$xpos<0&d$xpos>-allowedovershoot] <<- 0
 
    badidxs=d$xpos>xmax|(d$xpos==0&d$ypos==0&d$dil==0)
   }
-  d[which(badidxs),c('dil','xpos','ypos')] = c(NA,NA,NA)
-  if(any(na.omit(d$dil)<1)) { d$dil[which(d$dil<1)]<-1 }# so we can see something! 
+  d[which(badidxs),c('dil','xpos','ypos')] <<- c(NA,NA,NA)
+  if(any(na.omit(d$dil)<1)) { d$dil[which(d$dil<1)]<<-1 }# so we can see something! 
   # which is need to not die on scanbars 10656.20090410.2
   
    # remove repeats
@@ -350,34 +348,25 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
   # x by 2 matrix of target onset and offset indicies
   targetIdxs       <- cbind(xdats$cs[goodTargPos-1],xdats$cs[goodTargPos])
 
-  # if onlyontrials is specified, we only want to look at those/that trial
-  # but we want to keep onlyontrials null/not null for write.csv check later
-  if( is.null(onlyontrials) ) { runontrials <- 1:dim(targetIdxs)[1] }
-  else                        { runontrials <- onlyontrials }
 
   if(length(goodTargPos) <= 0) {
-    allsacs <- dropTrialSacs(subj,runtype,runontrials,0,'no understandable start/stop xdats!',allsacs,showplot=F,run=run,rundate=rundate)
-    return() 
+    #allsacs <- dropTrialSacs(subj,runtype,runontrials,0,'no understandable start/stop xdats!',allsacs,showplot=F,run=run,rundate=rundate)
+    #return() 
+    return('no understandable start/stop xdats!')
   }
 
   if(! length(goodTargPos) %in% expectedTrialLengths ) {
     cat(subj,runtype,'WARNING: unexpected num of trials', length(goodTargPos),'\n')
   }
-  
 
-  
+  return(targetIdxs)
+}
 
-  for(trl in runontrials ) {
-    #print(c(trl,length(runontrials)))
-    #trl  <- 8
-    #print(trl)
-    
-    # target code xdat is a little past where target index starts
-    xdatCode <- d$xdat[ targetIdxs[trl,1] + 1 ]
-    # the code is after the startcode but before stopcode (between targetidx[,1] and [,2] 
-    # before was taking the 15th to make sure past any repated start xdat??
-    # now only using 1 ahead
-
+## need what trial to work on
+## assume "d" and targetIdxs are populated
+## export b.orig for plotting
+## return b.approx
+interoplateSamples <- function(trl, funnybusiness=''){
     # seems okay because:
     #print(head(d$xdat[ targetIdxs[trl,1]:targetIdxs[trl,2] ]))
     
@@ -391,24 +380,6 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     if(numTargetCodes < 55 ) cat(sprintf('WARNING: have only %d samples of the target codes\n',numTargetCodes))
 
 
-    # this particular threshold
-    #sac.thres <<- sac.thresholds[ xdatCode%%10 ]
-    # xdatCode is index for thesholds (1 -> right short, 2-> right long, 3->left short, 4->left long)
-    # targetcodes are in pairs of 4, first 2 are right, second 2 are down. But this is always anti
-    #  -- find which index the targetcode matches in the list, find which number in the pair of four it is
-    #  use that (i^th) index of threshold
-
-    # getExpPos comes from *.settings.R.
-    # where the eye should look (opposite of dot if AntiSac, loc of dot if pro. sac)
-    sac.thres <<- getExpPos(sac.thresholds,xdatCode)
-    
-    
-    #expected  mag and direction of saccade
-    sac.expmag <<- sac.thres - screen.x.mid
-    sac.expdir <<- sign(sac.expmag)
-    sac.expmag <<- abs(sac.expmag)
-
-
     
     # grab the eye data for this trials traget code
     #trgt <-targetIdxs[trl,1]:targetIdxs[trl,2] 
@@ -420,8 +391,9 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     # FIX FIX FIX
     pretargetIDX <- trgt[1]-.3*sampleHz + 1:(.3*sampleHz)
     if (any(pretargetIDX<1)) {
-     allsacs <- dropTrialSacs(subj,runtype,trl,xdatCode,'weird! no eye position data before trial onset! cannot tell if pretrial blink',allsacs,showplot=F,run=run,rundate=rundate)
-     next
+     #allsacs <- dropTrialSacs(subj,runtype,trl,xdatCode,'weird! no eye position data before trial onset! cannot tell if pretrial blink',allsacs,showplot=F,run=run,rundate=rundate)
+     #next
+     return('no eye position data before trial onset! pretrial blink?')
     }
 
     pretargetD   <- d[pretargetIDX, ] 
@@ -429,19 +401,20 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
       length(which(is.na(pretargetD$xpos))) > .2*sampleHz &&
       !any(grepl('preblinkok',funnybusiness))
     ){
-     allsacs <- dropTrialSacs(subj,runtype,trl,xdatCode,'blink before target onset',allsacs,showplot=showplot,run=run,rundate=rundate)
-     next
+     #allsacs <- dropTrialSacs(subj,runtype,trl,xdatCode,'blink before target onset',allsacs,showplot=showplot,run=run,rundate=rundate)
+     #next
+     return('blink before target onset')
     }
 
 
     ## get eye tracking for relevant portion
-    b.orig     <- data.frame(time=1:length(trgt),x=d$xpos[trgt]) 
+    b.orig     <<- data.frame(time=1:length(trgt),x=d$xpos[trgt]) 
 
     # fill in the NAs with approximations
     # using first method that came to mind (old/bad)
     b.nona<- na.omit(b.orig)
-    b.all <-b.nona
-    names(b.all) <- c('x','y')
+    #b.all <-b.nona
+    #names(b.all) <- c('x','y')
     # plot which points are used by changing the shape
     #b.all$used <- T
 
@@ -522,23 +495,90 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
      firstNA <-ifelse(length(naX)==0,  0, naX[1] )
     }
 
-
-
     ###### CHECKS
     # if we take out the NAs and there is nothing left!
     if(length(b.approx$x)<=1){
-     allsacs <- dropTrialSacs(subj,runtype,trl,xdatCode,'no data',allsacs,showplot=showplot,run=run,rundate=rundate)
-     next 
+     #allsacs <- dropTrialSacs(subj,runtype,trl,xdatCode,'no data',allsacs,showplot=showplot,run=run,rundate=rundate)
+     #next 
+     return('no data left after removing blinks')
     }
 
 
 
     ####### Estimate away NAs
     # replace NAs so we can do polyfit
+    b.approx <<- b.approx
     b.all <- b.approx
     b.all$x <- na.approx(b.approx$x,x=b.approx$time) 
     
     names(b.all) <- c('x','y') # bad code elsewhere wants x and y
+
+
+    return(b.all)
+}
+
+# returns 'allsacs' a list of all saccades in each trial
+getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writetopdf=F,savedas=NULL, showplot=F, funnybusiness=""){
+  
+  # this inputs might not come in as numbers
+  subj   <-as.numeric(subj)
+  run    <-as.numeric(run)
+  rundate<-as.numeric(rundate)
+
+  # setup dataframe to hold sacades from all trials
+  allsacs     <- data.frame()
+
+  ## updates "d" in global scope
+  # returns a fail reason or targetIdxs
+  targetIdxs <<- parseRawForTargets(eydfile,funnybusiness)
+
+  if(is.character(targetIdxs)) {
+    allsacs <- dropTrialSacs(subj,runtype,1:expectedTrialLengths,0,samples,
+                         allsacs,showplot=F,run=run,rundate=rundate)
+    return(allsacs) 
+  }
+
+  
+  # if onlyontrials is specified, we only want to look at those/that trial
+  # but we want to keep onlyontrials null/not null for write.csv check later
+  if( is.null(onlyontrials) ) { runontrials <- 1:dim(targetIdxs)[1] }
+  else                        { runontrials <- onlyontrials }
+
+  for(trl in runontrials ) {
+    #print(c(trl,length(runontrials)))
+    #trl  <- 8
+    #print(trl)
+    
+
+
+    # target code xdat is a little past where target index starts
+    xdatCode <- d$xdat[ targetIdxs[trl,1] + 1 ]
+    # the code is after the startcode but before stopcode (between targetidx[,1] and [,2] 
+    # before was taking the 15th to make sure past any repated start xdat??
+    # now only using 1 ahead
+
+    # getExpPos comes from *.settings.R -- so does sac.thresholds (shouldn't have specified this, but thats how it is now :(  )
+    # where the eye should look (opposite of dot if AntiSac, loc of dot if pro. sac)
+    ## export to global scopefor plotting
+    sac.thres <<- getExpPos(sac.thresholds,xdatCode)
+
+    #expected  mag and direction of saccade
+    sac.expmag <<- sac.thres - screen.x.mid
+    sac.expdir <<- sign(sac.expmag)
+    sac.expmag <<- abs(sac.expmag)
+
+
+    # have "d" and "targetIdxs" in global scope
+    # will export b.orig and b.approx too
+    # returns "b" (time,xpos) with blinks removed
+    #   or reason for falure
+    b.all <- interoplateSamples(trl,funnybusiness)
+    if(is.character(b.all)){
+     failreason <- b.all
+     allsacs <- dropTrialSacs(subj,runtype,trl,xdatCode,failreason,allsacs,showplot=showplot,run=run,rundate=rundate)
+     next
+    }
+
 
 
     # sanity check -- do we really only have target Idxs?
@@ -585,7 +625,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
      next
     }
 
-    # is trackign smooth?
+    # is tracking smooth?
     xposStdDevMax <- 40
     averageChange <- sd(abs(diff(na.omit(d$xpos[trgt[3:(sac.majorRegionEnd*sampleHz) ]  ]))))
     if(is.na(averageChange) || (averageChange > xposStdDevMax && !any(grepl('ignorexpossd',funnybusiness)) )   ) {
@@ -676,7 +716,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     ###### DROP TRIAL CONDITIONS
     # no saccades, also will trap no enough data
     if( nsacs<1  ){
-     allsacs <- dropTrialSacs(subj,runtype,trl,xdatCode,'no saccades',allsacs,run=run,showplot=showplot,rundate=rundate)
+     allsacs <- dropTrialSacs(subj,runtype,trl,xdatCode,'no saccades (getSacs)',allsacs,run=run,showplot=showplot,rundate=rundate)
      next
     }
 
@@ -941,9 +981,9 @@ scoreSingleTrial<-function(x,funnybusiness='') { # x is good sacs for that trial
         failreason <- '1st good sac too soon' 
 
      # drop if the first good sac has poor tracking
-     # TODO? only do this isf there is more than one saccade? 
      } else if( x$p.tracked[1] < sac.firstmincoverage && !any(grepl('ignorefirstsactrack',funnybusiness)) ){
-        failreason <- sprintf('first good sac has poor tracking ( %.2f < %.2f obvervedsamples/expected)',x$p.tracked[1],sac.firstmincoverage )
+        failreason <- sprintf('first good sac has poor tracking ( %.2f < %.2f obvervedsamples/expected)',
+                      ,x$p.tracked[1],sac.firstmincoverage )
 
      # drop if first sac is not close to baseline (use same value as used to drop trials that start too far from baseline)
      #  means the first sac doesn't inform the initial movement, so this trial is bogus
