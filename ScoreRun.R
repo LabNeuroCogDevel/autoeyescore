@@ -52,7 +52,9 @@ sampleHz     <- 60
 ## experimental design
 sac.time          <- 1.45 # how long is the target up before we see the fixation cross again? -- why isn't this in each paraigms setting
 
-sac.trackingtresh <- 0    # what percent of a sac has to have actual samples (tacked) to be counted
+sac.trackingtresh <- 0    # what percent of a sac has to have actual samples (tacked) to be counted, set to 0 to ignore
+sac.firstmincoverage  <- .8 # first saccade has to be this much tracked or trial is dropped
+
 
 ## latancy properties
 #  how fast the eye has to move before considering the movement a saccade (also heuristic overcompesating approximation)
@@ -979,8 +981,9 @@ scoreSingleTrial<-function(x,funnybusiness='') { # x is good sacs for that trial
         failreason <- '1st good sac too soon' 
 
      # drop if the first good sac has poor tracking
-     } else if( x$p.tracked[1] < .8 && !any(grepl('ignorefirstsactrack',funnybusiness)) ){
-        failreason <- 'first good sac has poor tracking' 
+     } else if( x$p.tracked[1] < sac.firstmincoverage && !any(grepl('ignorefirstsactrack',funnybusiness)) ){
+        failreason <- sprintf('first good sac has poor tracking ( %.2f < %.2f obvervedsamples/expected)',
+                      ,x$p.tracked[1],sac.firstmincoverage )
 
      # drop if first sac is not close to baseline (use same value as used to drop trials that start too far from baseline)
      #  means the first sac doesn't inform the initial movement, so this trial is bogus
