@@ -356,7 +356,7 @@ parseRawForTargets <- function(eydfile, funnybusiness=''){
   }
 
   if(! length(goodTargPos) %in% expectedTrialLengths ) {
-    cat(subj,runtype,'WARNING: unexpected num of trials', length(goodTargPos),'\n')
+    cat('WARNING: unexpected num of trials', length(goodTargPos),'\n')
   }
 
   return(targetIdxs)
@@ -983,7 +983,7 @@ scoreSingleTrial<-function(x,funnybusiness='') { # x is good sacs for that trial
      # drop if the first good sac has poor tracking
      } else if( x$p.tracked[1] < sac.firstmincoverage && !any(grepl('ignorefirstsactrack',funnybusiness)) ){
         failreason <- sprintf('first good sac has poor tracking ( %.2f < %.2f obvervedsamples/expected)',
-                      ,x$p.tracked[1],sac.firstmincoverage )
+                      x$p.tracked[1],sac.firstmincoverage )
 
      # drop if first sac is not close to baseline (use same value as used to drop trials that start too far from baseline)
      #  means the first sac doesn't inform the initial movement, so this trial is bogus
