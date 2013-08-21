@@ -1,8 +1,9 @@
-To score, be sure you are in the ``autoeyescore`` directory and in a terminal window execute:
+To score, in a terminal window, run the following:
 
+    cd ~/autoeyescore/
     ./scoreDollarReward.bash DollarReward/eyd/1940reward.eyd
 
-it does not matter where the eyds, however if they are in ``DollarReward/eyd/``, an abervated command can be run
+it does not matter where the eyd file is, however if they are in ``DollarReward/eyd/``, an abbreviated command can be run
 
    ./scoreDollarReward.bash 1940
 
