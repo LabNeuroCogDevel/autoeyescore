@@ -1,6 +1,5 @@
-Dollar Reward is a special task unlike the others here (as it does not have a *.settings.R file, it will not be see by runme.bash)
+To score, be sure you are in the ``autoeyescore`` directory and use:
 
-To score use:
     ./scoreDollarReward.bash DollarReward/eyd/1940reward.eyd
 
 it does not matter where the eyds, however if they are in ``DollarReward/eyd/``, an abervated command can be run
@@ -41,4 +40,7 @@ To inspect (show a graph) for the saccades in a trial, run ``R``. Inside ``R``, 
     # to see score of all trials
     scoreSac( trialSac(1940,'*') )
 
+Note:
+
+Dollar Reward is a special task unlike the others here (as it does not have a ``*.settings.R`` file, it will not be see by ``runme.bash``)
 
