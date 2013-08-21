@@ -1,4 +1,4 @@
-To score, be sure you are in the ``autoeyescore`` directory and use:
+To score, be sure you are in the ``autoeyescore`` directory and in a terminal window execute:
 
     ./scoreDollarReward.bash DollarReward/eyd/1940reward.eyd
 
