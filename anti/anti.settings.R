@@ -76,3 +76,6 @@ getExpPos <- function(sac.thresholds,xdatCode){
 xdatIsAS <- function(xdat){
  return(TRUE)
 }
+trialIsType <- function(xdat){
+ return('AS')
+}

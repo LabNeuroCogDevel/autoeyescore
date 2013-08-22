@@ -129,7 +129,9 @@ done
 
 echo "using $dir"
 # convert from bea_res name to will's naming convention (stupid Will)
-declare -A beaTowill=([VGS]='vgs' [BarsScan]='scannerbars' [BarsBehavioral]='bars' [Anti]='anti' [AntiState]="antistate")
+declare -A beaTowill=([VGS]='vgs' [BarsScan]='scannerbars' \
+                      [BarsBehavioral]='bars' [Anti]='anti'\
+                      [AntiState]="antistate" [Fix]="fix" )
 paradigm=${default[paradigm]}
 paradigm=${paradigm%%/*}
 willtask=${beaTowill[$paradigm]}
@@ -143,7 +145,7 @@ for f in $dir/Raw/EyeData/*eyd; do
  outdir="$(dirname "$f")/txt"
  tsv="$outdir/$(nameTSV $f)"
 
- [ -r $tsv ] && continue
+ #[ -r $tsv ] && continue
  [ ! -d $outdir ] && mkdir -p $outdir
  $scriptdir/dataFromAnyEyd.pl $f > $tsv
  # remove if cannot understand it's format

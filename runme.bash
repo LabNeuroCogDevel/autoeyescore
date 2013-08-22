@@ -66,7 +66,6 @@ done
 
 ### ARG COMPAREING
 [ -z "$type" -a -z "$TEST" ] && printhelp
-[ "$type"=="fix" ] && echo "not running fix yet" && exit 1
 
 basedir=$(cd $(dirname $0);pwd)
 

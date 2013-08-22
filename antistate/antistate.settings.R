@@ -97,3 +97,7 @@ getExpPos <- function(sac.thresholds,xdatCode){
     return(exppos)
 }
 
+trialIsType <- function(xdat){
+ if(xdatIsAS(xdat) ) { return('AS') }
+ return('PS')
+}

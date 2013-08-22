@@ -1,0 +1,2 @@
+scores_off	lats_off
+0.414097852825948	0

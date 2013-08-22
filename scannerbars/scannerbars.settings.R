@@ -3,7 +3,7 @@
 # XDAT CODES
 startcodes   <- c(1:10,20)*10
 targetcodes  <- c(111:150,201:204)
-stopcodes    <- c(0,250)
+stopcodes    <- c(0,250,254)
 
 # number of trials
 expectedTrialLengths  <- 42
@@ -103,4 +103,7 @@ getExpPos <- function(sac.thresholds,xdatCode){
 # is this xdat an antisaccde xdat?
 xdatIsAS <- function(xdat){
  return(TRUE)
+}
+trialIsType <- function(xdat){
+ return('AS')
 }

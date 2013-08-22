@@ -31,10 +31,12 @@ showdiffs <-function(auto=NA,manual=NA,size=10,xdat=NA) {
     print(x$trail)
     a<-getSacDot(as.character(x$trial));
     print(scoreSac(a));
-    cat('which is correct,  manual(m) or algorithm(a)?')
+    cat('which is correct:(a)lgorithm,(s)corer, (n)either, or (e)ither ?')
     correct <- readline();
+    cat('note: ')
+    note <- readline();
     dev.off();
-    cbind(x,whosCorrect=correct)
+    cbind(x,whosCorrect=correct,note=note)
   })
 
   write.csv(results,file=savetxt)

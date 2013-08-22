@@ -1032,7 +1032,8 @@ scoreSingleTrial<-function(x,funnybusiness='') { # x is good sacs for that trial
        cat('dropped at trial level:', x$subj[1],x$trial[1], failreason,'\n');
       }
 
-      return( dropTrialScore(x$trial[1],failreason, xdat=x$xdat[1], AS=xdatIsAS(x$xdat[1]) ) )
+      #return( dropTrialScore(x$trial[1],failreason, xdat=x$xdat[1], AS=xdatIsAS(x$xdat[1]) ) )
+      return( dropTrialScore(x$trial[1],failreason, xdat=x$xdat[1], AS=trialIsType(x$xdat[1]) ) )
 
      ### EVERYTHING IS GOOD SO FAR
      } else {
@@ -1055,7 +1056,8 @@ scoreSingleTrial<-function(x,funnybusiness='') { # x is good sacs for that trial
          # before the good saccades get counted
          #  -- or if any saccade ends on the correct side of base.val (not screen.x.mid)  -- even if its the incorrect sac
          ErrCorr=!x$cordir[1]&length(x$cordir)>1&(any(x$MaxMinX[-1])||any(x$corside)),
-         AS=xdatIsAS(mean(x$xdat)),
+         #AS=xdatIsAS(mean(x$xdat)),
+         AS=trialIsType(mean(x$xdat)),
          Desc=''
        ) )
      }
@@ -1073,6 +1075,18 @@ dropTrialScore <- function(trial=0,desc='no saccades',xdat=NA, AS=NA){
          Desc=desc
      )
 }
+
+# reset Count for fix types
+setScoreForFix <- function(scoredSac) {
+   a<-scoredSac
+   #a$Count[a$Desc=="no saccades"]<-1;
+   a$Count[grepl("no saccades",a$Desc)] <- 1;
+   a$Count[a$Desc==""]                  <- 0;
+   a$Count[a$Desc=="no good saccades"]  <- 1;
+   a$Count[grepl("no saccades within sac.time", a$Desc) ] <- 1;
+   return(a) 
+}
+
 scoreSac <- function(allsacs,funnybusiness=''){
 
 
@@ -1093,7 +1107,8 @@ scoreSac <- function(allsacs,funnybusiness=''){
 
 
   #names(cor.ErrCor.AS) <- c('trial','xdat','lat','fstCorrect','ErrCorr','AS')
-  cor.ErrCor.AS[,c('fstCorrect','ErrCorr','AS')]<-sapply(cor.ErrCor.AS[,c('fstCorrect','ErrCorr','AS')],as.logical)
+  cor.ErrCor.AS[,c('fstCorrect','ErrCorr')]<-sapply(cor.ErrCor.AS[,c('fstCorrect','ErrCorr')],as.logical)
+  cor.ErrCor.AS$AS<-as.character(cor.ErrCor.AS$AS)
   cor.ErrCor.AS$Count[is.na(cor.ErrCor.AS$lat )] <- -1
   cor.ErrCor.AS$Count[!is.na(cor.ErrCor.AS$lat )] <- 0
   cor.ErrCor.AS$Count[ which(cor.ErrCor.AS$fstCorrect == T ) ] <- 1
@@ -1101,6 +1116,10 @@ scoreSac <- function(allsacs,funnybusiness=''){
   # force order with Desc last
   cor.ErrCor.AS <- cor.ErrCor.AS[c('trial','xdat','lat','fstCorrect','ErrCorr','AS','Count','Desc')]
   
+  # reinterpert count for fixation trials
+  fixsacs <- which(grepl('FIX',cor.ErrCor.AS$AS))
+  cor.ErrCor.AS[fixsacs,] <- setScoreForFix(cor.ErrCor.AS[fixsacs,])
+
   #fstCorrect&ErrCor
   #write.table(file=paste(  paste('eyeData',subj,id,sep="/"), "/", subj, "-", type,'.pertrial.txt', sep=""),cor.ErrCor.AS,row.names=F,quote=F)
   return(cor.ErrCor.AS)
@@ -1121,25 +1140,32 @@ scoreRun <-function(cor.ErrCor.AS,seentrials) {
   #TODO: are dropped pro or anti saccades
   
   ## Pro Saccade
-  PS <- subset(cor.ErrCor.AS, subset=!AS&Count %in% 0:2)
+  PS <- subset(cor.ErrCor.AS, subset=grepl('PS',AS)&Count %in% 0:2)
   PS.cor    <- which(PS$fstCorrect)
   PS.ErrCor <- which(PS$ErrCorr)
   PS.Err    <- which(!( PS$fstCorrect | PS$ErrCorr ))
 
   ## Anti Saccade
-  AS <- subset(cor.ErrCor.AS, subset=AS&Count %in% 0:2)
+  AS <- subset(cor.ErrCor.AS, subset=grepl('AS',AS)&Count %in% 0:2)
   AS.cor    <- which(AS$fstCorrect)
   AS.ErrCor <- which(AS$ErrCorr)
   AS.Err    <- which(!( AS$fstCorrect | AS$ErrCorr ))
 
+  ## Other
+  OS <- subset(cor.ErrCor.AS, subset=!grepl('[AP]S',AS)&Count %in% 0:2)
+  OS.cor    <- which(OS$Count==1)
+  OS.ErrCor <- which(OS$Count==2)
+  OS.Err    <- which(OS$Count==0)
+
   lats <-as.data.frame(t(
    c(
      sapply(list(AScor.lat=AS.cor,ASErrCor.lat=AS.ErrCor,ASErr.lat=AS.Err),function(x){mean(AS$lat[x])}), 
-     sapply(list(PScor.lat=PS.cor,PSErrCor.lat=PS.ErrCor,PSErr.lat=PS.Err),function(x){mean(PS$lat[x])})
+     sapply(list(PScor.lat=PS.cor,PSErrCor.lat=PS.ErrCor,PSErr.lat=PS.Err),function(x){mean(PS$lat[x])}),
+     sapply(list(OScor.lat=OS.cor,OSErrCor.lat=OS.ErrCor,OSErr.lat=OS.Err),function(x){mean(OS$lat[x])})
    )))
 
   #simple stat
-  stats <- list('PSCor'=PS.cor,'PSCorErr'=PS.ErrCor,'PSErr'=PS.Err,'ASCor'=AS.cor,'ASErrCor'=AS.ErrCor,'ASErr'=AS.Err, 'Dropped'=dropped)
+  stats <- list('PSCor'=PS.cor,'PSCorErr'=PS.ErrCor,'PSErr'=PS.Err,'ASCor'=AS.cor,'ASErrCor'=AS.ErrCor,'ASErr'=AS.Err,'OSCor'=OS.cor,'OSErrCor'=OS.ErrCor,'OSErr'=OS.Err, 'Dropped'=dropped)
   lengths <- lapply(stats,length)
   #print(lengths)
   #print(sum(lengths))

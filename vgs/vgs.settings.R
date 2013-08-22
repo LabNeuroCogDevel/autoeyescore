@@ -79,3 +79,6 @@ xdatIsAS <- function(xdat){
  # these are all prosacs
  return(FALSE)
 }
+trialIsType <- function(xdat){
+ return('PS')
+}

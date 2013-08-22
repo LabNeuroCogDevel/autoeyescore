@@ -96,3 +96,11 @@ getExpPos <- function(sac.thresholds,xdatCode){
 xdatIsAS <- function(xdat){
  return(TRUE)
 }
+trialIsType <- function(xdat){
+ if(xdat<180) { return('ASNue') }
+ else if(xdat<190) { return('ASRew') }
+ else if(xdat<200) { return('ASPun') }
+ else {
+   return('AS')
+ }
+}
