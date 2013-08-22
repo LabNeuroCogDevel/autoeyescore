@@ -22,7 +22,7 @@ compared$scoresMatch <- compared$count_m==compared$count_a;
 compared.plot<-ggplot(compared,aes(x=count_m,y=p,label=occurances,fill=scoresMatch))+
                  geom_bar(stat="identity")+
                  facet_wrap(~count_a)+
-                 ggtitle(sprintf('%s: per trial classification by automic score',basename(getwd())))+
+                 ggtitle(sprintf('%s: per trial classification by automatic score',basename(getwd())))+
                  theme_bw()+
                  geom_text()+
                  ylab('% automatic agrees with manual')+xlab('manually scored as')

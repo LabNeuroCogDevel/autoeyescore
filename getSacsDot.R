@@ -28,6 +28,7 @@ getSacDot <- function(dotnotation, showplot=T,funnybusiness='',showcmd=F) {
   #trial=sprintf('1:%d',expectedTrialLengths)
   trial=1:expectedTrialLengths
   parts['trial']=sprintf('1:%d',expectedTrialLengths);
+  showplot=F
  }else{
   trial=parts['trial'] 
  }

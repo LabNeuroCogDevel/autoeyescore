@@ -38,18 +38,19 @@ plotTrial=F
 
 #r<-rle(sort(paste(splitfile$subj, splitfile$type)))
 
-dropScore <- function(subj,rundate,run,type,reason) {
-   cat(subj,run,type, reason,"\n")
-   output<-list('PSCor'=NaN,'PSCorErr'=NaN,'PSErr'=NaN,'ASCor'=NaN,'ASErrCor'=NaN,'ASErr'=NaN, 'Dropped'=NaN,
-                'AScor.lat'=NaN,'ASErrCor.lat'=NaN,'ASErr.lat'=NaN,'PScor.lat'=NaN,'PSErrCor.lat'=NaN,'PSErr.lat'=NaN)
-   output$total <- 0
-   #output$xdat  <- NaN # how'd this get in there?
-   output$subj  <- subj
-   output$date  <- rundate
-   output$type  <- type
-   output$run   <- run
-   return(output)
-}
+# never used, also have dropRun which looks to be the same
+#dropScore <- function(subj,rundate,run,type,reason) {
+#   cat(subj,run,type, reason,"\n")
+#   output<-list('PSCor'=NaN,'PSCorErr'=NaN,'PSErr'=NaN,'ASCor'=NaN,'ASErrCor'=NaN,'ASErr'=NaN, 'Dropped'=NaN,
+#                'AScor.lat'=NaN,'ASErrCor.lat'=NaN,'ASErr.lat'=NaN,'PScor.lat'=NaN,'PSErrCor.lat'=NaN,'PSErr.lat'=NaN)
+#   output$total <- 0
+#   #output$xdat  <- NaN # how'd this get in there?
+#   output$subj  <- subj
+#   output$date  <- rundate
+#   output$type  <- type
+#   output$run   <- run
+#   return(output)
+#}
 
 getsubj <- function(i,reuse=T){
   filename <- splitfile$file[i]

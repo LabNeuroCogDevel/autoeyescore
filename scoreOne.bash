@@ -168,7 +168,8 @@ Rscript --vanilla  --verbose <(echo "
  perRunStats <- scoreEveryone(splitfile,F,reuse=F);
 
  # plot
- sums     <- aggregate(. ~ subj, perRunStats[,c(1:8,match('subj',names(perRunStats))  )],sum)
+ plotCatagories <- c('subj','PSCor','PSCorErr','PSErr','ASCor','ASErrCor','ASErr','OSCor','OSErrCor','OSErr','Dropped','total')
+ sums     <- aggregate(. ~ subj, perRunStats[,plotCatagories],sum)
  longsums <- melt(sums[,names(sums) != 'total'],id.vars='subj') 
  byrun    <- melt(perRunStats[,!grepl('lat|total|type',names(perRunStats))], id.vars=c('subj','date','run') )
 

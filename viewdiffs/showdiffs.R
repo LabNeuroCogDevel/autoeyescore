@@ -12,7 +12,7 @@ source('getSacsDot.R')
 
 
 diffs.file <- file.path(dirname(pertrialCSV), 'trialChanges.txt')
-if(file.exists(diffs.file)){
+if(file.exists(diffs.file) && file.info(diffs.file)$size >0){
  diffs.data <- read.table(diffs.file,sep="\t",header=F)
  names(diffs.data) <- c('trial', 'before','current','scorer','status')
 }
