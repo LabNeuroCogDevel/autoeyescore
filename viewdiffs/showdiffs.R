@@ -48,8 +48,11 @@ cat(sprintf('
 showdiffs(-1,1,10) # same as showdiffs(auto=-1,manual=1,size=10)
     to see 10 instances  where auto says drop (-1), manual says correct (1)
 
- showdiffs(size=10) 
-    to see 10 instances where manual and auto are different
+ showdiffs(reason="first saccade") 
+    to see 10 instances where the drop reason is because of the first saccade
+
+ showdiffs(size=15) 
+    to see 15 instances where manual and auto are different
 
  showdiffs(auto=1,xdat=133)
     to see where algorithm says 1 on xdats of 133 (shows 10 by default)

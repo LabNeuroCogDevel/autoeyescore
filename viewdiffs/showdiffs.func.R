@@ -1,5 +1,9 @@
 # make function to show how scorer and algorithm disagree
-showdiffs <-function(auto=NA,manual=NA,size=10,xdat=NA) {
+# expect to have variable "n" in the workspace
+#  > names(n)
+#     "trial"   "count_a" "lat_a"   "count_m" "lat_m"   "scorer"  "xdat"    "reason"  "run"
+
+showdiffs <-function(auto=NA,manual=NA,size=10,xdat=NA,reason=NA) {
  savetxt<-sprintf('%s.%s.csv',Sys.Date(),Sys.time());
  if(!is.na(auto) || !is.na(manual)) {
    viewBOOL <- rep(T, length(n$count_a))
@@ -20,8 +24,16 @@ showdiffs <-function(auto=NA,manual=NA,size=10,xdat=NA) {
     viewBOOL <- viewBOOL&n$xdat==xdat  
     savetxt<-sprintf('x%d.%s',xdat,savetxt)
   }
+ if(!is.na(reason)  ) { 
+    viewBOOL <- viewBOOL&grepl(reason,as.character(n$reason))
+    savetxt<-sprintf('x%d.%s',xdat,savetxt)
+  }
 
  # grab samples and remove from n
+ if(length(which(viewBOOL)) < size) {
+  cat("too few matched critiera for your requested sample size!")
+  return()
+ }
  sampleidx<-sample(which(viewBOOL),size)
  trials <- n[sampleidx,]
  n<-n[-sampleidx,]
