@@ -31,7 +31,7 @@ see scoreOne.bash
 
 RUNNING BATCH
   
-  each task has it's own directory (anti,bars,scannerbars) with subdirectories for results and tests
+  each task has its own directory (anti,bars,scannerbars) with subdirectories for results and tests
   from this directory, '../score.R' is run which sources settings and scores. but use runme.bash 
  
   see runme.bash for help
@@ -47,18 +47,18 @@ RUNNING BATCH
 
 
  Results
-   check score.Rout (in results if succesful) for errors!
+   check score.Rout (in results if successful) for errors!
    the bottom of the file lists all subjects.date.runs that were not processed
 
 ITERATIVE CHANGES
   in R
-    # for behav bars
+    # for behavioral bars
     source('viewdiffs/checkBarsBeh.R')
 
 TESTING
 
   in R
-    # for behav bars
+    # for behavioral bars
     source('bars/bars.settings.R')
     source('ScoreRun.R')
     source('getSacsbyDot.R')
