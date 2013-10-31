@@ -1,0 +1,29 @@
+trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
+1	1	480	1	1866.66666666667	unknown	164	
+2	1	444	1	1850	unknown	181	
+3	0	319	0	1733.33333333333	unknown	166	
+4	1	405	1	1750	unknown	186	
+5	1	385	1	1783.33333333333	unknown	184	
+6	2	310	2	1700	unknown	162	
+7	1	419	-1	-1	unknown	186	
+8	2	345	2	516.666666666667	unknown	166	
+9	1	385	-1	-1	unknown	161	
+10	1	377	-1	-1	unknown	185	
+11	1	484	1	1850	unknown	181	
+12	-1	NA	-1	-1	unknown	185	moving (5.238 px/60Hz) before target onset
+13	2	310	2	2000	unknown	163	
+14	1	444	2	300	unknown	182	
+15	1	511	-1	-1	unknown	161	
+16	1	361	-1	-1	unknown	164	
+17	2	325	2	1666.66666666667	unknown	163	
+18	-1	NA	-1	-1	unknown	184	no saccades (getSacs)
+19	2	321	2	1716.66666666667	unknown	166	
+20	1	369	-1	-1	unknown	182	
+21	2	349	0	1716.66666666667	unknown	165	
+22	1	682	-1	-1	unknown	161	
+23	1	650	-1	916.666666666667	unknown	165	
+24	1	483	-1	-1	unknown	181	
+25	1	476	1	1866.66666666667	unknown	186	
+26	2	365	2	300	unknown	183	
+27	2	314	2	550	unknown	183	
+28	2	290	2	1683.33333333333	unknown	162	
