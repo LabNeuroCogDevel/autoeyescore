@@ -1,0 +1,2 @@
+PSCor	PSCorErr	PSErr	ASCor	ASErrCor	ASErr	OSCor	OSErrCor	OSErr	Dropped	total	AScor.lat	ASErrCor.lat	ASErr.lat	PScor.lat	PSErrCor.lat	PSErr.lat	OScor.lat	OSErrCor.lat	OSErr.lat	subj	date	run	type
+0	0	0	23	4	0	0	0	0	1	28	475.260869565217	445	NA	NA	NA	NA	NA	NA	NA	036	0	0	RingReward

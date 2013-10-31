@@ -1,0 +1,29 @@
+trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
+1	1	497	-1	-1	unknown	164	
+2	1	513	-1	-1	unknown	181	
+3	1	405	-1	-1	unknown	166	
+4	1	431	-1	-1	unknown	186	
+5	1	461	-1	-1	unknown	184	
+6	1	425	-1	-1	unknown	162	
+7	1	397	-1	-1	unknown	186	
+8	1	387	1	1800	unknown	166	
+9	1	473	1	250	unknown	161	
+10	1	481	-1	-1	unknown	185	
+11	1	489	-1	-1	unknown	181	
+12	1	465	1	1883.33333333333	unknown	185	
+13	2	461	-1	2700	unknown	163	
+14	1	505	-1	-1	unknown	182	
+15	1	609	1	550	unknown	161	
+16	1	433	-1	-1	unknown	164	
+17	2	469	-1	866.666666666667	unknown	163	
+18	1	617	1	1983.33333333333	unknown	184	
+19	1	481	1	466.666666666667	unknown	166	
+20	1	461	-1	-1	unknown	182	
+21	1	625	1	2033.33333333333	unknown	165	
+22	1	453	-1	-1	unknown	161	
+23	2	349	2	1683.33333333333	unknown	165	
+24	2	501	-1	-1	unknown	181	
+25	1	393	1	1800	unknown	186	
+26	1	441	-1	900	unknown	183	
+27	1	489	1	1883.33333333333	unknown	183	
+28	-1	NA	-1	-1	unknown	162	moving (53.334 px/60Hz) before target onset
