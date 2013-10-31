@@ -53,7 +53,8 @@ sampleHz     <- 60
 sac.time          <- 1.45 # how long is the target up before we see the fixation cross again? -- why isn't this in each paraigms setting
 
 sac.trackingtresh <- 0    # what percent of a sac has to have actual samples (tacked) to be counted, set to 0 to ignore
-sac.firstmincoverage  <- .8 # first saccade has to be this much tracked or trial is dropped
+# this is used for a rule that is stupid
+#sac.firstmincoverage  <- .6 # first saccade has to be this much tracked or trial is dropped
 
 
 ## latancy properties
@@ -341,6 +342,7 @@ parseRawForTargets <- function(eydfile, funnybusiness=''){
   
   #### Split eye positions by target code
   # use only targetcodes that are preceded by startcodes and followed by end codes
+  # this should let us ingore  catch trials (no target)
   tarCodePos       <- which(xdats$values %in% targetcodes)
   goodTargPos      <- tarCodePos[  xdats$values[tarCodePos  - 1]  %in%  startcodes ]
   goodTargPos      <- goodTargPos[ xdats$values[goodTargPos + 1]  %in%  stopcodes  ]
@@ -981,12 +983,14 @@ scoreSingleTrial<-function(x,funnybusiness='') { # x is good sacs for that trial
         failreason <- '1st good sac too soon' 
 
      # drop if the first good sac has poor tracking
-     } else if( x$p.tracked[1] < sac.firstmincoverage && !any(grepl('ignorefirstsactrack',funnybusiness)) ){
-        failreason <- sprintf('first good sac has poor tracking ( %.2f < %.2f obvervedsamples/expected)',
-                      x$p.tracked[1],sac.firstmincoverage )
+     ### in BarsBeh this drops 1141 trials, of those 552 disagree with scorer, and those that agree are mostly wrong
+     ### so probably a bad rule :)
+     #} else if( length(x$p.tracked)>1 && x$p.tracked[1] < sac.firstmincoverage && !any(grepl('ignorefirstsactrack',funnybusiness)) ){
+     #   failreason <- sprintf('first good sac has poor tracking ( %.2f < %.2f obvervedsamples/expected)',
+     #                 x$p.tracked[1],sac.firstmincoverage )
 
-     # drop if first sac is not close to baseline (use same value as used to drop trials that start too far from baseline)
-     #  means the first sac doesn't inform the initial movement, so this trial is bogus
+     ## drop if first sac is not close to baseline (use same value as used to drop trials that start too far from baseline)
+     ##  means the first sac doesn't inform the initial movement, so this trial is bogus
      } else if(abs(x$startpos[1] - screen.x.mid) > 50 && !any(grepl('ignorefirstsacstart',funnybusiness)) ) { 
        failreason <- 'start pos too far from center fix' 
 
@@ -1125,10 +1129,11 @@ scoreSac <- function(allsacs,funnybusiness=''){
   return(cor.ErrCor.AS)
 }
 
-dropRun <- function(){
-  data.frame('PSCor'=NA,'PSCorErr'=NA,'PSErr'=NA,'ASCor'=NA,'ASErrCor'=NA,'ASErr'=NA, 'Dropped'=expectedTrialLengths,'total'=expectedTrialLengths)
-
-}
+# nerver used, also have dropScore in scoreEveryone that looks similiar
+#dropRun <- function(){
+#  data.frame('PSCor'=NA,'PSCorErr'=NA,'PSErr'=NA,'ASCor'=NA,'ASErrCor'=NA,'ASErr'=NA, 'Dropped'=expectedTrialLengths,'total'=expectedTrialLengths)
+#
+#}
 scoreRun <-function(cor.ErrCor.AS,seentrials) {
   if(is.null(cor.ErrCor.AS) || length(cor.ErrCor.AS) <1){
    cat('scoreRun given bad cor.ErrCor.AS dataframe\n')
