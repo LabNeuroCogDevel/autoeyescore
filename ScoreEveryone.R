@@ -62,6 +62,9 @@ getsubj <- function(i,reuse=T){
   savedas  <- splitfile$savedas[i]
   pertrialoutput <- sub('.sac.txt$','.trial.txt',splitfile$savedas[i])
 
+
+
+
   # from ScoreRun.R
   # saverootdir  <- 'eyeData'
   # outputdir <- paste(saverootdir, subj,runtype,sep="/")
@@ -107,11 +110,22 @@ getsubj <- function(i,reuse=T){
   # return(as.data.frame(output))
   #}
 
+  ## If we are using a sound task (and we have an EP log for it)
+  ## we should apply the log to the scores (sanity check and all)
+  ## EXPECT to read a tab sep file with header and a "correct" column
+  
+  EPfile    <- sub('data.tsv$','.eplog.txt',splitfile$file[i])
+  EPcorrect <- tryCatch({ 
+      correct <- read.table(file=EPfile,sep="\t",header=T)$correct
+      cat('using EP log!\n')
+      correct 
+     },error=function(e){ NULL })
+
+
   # SCORE SACCADES
   # get a line per trial dataframe
-  
   cor.ErrCor.AS<-tryCatch({ 
-      scoreSac(allsacs)
+      scoreSac(allsacs,EPcorrect=EPcorrect)
      },error=function(e){
          cat(sprintf('scoreSac failed on %s.%s.%d\n',subj,rundate,run))
          dropTrialScore(0)  # defined in ScoreRun.R

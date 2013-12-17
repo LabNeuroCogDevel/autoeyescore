@@ -148,6 +148,21 @@ for f in $dir/Raw/EyeData/*eyd; do
  #[ -r $tsv ] && continue
  [ ! -d $outdir ] && mkdir -p $outdir
  $scriptdir/dataFromAnyEyd.pl $f > $tsv
+
+ # we can also translate eprime log to useful information
+ # provided we have the log file like
+ # "/Raw/EPrime/* $run-$subject*"  --- only really care about bars tasks 
+ # -- because subject hears a noise that we want to account for
+
+ # extract rr from sss.dddd.r.data.csv
+ run=$(basename $tsv .data.tsv)
+ run=${run##*.} 
+ eplog=$( find $dir/Raw/Eprime/ -iname "* $run-$subject*txt"|tail -n1)
+ eptxt="${tsv/data.tsv/eplog}.txt" #append .txt to make sure we don't overwrite anything
+ echo "looking for $eplog"
+ [ -n "$eplog" -a -r "$eplog" ] && echo "parsing to $eptxt" && ./parseEP.pl "$eplog" > "$eptxt"
+
+
  # remove if cannot understand it's format
  [ $(wc -l $tsv|cut -f1 -d' ') -lt 10 ] && echo "Removed $tsv! $f looks bad" && rm $tsv
 done

@@ -37,3 +37,41 @@ getSacDot <- function(dotnotation, showplot=T,funnybusiness='',showcmd=F) {
  getSacs(eyetrack,parts['subj'],parts['run'],bname,onlyontrials=trial,savedas=saveto,writetopdf=F,showplot=showplot,rundate=parts['date'],funnybusiness=funnybusiness)
 }
 
+getRunDot <- function(dotnotation, showplot=F,funnybusiness='',showcmd=F) {
+ parts <- unlist(strsplit(dotnotation, '\\.'))
+ parts <- as.numeric(parts);
+ names(parts) <- c('subj','date','run')
+
+ dirbase  <- sprintf("%s/%s/%s",filebasedir,parts['subj'],parts['date'])
+ eyetrack <- sprintf("%s/Raw/EyeData/txt/%s.%s.%s.data.tsv",dirbase,parts['subj'],parts['date'],parts['run'])
+
+ # maybe we can use eprime?
+ EPfile    <- sub('data.tsv$','eplog.txt',eyetrack)
+ print(EPfile)
+ EPcorrect <- tryCatch({ 
+     correct <- read.table(file=EPfile,sep="\t",header=T)$Correct
+     if(!is.null(correct)){cat('found and using eprime log file\n')}
+     correct
+    },error=function(e){ cat('couldnt open eplog!\n'); NULL })
+
+ if(showplot==T){
+    for(trial in 1:expectedTrialLengths){
+       print(trial)
+       getSacs(eyetrack,
+               parts['subj'],
+               parts['run'],
+               bname,
+               onlyontrials=trial,
+               writetopdf=F,
+               showplot=showplot,
+               rundate=parts['date'],
+               funnybusiness=funnybusiness)
+       cat('push any key when ready for next')
+       readline()
+    }
+ }
+ 
+ allsacs <- getSacs(eyetrack,parts['subj'],parts['run'],bname,onlyontrials=1:expectedTrialLengths,writetopdf=F,showplot=F,rundate=parts['date'],funnybusiness=funnybusiness)
+ scoreSac(allsacs, EPcorrect=EPcorrect)
+}
+

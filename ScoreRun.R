@@ -5,10 +5,11 @@
 #
 # TESTING:
 #   funnybusiness ='ignoreblinks,dontcutspikes,preblinkok,useextremefilter'
-#     ignoreblinks: 
-#     dontcutspikes: 
-#     preblinkok:
-#     useextremefilter:
+#     blinkbeforeok: dont drop because there is a blink maxBlinkLengthBeforeFirstSac before first sac
+#     ignoreblinks:  dont do anything with blinks
+#     dontcutspikes: dont take out large isolated changes in eye postion
+#     preblinkok:    dont drop because there is a blink before trial starts
+#     useextremefilter: 
 #
 #TODO:
 #NOTES: 
@@ -84,6 +85,7 @@ blink.trim.samples <- 2
 ### Plot settings
 plot.endtime <- 1.75
 #plot.endtime <- 4
+maxBlinkLengthBeforeFirstSac <- .3
 
 # Green:   means correct direction to the correct place
 # Blue:    good dir, over or under shot position
@@ -107,7 +109,7 @@ p    <- ggplot() + theme_bw() + theme(legend.position="none")  + #,text=element_
 #
 #### PLOT 
 #
-ggplotXpos <- function(est,d,trgt,sac.df,base.val,delt.x.scale,slowpnt.x.scale,ptitle) {
+ggplotXpos <- function(est,d,trgt,sac.df,base.val,delt.x.scale,slowpnt.x.scale,ptitle,blinkends=c()) {
   
   ybreaks= sort( c(122,sac.thresholds ) )
   g    <- p +
@@ -132,11 +134,11 @@ ggplotXpos <- function(est,d,trgt,sac.df,base.val,delt.x.scale,slowpnt.x.scale,p
           geom_hline(yintercept=screen.x.mid,color=I('darkgreen'),alpha=I(.5))
    }
 
-     # outline "good" position (with padding) in purple
-     g <- g +
-          geom_hline(yintercept=c(sac.thres-sac.padding,sac.thres+sac.padding),
-                     color=I('purple'),alpha=I(.2)) +
-          ggtitle(ptitle) + ylab('left to right')+xlab('')
+  # outline "good" position (with padding) in purple
+  g <- g +
+       geom_hline(yintercept=c(sac.thres-sac.padding,sac.thres+sac.padding),
+                  color=I('purple'),alpha=I(.2)) +
+       ggtitle(ptitle) + ylab('left to right')+xlab('')
   
   # put colored boxes around saccades
   if(!is.null(sac.df) && dim(sac.df)[1]>=1){
@@ -147,6 +149,11 @@ ggplotXpos <- function(est,d,trgt,sac.df,base.val,delt.x.scale,slowpnt.x.scale,p
            scale_fill_manual(values=positionColors) +
            scale_alpha_manual(values=c('TRUE'=.5,'FALSE'=.2))
   } 
+
+  # put in blinkends if we have any
+  if(!is.null(blinkends) && length(blinkends)>0) {
+   g<- g + geom_vline(xintercept=blinkends,color=I('green'),linetype=I('dotdash'))
+  }
 
   return(g)
 } 
@@ -748,6 +755,8 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     actualblinkidx     <- NArle$values==T & NArle$lengths/sampleHz > blink.mintimedrop 
     eyeidx.blinkstart  <- NArlecs[which(actualblinkidx)-1]*sampleHz
     blinkends <- NArlecs[ actualblinkidx ]
+
+
     if(length(blinkends)==0){blinkends <- Inf}
 
     # if a sac starts with a blink, add that blink to the start
@@ -787,7 +796,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
 
     #sac.df$combined <- overlapSac
     
-    if(any(overlapSac)) {
+    if(any(overlapSac) ) {
       overlapSac <- which(overlapSac)
       # merge into one
       #needReplaced <-c('slowedIdx','endIdx','slowed','end','combined')
@@ -875,6 +884,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     if(is.na(firstsacstart)){firstsacstart <- -Inf}
 
 
+
     if(any(blinkends < firstsacstart ) & !any(grepl('ignoreblinks',funnybusiness))){
      # quick way to see if blink is held
      # if xpos is more than 5 px from any other
@@ -894,6 +904,10 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
          blinkends[x] - eyeidx.blinkstart[x]/sampleHz > .5 # sac is too long
         # should let scannerbars 10701.20110323.2.30 pass, doesn't
      }))
+
+
+
+     
      # this checks that there isn't an immediate acceleration after the blink
      # ... but the blink may be part of an acceleration and the start might be before
      # so we should check the first derv
@@ -917,6 +931,27 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
 
     }
 
+    ## unheld blink before first saccade
+    ## added 20131217 - WF
+    # * we'll check that a blink doesn't start some threshold before the first saccade
+    # * see bars getSacDot('10872.20131129.1.55') and .54 
+    #    - these are correct saccades, but cant be distinquished from a blink
+    if(length(eyeidx.blinkstart)>0 
+       && nrow(sac.df) > 0
+       && length(eyeidx.blinkstart)>0
+       && !any(grepl('blinkbeforeok',funnybusiness))
+       && !any(grepl('ignoreblinks',funnybusiness))){
+
+      firstsacstart <- sac.df$onset[1]
+      firstblinkbeforesac <- firstsacstart - eyeidx.blinkstart[1]/sampleHz;
+      if( firstblinkbeforesac  > maxBlinkLengthBeforeFirstSac){
+        allsacs <-  dropTrialSacs(subj,runtype,trl,xdatCode,
+                      sprintf('blink starts %.3f before any saccade',firstblinkbeforesac),
+                      allsacs,run=run,showplot=showplot,rundate=rundate)
+        next
+      }
+    }
+
     
 
     
@@ -934,7 +969,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     ## PLOT -- only if we are told to
     if(showplot | writetopdf) {
        ptitle <- paste(subj,runtype, trl,xdatCode)
-       g    <- ggplotXpos(est,d,trgt,sac.df,base.val,delt.x.scale,slowpnt.x.scale,ptitle)
+       g    <- ggplotXpos(est,d,trgt,sac.df,base.val,delt.x.scale,slowpnt.x.scale,ptitle,blinkends=c(eyeidx.blinkstart,blinkends*sampleHz))
        drv <- ggplotDrv(fst,scnd,slowpnt.x.scale,delt.x.scale)
 
        # write out plot
@@ -1091,7 +1126,7 @@ setScoreForFix <- function(scoredSac) {
    return(a) 
 }
 
-scoreSac <- function(allsacs,funnybusiness=''){
+scoreSac <- function(allsacs,EPcorrect=NULL,funnybusiness=''){
 
 
   # select only those saccades we will count
@@ -1111,8 +1146,14 @@ scoreSac <- function(allsacs,funnybusiness=''){
 
 
   #names(cor.ErrCor.AS) <- c('trial','xdat','lat','fstCorrect','ErrCorr','AS')
+  # turn these back into logicals
   cor.ErrCor.AS[,c('fstCorrect','ErrCorr')]<-sapply(cor.ErrCor.AS[,c('fstCorrect','ErrCorr')],as.logical)
+
+  # these get turned into factor, but back as character
   cor.ErrCor.AS$AS<-as.character(cor.ErrCor.AS$AS)
+  cor.ErrCor.AS$Desc<-as.character(cor.ErrCor.AS$Desc)
+
+  # set count "num sacs til correct movement"  (-1 drop, 0 error, 1 correct, 2 error corrected)
   cor.ErrCor.AS$Count[is.na(cor.ErrCor.AS$lat )] <- -1
   cor.ErrCor.AS$Count[!is.na(cor.ErrCor.AS$lat )] <- 0
   cor.ErrCor.AS$Count[ which(cor.ErrCor.AS$fstCorrect == T ) ] <- 1
@@ -1120,6 +1161,29 @@ scoreSac <- function(allsacs,funnybusiness=''){
   # force order with Desc last
   cor.ErrCor.AS <- cor.ErrCor.AS[c('trial','xdat','lat','fstCorrect','ErrCorr','AS','Count','Desc')]
   
+  # drop trials that disagree with log, if we have a log
+  if(!is.null(EPcorrect)) {
+   # eprime is 1 or NA. change NA to 0
+   EPcorrect[is.na(EPcorrect)] <- 0;
+   cor.ErrCor.AS$EPlog <- EPcorrect
+
+   # drop any disagreement
+   logDisagree <- which( (cor.ErrCor.AS$Count==1 & EPcorrect!=1) | (cor.ErrCor.AS$Count!=1 & EPcorrect==1) )
+   if(length(logDisagree) > 0L ) {
+     cor.ErrCor.AS$Desc[logDisagree] <- sprintf("Disagree with log file (org. cnt:%d) %s", cor.ErrCor.AS$Count[logDisagree] , cor.ErrCor.AS$Desc[logDisagree])
+     cor.ErrCor.AS$Count[logDisagree] <- -1
+     # undo anything that might have been set before dropping trial
+     cor.ErrCor.AS$lat[logDisagree] <- NA
+     cor.ErrCor.AS$fstCorrect[logDisagree] <- F
+     cor.ErrCor.AS$ErrCorr[logDisagree] <- F
+   }
+
+  } else {
+   # we could modify all other runs to indicate there was no EP log
+   # but that's a lot of space
+   #cor.ErrCor.AS$EPlog <- NA
+  }
+
   # reinterpert count for fixation trials
   fixsacs <- which(grepl('FIX',cor.ErrCor.AS$AS))
   cor.ErrCor.AS[fixsacs,] <- setScoreForFix(cor.ErrCor.AS[fixsacs,])

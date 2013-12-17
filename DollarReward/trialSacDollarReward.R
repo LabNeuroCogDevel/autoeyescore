@@ -1,4 +1,4 @@
-source('DollarReward/DollarReward.R')
+source('DollarReward/DollarReward.settings.R') 
 source('ScoreRun.R')
 filebasedir<-'DollarReward/txt/'
 trialSac <- function(subject,trial,showplot=T,funnybusiness='',showcmd=F) {
