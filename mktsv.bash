@@ -30,15 +30,17 @@ for f in $( find $basicdir -maxdepth 5 -mindepth 5 -iname \*.eyd ); do
 
  ## parse eprime if we can
  # extract rr from sss.dddd.r.data.csv
+ rawdir=$(dirname $(dirname $f))
  run=$(basename $tsv .data.tsv)
  run=${run##*.} 
- eplog=$( find $dir/Raw/E[pP]rime/ -iname "* $run-$subject*txt" 2>/dev/null|tail -n1) # take the highest number
+ eplog=$( find $rawdir/E[pP]rime/ -iname "* $run-$subject*txt" 2>/dev/null |tail -n1) # take the highest number
  eptxt="${tsv/data.tsv/eplog}.txt" #append .txt to make sure we don't overwrite anything
 
  # skip if we already have eptxt or if there is no eplog
  [ -r $eptxt -o -z "$eplog" ] && continue
  # proceed if we can read eplog
- [ -r "$eplog" ] && echo "found $eplog > $eptxt" && ../parseEP.pl "$eplog" > "$eptxt"
+ [ -r "$eplog" ] && ../parseEP.pl "$eplog" > "$eptxt" && echo "$eplog > $eptxt"
+ [ $(wc -l $eptxt|cut -f1 -d' ') -lt 10 ] && echo "Removed $eptxt (bad $eplog?)!" && rm $eptxt
 
 done
 

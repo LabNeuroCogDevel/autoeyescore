@@ -114,11 +114,12 @@ getsubj <- function(i,reuse=T){
   ## we should apply the log to the scores (sanity check and all)
   ## EXPECT to read a tab sep file with header and a "correct" column
   
-  EPfile    <- sub('data.tsv$','.eplog.txt',splitfile$file[i])
+  EPfile    <- sub('data.tsv$','eplog.txt',splitfile$file[i])
   EPcorrect <- tryCatch({ 
-      correct <- read.table(file=EPfile,sep="\t",header=T)$correct
+      correct <- read.table(file=EPfile,sep="\t",header=T)
+      idx<-grep('correct',names(correct),ignore.case = T)
       cat('using EP log!\n')
-      correct 
+      correct[,idx]
      },error=function(e){ NULL })
 
 

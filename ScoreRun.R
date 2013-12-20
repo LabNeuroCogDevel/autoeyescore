@@ -1162,7 +1162,11 @@ scoreSac <- function(allsacs,EPcorrect=NULL,funnybusiness=''){
   cor.ErrCor.AS <- cor.ErrCor.AS[c('trial','xdat','lat','fstCorrect','ErrCorr','AS','Count','Desc')]
   
   # drop trials that disagree with log, if we have a log
-  if(!is.null(EPcorrect)) {
+  if(!is.null(EPcorrect) && length(EPcorrect) != nrow(cor.ErrCor.AS) ) {
+   EPcorrect<- NULL;
+   cat(sprintf('WARNING: not using EP log file, log has %d entries but run is %d\n',length(EPcorrect), nrow(cor.ErrCor.AS)))
+  }
+  if(!is.null(EPcorrect) ) {
    # eprime is 1 or NA. change NA to 0
    EPcorrect[is.na(EPcorrect)] <- 0;
    cor.ErrCor.AS$EPlog <- EPcorrect

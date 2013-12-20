@@ -70,7 +70,7 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 99999.20060803.3.9	1	223	1	233	EMI	173	
 99999.20060803.3.10	2	331	2	317	EMI	172	
 99999.20060803.3.11	2	360	2	367	EMI	175	
-99999.20060803.3.12	1	1158	2	150	EMI	176	
+99999.20060803.3.12	-1	NA	2	150	EMI	176	blink starts 0.974 before any saccade
 99999.20060803.2.1	2	390	2	383	EMI	172	
 99999.20060803.2.2	2	330	2	300	EMI	173	
 99999.20060803.2.3	1	546	1	550	EMI	173	
@@ -200,7 +200,7 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 11111.20130116.4.7	1	352	1	350	LR	161	
 11111.20130116.4.8	1	390	1	400	LR	165	
 11111.20130116.4.9	1	308	1	317	LR	162	
-11111.20130116.4.10	-1	NA	-1	-1	LR	165	start pos too far from center fix
+11111.20130116.4.10	-1	NA	-1	-1	LR	165	blink starts 0.565 before any saccade
 11111.20130116.4.11	-1	NA	-1	-1	LR	164	average fixpos(193.900000) is off from baseline(130.500000)!
 11111.20130116.4.12	-1	NA	-1	-1	LR	166	blink before target onset
 11111.20130116.3.1	1	414	1	333	LR	176	
@@ -293,7 +293,7 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 11088.20121211.3.4	1	315	1	317	LR	163	
 11088.20121211.3.5	1	293	1	300	LR	161	
 11088.20121211.3.6	1	422	1	383	LR	164	
-11088.20121211.3.7	1	427	1	433	LR	162	
+11088.20121211.3.7	-1	NA	1	433	LR	162	blink starts 0.410 before any saccade
 11088.20121211.3.8	1	298	1	300	LR	166	
 11088.20121211.3.9	1	226	1	183	LR	165	
 11088.20121211.3.10	1	270	1	267	LR	166	
@@ -682,7 +682,7 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 10825.20100609.3.9	2	427	-1	-1	CW	175	
 10825.20100609.3.10	1	442	-1	-1	CW	174	
 10825.20100609.3.11	-1	NA	-1	-1	CW	173	no saccades (getSacs)
-10825.20100609.3.12	-1	NA	-1	-1	CW	172	start pos too far from center fix
+10825.20100609.3.12	-1	NA	-1	-1	CW	172	blink starts 0.849 before any saccade
 10825.20100609.2.1	2	278	2	250	unknown	172	
 10825.20100609.2.2	2	302	2	300	unknown	175	
 10825.20100609.2.3	2	301	-1	-1	unknown	171	
@@ -2168,7 +2168,7 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 10480.20091110.2.7	2	729	-1	-1	KB	176	
 10480.20091110.2.8	1	487	-1	-1	KB	171	
 10480.20091110.2.9	1	632	-1	-1	KB	172	
-10480.20091110.2.10	1	979	-1	-1	KB	174	
+10480.20091110.2.10	-1	NA	-1	-1	KB	174	blink starts 0.629 before any saccade
 10480.20091110.2.11	-1	NA	-1	-1	KB	174	blink before target onset
 10480.20091110.2.12	2	613	1	700	KB	175	
 10480.20091110.1.1	1	542	1	533	KB	164	
@@ -2294,7 +2294,7 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 10479.20091109.1.1	2	584	-1	-1	KB	174	
 10479.20091109.1.2	2	263	-1	-1	KB	171	
 10479.20091109.1.3	2	322	-1	-1	KB	176	
-10479.20091109.1.4	1	539	-1	-1	KB	171	
+10479.20091109.1.4	-1	NA	-1	-1	KB	171	blink starts 0.472 before any saccade
 10479.20091109.1.5	1	479	1	433	KB	173	
 10479.20091109.1.6	-1	NA	-1	-1	KB	172	blink before target onset
 10479.20091109.1.7	-1	NA	-1	-1	KB	175	< 30% tracking for samples of interest
@@ -2428,7 +2428,7 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 10477.20101117.2.3	1	352	1	333	CW	163	
 10477.20101117.2.4	1	367	1	350	CW	163	
 10477.20101117.2.5	1	367	1	367	CW	161	
-10477.20101117.2.6	-1	NA	-1	-1	CW	164	no good saccades
+10477.20101117.2.6	-1	NA	-1	-1	CW	164	blink starts 0.356 before any saccade
 10477.20101117.2.7	2	68	-1	-1	CW	161	
 10477.20101117.2.8	1	322	1	333	CW	166	
 10477.20101117.2.9	1	322	1	317	CW	162	
@@ -2635,7 +2635,7 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 10472.20101012.1.6	1	412	1	400	CW	165	
 10472.20101012.1.7	1	594	1	600	CW	162	
 10472.20101012.1.8	1	427	1	433	CW	162	
-10472.20101012.1.9	1	621	-1	-1	CW	166	
+10472.20101012.1.9	-1	NA	-1	-1	CW	166	blink starts 0.554 before any saccade
 10472.20101012.1.10	1	419	-1	-1	CW	166	
 10472.20101012.1.11	1	278	1	267	CW	165	
 10472.20101012.1.12	1	330	1	483	CW	164	
@@ -2958,7 +2958,7 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 10470.20071015.1.5	1	482	1	483	KS	175	
 10470.20071015.1.6	1	621	1	617	KS	174	
 10470.20071015.1.7	1	539	1	550	KS	176	
-10470.20071015.1.8	1	994	1	983	KS	175	
+10470.20071015.1.8	-1	NA	1	983	KS	175	blink starts 0.860 before any saccade
 10470.20071015.1.9	1	617	1	617	KS	171	
 10470.20071015.1.10	1	479	1	483	KS	176	
 10470.20071015.1.11	1	427	1	433	KS	172	
@@ -4243,7 +4243,7 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 10365.20101218.4.6	1	330	1	333	CW	162	
 10365.20101218.4.7	1	293	1	283	CW	161	
 10365.20101218.4.8	1	472	-1	-1	CW	165	
-10365.20101218.4.9	1	390	-1	-1	CW	162	
+10365.20101218.4.9	-1	NA	-1	-1	CW	162	blink starts 0.340 before any saccade
 10365.20101218.4.10	1	508	1	500	CW	165	
 10365.20101218.4.11	1	324	1	317	CW	164	
 10365.20101218.4.12	1	442	1	433	CW	166	
@@ -4337,7 +4337,7 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 10365.20081108.4.4	2	390	2	417	KS	171	
 10365.20081108.4.5	2	352	2	350	KS	175	
 10365.20081108.4.6	2	315	2	433	KS	172	
-10365.20081108.4.7	-1	NA	-1	-1	KS	176	start pos too far from center fix
+10365.20081108.4.7	-1	NA	-1	-1	KS	176	blink starts 0.668 before any saccade
 10365.20081108.4.8	2	474	-1	-1	KS	174	
 10365.20081108.4.9	1	554	-1	-1	KS	172	
 10365.20081108.4.10	2	404	0	417	KS	175	
@@ -5442,7 +5442,7 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 10344.20060909.2.5	1	442	1	450	EMI	173	
 10344.20060909.2.6	2	444	2	450	EMI	172	
 10344.20060909.2.7	2	293	2	300	EMI	175	
-10344.20060909.2.8	-1	NA	1	467	EMI	176	start pos too far from center fix
+10344.20060909.2.8	-1	NA	1	467	EMI	176	blink starts 0.816 before any saccade
 10344.20060909.2.9	2	427	2	350	EMI	175	
 10344.20060909.2.10	1	437	1	433	EMI	174	
 10344.20060909.2.11	1	591	1	617	EMI	173	
@@ -5770,7 +5770,7 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 10336.20060824.1.9	1	472	1	483	EMI	171	
 10336.20060824.1.10	2	360	2	350	EMI	176	
 10336.20060824.1.11	1	497	1	500	EMI	172	
-10336.20060824.1.12	-1	NA	1	433	EMI	171	start pos too far from center fix
+10336.20060824.1.12	-1	NA	1	433	EMI	171	blink starts 0.393 before any saccade
 10335.20100526.4.1	2	272	2	250	CW	175	
 10335.20100526.4.2	1	412	1	417	CW	173	
 10335.20100526.4.3	1	494	1	467	CW	173	
@@ -6020,7 +6020,7 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 10333.20100602.4.7	1	539	1	533	CW	176	
 10333.20100602.4.8	0	400	0	400	CW	171	
 10333.20100602.4.9	1	479	-1	-1	CW	172	
-10333.20100602.4.10	-1	NA	-1	-1	CW	174	start pos too far from center fix
+10333.20100602.4.10	-1	NA	-1	-1	CW	174	blink starts 0.857 before any saccade
 10333.20100602.4.11	2	106	2	100	CW	174	
 10333.20100602.4.12	-1	NA	-1	-1	CW	175	blink before target onset
 10333.20100602.3.1	-1	NA	1	467	CW	161	no good saccades
@@ -6307,7 +6307,7 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 10329.20121015.4.6	1	442	1	433	LR	176	
 10329.20121015.4.7	1	382	1	383	LR	171	
 10329.20121015.4.8	1	367	-1	-1	LR	172	
-10329.20121015.4.9	-1	NA	-1	-1	LR	173	start pos too far from center fix
+10329.20121015.4.9	-1	NA	-1	-1	LR	173	blink starts 0.517 before any saccade
 10329.20121015.4.10	1	399	1	400	LR	174	
 10329.20121015.4.11	1	375	1	367	LR	172	
 10329.20121015.4.12	1	382	1	383	LR	173	
@@ -7866,7 +7866,7 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 10288.20090715.2.5	1	504	-1	-1	KB	171	
 10288.20090715.2.6	1	598	-1	-1	KB	173	
 10288.20090715.2.7	1	519	1	500	KB	171	
-10288.20090715.2.8	-1	NA	-1	-1	KB	175	no good saccades
+10288.20090715.2.8	-1	NA	-1	-1	KB	175	blink starts 0.612 before any saccade
 10288.20090715.2.9	1	512	1	500	KB	176	
 10288.20090715.2.10	1	554	-1	-1	KB	174	
 10288.20090715.2.11	1	788	-1	-1	KB	175	
@@ -8212,7 +8212,7 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 10279.20130112.1.3	1	404	1	400	RC	163	
 10279.20130112.1.4	1	330	1	317	RC	163	
 10279.20130112.1.5	1	129	1	383	RC	161	
-10279.20130112.1.6	-1	NA	-1	-1	RC	164	start pos too far from center fix
+10279.20130112.1.6	-1	NA	-1	-1	RC	164	blink starts 0.354 before any saccade
 10279.20130112.1.7	-1	NA	1	150	RC	161	poor tracking: sd of xpos Δ=41.919339
 10279.20130112.1.8	-1	NA	-1	-1	RC	166	moving (-Inf px/60Hz) before target onset
 10279.20130112.1.9	1	292	1	300	RC	162	
@@ -8445,7 +8445,7 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 10273.20060427.2.8	-1	NA	1	233	EMI	164	1st good sac too soon
 10273.20060427.2.9	1	369	1	367	EMI	162	
 10273.20060427.2.10	1	427	1	367	EMI	163	
-10273.20060427.2.11	1	448	1	450	EMI	166	
+10273.20060427.2.11	-1	NA	1	450	EMI	166	blink starts 0.398 before any saccade
 10273.20060427.2.12	2	87	1	167	EMI	166	
 10273.20060427.1.1	1	569	1	567	EMI	174	
 10273.20060427.1.2	1	569	1	567	EMI	171	
@@ -8453,7 +8453,7 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 10273.20060427.1.4	-1	NA	-1	-1	EMI	176	no saccades within sac.time(1.450)
 10273.20060427.1.5	1	427	1	417	EMI	171	
 10273.20060427.1.6	1	442	1	450	EMI	172	
-10273.20060427.1.7	2	434	2	433	EMI	174	
+10273.20060427.1.7	-1	NA	2	433	EMI	174	blink starts 0.401 before any saccade
 10273.20060427.1.8	1	501	1	517	EMI	173	
 10273.20060427.1.9	1	539	1	533	EMI	173	
 10273.20060427.1.10	1	459	1	450	EMI	172	
@@ -8700,9 +8700,9 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 10267.20080223.1.11	-1	NA	1	383	KS	166	moving (4.462 px/60Hz) before target onset
 10267.20080223.1.12	-1	NA	-1	-1	KS	162	blink before target onset
 10267.20070203.4.1	2	414	2	400	KS	174	
-10267.20070203.4.2	2	487	-1	-1	KS	171	
+10267.20070203.4.2	-1	NA	-1	-1	KS	171	blink starts 0.353 before any saccade
 10267.20070203.4.3	2	322	2	333	KS	176	
-10267.20070203.4.4	2	919	-1	-1	KS	171	
+10267.20070203.4.4	-1	NA	-1	-1	KS	171	blink starts 0.769 before any saccade
 10267.20070203.4.5	2	315	2	300	KS	173	
 10267.20070203.4.6	2	442	2	450	KS	172	
 10267.20070203.4.7	0	308	0	300	KS	175	
@@ -9244,7 +9244,7 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 10253.20110209.3.3	1	398	1	417	CW	164	
 10253.20110209.3.4	1	337	1	317	CW	163	
 10253.20110209.3.5	-1	NA	-1	-1	CW	161	blink before target onset
-10253.20110209.3.6	-1	NA	-1	-1	CW	164	start pos too far from center fix
+10253.20110209.3.6	-1	NA	-1	-1	CW	164	blink starts 0.334 before any saccade
 10253.20110209.3.7	-1	NA	-1	-1	CW	162	blink before target onset
 10253.20110209.3.8	-1	NA	1	417	CW	166	average fixpos(74.237500) is off from baseline(130.500000)!
 10253.20110209.3.9	-1	NA	-1	-1	CW	165	blink before target onset
@@ -10321,7 +10321,7 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 10233.20060313.1.12	1	434	1	433	EMI	175	
 10232.20080223.4.1	-1	NA	-1	-1	KS	161	blink before target onset
 10232.20080223.4.2	1	382	1	317	KS	163	
-10232.20080223.4.3	1	647	-1	-1	KS	162	
+10232.20080223.4.3	-1	NA	-1	-1	KS	162	blink starts 0.597 before any saccade
 10232.20080223.4.4	1	412	1	400	KS	162	
 10232.20080223.4.5	1	452	1	450	KS	165	
 10232.20080223.4.6	1	397	1	400	KS	166	
@@ -11429,9 +11429,9 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 10217.20100330.2.4	1	393	-1	-1	KB	166	
 10217.20100330.2.5	1	360	-1	-1	KB	162	
 10217.20100330.2.6	1	457	1	467	KB	161	
-10217.20100330.2.7	1	576	-1	-1	KB	164	
+10217.20100330.2.7	-1	NA	-1	-1	KB	164	blink starts 0.343 before any saccade
 10217.20100330.2.8	1	352	-1	-1	KB	165	
-10217.20100330.2.9	1	613	-1	-1	KB	165	
+10217.20100330.2.9	-1	NA	-1	-1	KB	165	blink starts 0.313 before any saccade
 10217.20100330.2.10	-1	NA	-1	-1	KB	162	blink before target onset
 10217.20100330.2.11	-1	NA	-1	-1	KB	164	moving (4.481 px/60Hz) before target onset
 10217.20100330.2.12	1	430	1	433	KB	163	
@@ -12207,7 +12207,7 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 10201.20091210.1.2	1	419	1	417	KB	162	
 10201.20091210.1.3	1	382	1	383	KB	164	
 10201.20091210.1.4	1	442	1	433	KB	163	
-10201.20091210.1.5	-1	NA	-1	-1	KB	165	start pos too far from center fix
+10201.20091210.1.5	-1	NA	-1	-1	KB	165	blink starts 0.476 before any saccade
 10201.20091210.1.6	1	412	-1	-1	KB	161	
 10201.20091210.1.7	1	404	1	383	KB	163	
 10201.20091210.1.8	1	397	-1	-1	KB	165	
@@ -13194,7 +13194,7 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 10193.20061118.3.5	1	539	1	450	EMI	175	
 10193.20061118.3.6	1	509	1	517	EMI	174	
 10193.20061118.3.7	1	673	1	667	EMI	176	
-10193.20061118.3.8	-1	NA	-1	-1	EMI	175	start pos too far from center fix
+10193.20061118.3.8	-1	NA	-1	-1	EMI	175	blink starts 0.582 before any saccade
 10193.20061118.3.9	-1	NA	1	567	EMI	171	moving (6.827 px/60Hz) before target onset
 10193.20061118.3.10	-1	NA	-1	-1	EMI	176	no saccades within sac.time(1.450)
 10193.20061118.3.11	1	114	1	517	EMI	172	
@@ -14111,7 +14111,7 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 10186.20120530.3.10	1	367	1	367	LR	166	
 10186.20120530.3.11	1	402	1	383	LR	164	
 10186.20120530.3.12	1	357	1	367	LR	165	
-10186.20120530.2.1	-1	NA	-1	-1	LR	161	start pos too far from center fix
+10186.20120530.2.1	-1	NA	-1	-1	LR	161	blink starts 0.329 before any saccade
 10186.20120530.2.2	1	390	1	300	LR	163	
 10186.20120530.2.3	-1	NA	-1	-1	LR	162	average fixpos(186.012500) is off from baseline(130.500000)!
 10186.20120530.2.4	-1	NA	-1	-1	LR	162	no saccades within sac.time(1.450)
@@ -15171,7 +15171,7 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 10177.20070329.1.2	1	382	1	400	ERIKBENNETT	165	
 10177.20070329.1.3	1	285	1	267	ERIKBENNETT	163	
 10177.20070329.1.4	1	584	1	133	ERIKBENNETT	164	
-10177.20070329.1.5	1	457	-1	-1	ERIKBENNETT	164	
+10177.20070329.1.5	-1	NA	-1	-1	ERIKBENNETT	164	blink starts 0.440 before any saccade
 10177.20070329.1.6	-1	NA	0	150	ERIKBENNETT	163	moving (5.745 px/60Hz) before target onset
 10177.20070329.1.7	1	330	1	350	ERIKBENNETT	161	
 10177.20070329.1.8	1	412	1	417	ERIKBENNETT	161	
@@ -15419,7 +15419,7 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 10175.20100608.4.10	1	315	1	317	CW	162	
 10175.20100608.4.11	1	114	-1	-1	CW	164	
 10175.20100608.4.12	1	293	1	283	CW	163	
-10175.20100608.3.1	1	897	-1	-1	CW	171	
+10175.20100608.3.1	-1	NA	-1	-1	CW	171	blink starts 0.530 before any saccade
 10175.20100608.3.2	2	360	2	333	CW	174	
 10175.20100608.3.3	2	240	2	317	CW	175	
 10175.20100608.3.4	1	519	1	517	CW	171	
@@ -16231,7 +16231,7 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 10169.20090613.4.6	1	375	1	383	KB	162	
 10169.20090613.4.7	1	350	1	283	KB	165	
 10169.20090613.4.8	-1	NA	-1	-1	KB	164	moving (13.040 px/60Hz) before target onset
-10169.20090613.4.9	1	546	-1	-1	KB	162	
+10169.20090613.4.9	-1	NA	-1	-1	KB	162	blink starts 0.496 before any saccade
 10169.20090613.4.10	1	516	1	283	KB	163	
 10169.20090613.4.11	1	362	1	367	KB	166	
 10169.20090613.4.12	-1	NA	-1	-1	KB	166	moving (4.652 px/60Hz) before target onset
@@ -18732,7 +18732,7 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 10133.20081217.1.11	1	524	1	500	KS	163	
 10133.20081217.1.12	2	145	0	217	KS	165	
 10133.20071204.4.1	2	285	2	267	KS	172	
-10133.20071204.4.2	2	882	2	883	KS	175	
+10133.20071204.4.2	-1	NA	2	883	KS	175	blink starts 0.699 before any saccade
 10133.20071204.4.3	1	509	1	517	KS	171	
 10133.20071204.4.4	-1	NA	-1	-1	KS	174	blink before target onset
 10133.20071204.4.5	-1	NA	1	533	KS	172	moving (19.007 px/60Hz) before target onset
@@ -18924,7 +18924,7 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 10132.20100308.1.11	1	375	1	383	KB	165	
 10132.20100308.1.12	1	382	1	383	KB	164	
 10132.20080104.4.1	2	308	2	283	KS	173	
-10132.20080104.4.2	1	942	1	367	KS	174	
+10132.20080104.4.2	-1	NA	1	367	KS	174	blink starts 0.575 before any saccade
 10132.20080104.4.3	2	345	2	350	KS	176	
 10132.20080104.4.4	2	404	2	400	KS	171	
 10132.20080104.4.5	2	334	2	333	KS	175	
@@ -19059,7 +19059,7 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 10129.20090825.1.2	1	399	1	400	KS	176	
 10129.20090825.1.3	1	507	1	500	KS	172	
 10129.20090825.1.4	1	509	1	500	KS	172	
-10129.20090825.1.5	1	919	1	467	KS	171	
+10129.20090825.1.5	-1	NA	1	467	KS	171	blink starts 0.436 before any saccade
 10129.20090825.1.6	1	472	1	467	KS	173	
 10129.20090825.1.7	1	658	1	650	KS	171	
 10129.20090825.1.8	1	442	1	450	KS	175	
@@ -19135,7 +19135,7 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 10129.20070811.3.6	1	434	-1	-1	KS	166	
 10129.20070811.3.7	1	449	1	450	KS	161	
 10129.20070811.3.8	1	407	1	400	KS	165	
-10129.20070811.3.9	1	927	1	250	KS	164	
+10129.20070811.3.9	-1	NA	1	250	KS	164	blink starts 0.677 before any saccade
 10129.20070811.3.10	1	404	1	417	KS	166	
 10129.20070811.3.11	1	352	1	350	KS	164	
 10129.20070811.3.12	1	339	1	333	KS	163	
@@ -19666,7 +19666,7 @@ trial	count_a	lat_a	count_m	lat_m	scorer	xdat	reason
 10124.20060803.3.9	1	223	1	233	EMI	173	
 10124.20060803.3.10	2	331	2	317	EMI	172	
 10124.20060803.3.11	2	360	2	367	EMI	175	
-10124.20060803.3.12	1	1158	2	150	EMI	176	
+10124.20060803.3.12	-1	NA	2	150	EMI	176	blink starts 0.974 before any saccade
 10124.20060803.2.1	2	390	2	383	EMI	172	
 10124.20060803.2.2	2	330	2	300	EMI	173	
 10124.20060803.2.3	1	546	1	550	EMI	173	

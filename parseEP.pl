@@ -33,7 +33,7 @@ while(<$logfh>){
  if(m/LogFrame End/){
 
   # only print and increment if we are in master list and is a reward type (not fix)
-  if($rec{'Procedure'} !~ m/fix|done/i && $rec{'Running'} eq 'masterlist'){
+  if($rec{'Procedure'} !~ m/fix|done|catch/i && $rec{'Running'} eq 'masterlist'){
     $rec{'trial'}=++$t;
     print join("\t",@rec{@keys}), "\n" 
    }
