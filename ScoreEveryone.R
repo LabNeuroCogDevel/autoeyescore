@@ -115,12 +115,15 @@ getsubj <- function(i,reuse=T){
   ## EXPECT to read a tab sep file with header and a "correct" column
   
   EPfile    <- sub('data.tsv$','eplog.txt',splitfile$file[i])
-  EPcorrect <- tryCatch({ 
-      correct <- read.table(file=EPfile,sep="\t",header=T)
-      idx<-grep('correct',names(correct),ignore.case = T)
-      cat('using EP log!\n')
-      correct[,idx]
-     },error=function(e){ NULL })
+  EPcorrect <- NULL;
+  if(file.exists(EPfile)){
+     EPcorrect <- tryCatch({ 
+         correct <- read.table(file=EPfile,sep="\t",header=T)
+         idx<-grep('correct',names(correct),ignore.case = T)
+         cat('using EP log!\n')
+         correct[,idx]
+        },error=function(e){ NULL })
+  }
 
 
   # SCORE SACCADES

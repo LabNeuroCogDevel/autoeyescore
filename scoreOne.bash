@@ -159,7 +159,7 @@ for f in $dir/Raw/EyeData/*eyd; do
  run=${run##*.} 
  eplog=$( find $dir/Raw/Eprime/ -iname "* $run-$subject*txt"|tail -n1)
  eptxt="${tsv/data.tsv/eplog}.txt" #append .txt to make sure we don't overwrite anything
- echo "looking for $eplog"
+ echo "looking for eprime log '$eplog' in  $dir/Raw/Eprime/"
  [ -n "$eplog" -a -r "$eplog" ] && echo "parsing to $eptxt" && ./parseEP.pl "$eplog" > "$eptxt"
 
 
