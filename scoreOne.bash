@@ -164,15 +164,24 @@ for f in $dir/Raw/EyeData/*eyd; do
 
 
  # remove if cannot understand it's format
- [ $(wc -l $tsv|cut -f1 -d' ') -lt 10 ] && echo "Removed $tsv! $f looks bad" && rm $tsv
+ wc="$(wc -l $tsv|awk '{print $1}')"
+ #echo "--> $wc from '$tsv': $(wc -l $tsv)"
+ [ -z "$wc" -o "$wc" -lt 10 ] && echo "Removed $tsv! $f looks bad" && rm $tsv
 done
 
 
 #
 # score! and plot
 #
-Rscript --vanilla  --verbose <(echo "
+# make a unique temporary file
+TMPDIR="./tmpscripts/"
+tmp=$(mktemp -t ${default[subject]}_${default[date]})
+echo $tmp
+
+# write the script for this subject+date
+cat > $tmp <<HEREDOC
  # load up all the source files
+ setwd("$(pwd)")
  source('$willtask/$willtask.settings.R');
  source('ScoreRun.R');
  source('ScoreEveryone.R');
@@ -204,4 +213,21 @@ Rscript --vanilla  --verbose <(echo "
   cat('\npress anykey');
   readLines(file('stdin'),1)
  }
-")
+HEREDOC
+
+# give instructions and run
+
+echo "
+
+=====================================
+To rerun open R and run: source('$tmp')
+=====================================
+
+(1) Push enter when window opens
+(2)  enter again for the next plot
+(3)  enter again to close the window
+
+"
+R CMD BATCH --no-save --no-restore $tmp
+#Rscript --vanilla  --verbose $tmp
+# rm $tmp
