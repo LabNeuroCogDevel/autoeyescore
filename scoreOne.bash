@@ -228,6 +228,9 @@ To rerun open R and run: source('$tmp')
 (3)  enter again to close the window
 
 "
-R CMD BATCH --no-save --no-restore $tmp
+R=$(which R)
+[ "$R" = "/Library/Frameworks/R.framework/Resources/bin/R" ] && R=/sw/bin/R
+$R CMD BATCH --no-save --no-restore $tmp
+
 #Rscript --vanilla  --verbose $tmp
 # rm $tmp
