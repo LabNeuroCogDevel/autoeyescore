@@ -175,8 +175,8 @@ done
 #
 # make a unique temporary file
 TMPDIR="./tmpscripts/"
-tmp=$(mktemp -t ${default[subject]}_${default[date]})
-echo $tmp
+#tmp=$(mktemp -t ${default[subject]}_${default[date]})
+tmp=$TMPDIR/${default[subject]}_${default[date]}.$(date +%F_%H%M).R
 
 # write the script for this subject+date
 cat > $tmp <<HEREDOC
@@ -230,7 +230,9 @@ To rerun open R and run: source('$tmp')
 "
 R=$(which R)
 [ "$R" = "/Library/Frameworks/R.framework/Resources/bin/R" ] && R=/sw/bin/R
-$R CMD BATCH --no-save --no-restore $tmp
+$R CMD BATCH --no-save --no-restore $tmp 
 
+cat "$(basename $tmp)out"
+mv "$(basename $tmp)out" $TMPDIR
 #Rscript --vanilla  --verbose $tmp
 # rm $tmp

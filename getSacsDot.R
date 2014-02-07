@@ -1,4 +1,11 @@
+# install.packages(c('colorspace','digest','zoo','plyr','KernSmooth','ggplot2'))
 source('ScoreRun.R')
+# make sure we loaded the settings file
+if(!exists('filebasedir')) { 
+  stop('need to source a settings file first!\nsource("anti/anti.settings.R")') 
+} else  { 
+  cat('using ', filebasedir, "\n")
+}
 # arnold (users/lncd/rnc/ vs reese (mnt/b)
 taskdir <- gsub('.*/Data/Tasks','',filebasedir)
 Bdir <- '/mnt/B/'
@@ -37,7 +44,13 @@ getSacDot <- function(dotnotation, showplot=T,funnybusiness='',showcmd=F) {
  getSacs(eyetrack,parts['subj'],parts['run'],bname,onlyontrials=trial,savedas=saveto,writetopdf=F,showplot=showplot,rundate=parts['date'],funnybusiness=funnybusiness)
 }
 
-getRunDot <- function(dotnotation, showplot=F,funnybusiness='',showcmd=F) {
+getRunDot <- function(dotnotation, showplot=F,funnybusiness='',showcmd=F,auditor=NULL) {
+ auditdf <- NULL;
+ if(is.null(auditor)) {
+  cat('What are your initials? ')
+  auditor<-readline()
+ }
+
  parts <- unlist(strsplit(dotnotation, '\\.'))
  parts <- as.numeric(parts);
  names(parts) <- c('subj','date','run')
@@ -56,8 +69,9 @@ getRunDot <- function(dotnotation, showplot=F,funnybusiness='',showcmd=F) {
 
  if(showplot==T){
     for(trial in 1:expectedTrialLengths){
+       ## TODO, open audit file, redo
        print(trial)
-       getSacs(eyetrack,
+       sacs<-getSacs(eyetrack,
                parts['subj'],
                parts['run'],
                bname,
@@ -66,12 +80,43 @@ getRunDot <- function(dotnotation, showplot=F,funnybusiness='',showcmd=F) {
                showplot=showplot,
                rundate=parts['date'],
                funnybusiness=funnybusiness)
-       cat('push any key when ready for next')
-       readline()
+       score<-scoreSac(sacs)
+       print(score)
+
+       ## ask questions
+       cat('Scored Correctly?[enter for yes]')
+       good<-readline()
+       if(good==""){
+        good=1;
+        shouldbe=score$Count;
+        reason="";
+       } else {
+         good=0;
+         cat('what should the score be\n(-1 drop,0 incorect, 1 correct, 2 error corr, NA = donno)\n')
+         shouldbe<-readline()
+         cat('whats wrong?')
+         reason<-readline()
+       }
+
+      # show all of these
+      thisrun<-data.frame(subj=parts['subj'],visit=parts['date'], run=parts['run'], 
+                           trail=trial,correctly=good,reason=reason,
+                           scoreas=score$Count, shoudlbe=shouldbe, auditor=auditor)
+       # append or create
+       if( is.null(auditdf) ) {
+        print('replacying null')
+        auditdf <- thisrun
+       } else {
+        print('adding')
+        auditdf <- rbind(auditdf,thisrun)
+       }
+       write.table(file=file.path('audit',paste0(dotnotation,'.',auditor,'.audit.txt')),auditdf)
     }
  }
  
  allsacs <- getSacs(eyetrack,parts['subj'],parts['run'],bname,onlyontrials=1:expectedTrialLengths,writetopdf=F,showplot=F,rundate=parts['date'],funnybusiness=funnybusiness)
  scoreSac(allsacs, EPcorrect=EPcorrect)
 }
+
+cat("use getSacDot('lunaid.yyyymmdd.r#.t#') or getRunDot('lunaid.yyyymmdd.r#',showplot=F)\n")
 

@@ -34,6 +34,11 @@
 #       1 -- first saccade is correct
 #       2 -- corrected incorrect saccade (might have been 3rd, 4th, etc, saccade)
 
+### To avoid any conflicts with other R installs (e.g. on arnold)
+###    use our own packages
+library(devtools)
+dev_mode(TRUE, path = "Rforsoring")
+
 #
 library(KernSmooth)
 library(ggplot2)
@@ -365,7 +370,7 @@ parseRawForTargets <- function(eydfile, funnybusiness=''){
   }
 
   if(! length(goodTargPos) %in% expectedTrialLengths ) {
-    cat('WARNING: unexpected num of trials', length(goodTargPos),'\n')
+    cat('WARNING: unexpected num of trials: ', length(goodTargPos),'\n')
   }
 
   return(targetIdxs)
@@ -560,6 +565,12 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     
 
 
+    nrow(targetIdxs)
+    if(trl>nrow(targetIdxs)){
+     #cat('BAD TRIAL NUMBER ', trl, ' only have ', nrow(targetIdxs), ' trials')
+     allsacs <- dropTrialSacs(subj,runtype,trl,0,'no trial in data',allsacs,showplot=F,run=run,rundate=rundate)
+     next
+    }
     # target code xdat is a little past where target index starts
     xdatCode <- d$xdat[ targetIdxs[trl,1] + 1 ]
     # the code is after the startcode but before stopcode (between targetidx[,1] and [,2] 
