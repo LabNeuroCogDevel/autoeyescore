@@ -1,0 +1,180 @@
+#################################
+# iterate on scoring variables to see their impact (literature, old params, new params)
+
+# focus on subjs with most data, picking 5 old and 5 young
+youngID="10148 10156 10184 10252 10335"
+oldID="10128 10311 10316 10359 10385"
+ids=($( echo $youngID $oldID )) # using arrays for indexing
+N=${#ids[@]} # number of subjects
+youngDOB="19921207 19930115 19940721 19940909 19960821"
+oldDOB="19871216 19860323 19861018 19860618 19880530"
+dobs=($( echo $youngDOB $oldDOB )) # using arrays for indexing
+path=/Volumes/Phillips/COG
+
+# copy raw files to checkParams directory
+for task in MGSEncode AntiState; do
+  mkdir -p $path/checkParams/$task
+  for i in $( seq 0 $((N-1)) ); do cp -r $path/$task/${ids[$i]} $path/checkParams/$task/${ids[$i]}; done
+done
+
+# used eyescoreScript.R to score data
+
+# create summary results files
+path=$path/checkParams
+cd $path
+mkdir -p stats
+minVels="4 8"
+slowVels="1 4"
+colNames="type count correct incorrect corrected dropped percCorrect latency accuracy accuracyLast accuracyMost"
+for task in MGSEncode AntiState; do # tasks
+  types=$( eval "case $task in 'MGSEncode') echo 'vgs mgs' ;; 'AntiState') echo 'ps as' ;; esac" )
+  for type in $types; do # trial types
+    echo "id date age minVel slowVel $colNames" > stats/${task}_${type}_stats.txt
+    for i in $( seq 0 $((N-1)) ); do id=${ids[$i]} # loop over subjects
+      for date in $( ls $task/$id ); do # loop over scans
+        # get age
+        dateDiff=$(( $date-${dobs[$i]} ))
+        age=${dateDiff:0:2}.$((10#${dateDiff:2:2}*100/12))
+        for m in $minVels; do for s in $slowVels; do # loop over parameters checked
+          # get row from subjects stats, print to new stats file
+          file=$task/$id/$date/${id}_${date}_${task}_${m}_${s}_stats.txt
+          stats=$( awk -v type=$type '$2 ~ type' $file ) # awk gets row
+          #stats=$( echo $stats | cut -c3- ) # cuts out first two characters to remove row name (1 or 2 and a space)
+          echo $id $date $age $m $s $stats >> stats/${task}_${type}_stats.txt
+        done; done
+      done
+    done
+  done
+done
+
+
+#####################
+# basic R stats
+
+# convenience function for getting counts of unique values (will use for droppedReasons, but can also use for other measures)
+f <- function(x) { u <- unique(x); d <- data.frame(value=character(), count=numeric()); for(i in u) d <- rbind(d, data.frame(value=i, count=length(which(x%in%i)))); return(d) }
+
+# convenience function for getting residuals for all parameters
+getRes <- function(stats, params, measures){
+  for(minVel in params$minVel){ for(slowVel in params$slowVel){
+    ind <- which(stats$minVel==minVel & stats$slowVel==slowVel)
+    for(measure in measures){
+      f <- as.formula(paste(measure, "~ age + (age|id)"))
+      m <- lmer(f, stats, subset=ind)
+      stats[[measure]][ind] <- abs(resid(m))
+    }
+  }}
+  return(stats)
+}
+
+# convenience function for removing outliers based on data (convert to z, threshold)
+removeDropped <- function(stats, params, measures, task, countThr=2/3, droppedThr=1/3){
+  countExp <- switch(task, MGSEncode=60, AntiState=48) # edit here to add more tasks/types
+  ind <- stats[["count"]]<countExp*countThr | stats[["dropped"]]>stats[["count"]]*droppedThr
+  stats[ind,measures] <- NA
+  return(stats)
+}
+
+# convenience function for removing outliers based on data (convert to z, threshold)
+removeOutliers <- function(stats, params, measures, zThr=2.5){
+  for(minVel in params$minVel){ for(slowVel in params$slowVel){
+    ind <- which(stats$minVel==minVel & stats$slowVel==slowVel)
+    for(measure in measures){
+      z <- stats[[measure]][ind]
+      z <- (z-mean(z))/sd(z)>=zThr
+      stats[[measure]][ind][z] <- NA
+    }
+  }}
+  return(stats)
+}
+
+# get stats
+getParamStats <- function(path="~/Dropbox/COG", tasks=c("MGSEncode", "AntiState"), params=list(minVel=c(4,8), slowVel=c(1,4)), measures=c("correct", "incorrect", "dropped", "percCorrect", "latency", "accuracy", "accuracyMost"), opts=list(resids=F, dropped=F, outliers=F), outputTable=NULL) {
+# path <- "/Volumes/Phillips/COG/checkParams"
+#browser()
+  require(lme4) # for mixed models
+  # data frame for stats
+  paramStats <- data.frame(task=character(), type=character(), measure=character(), param=character(), b=numeric(), se=numeric(), t=numeric(), chisq=numeric(), p=numeric())
+  # loop through task and trial types, will have a separate file for each
+  for(task in tasks){
+    types <- switch(task, MGSEncode=c("vgs","mgs"), AntiState=c("ps","as")) # edit here to add more tasks/types
+    for(type in types){
+      # get and prepare data, loop over measure and param
+      stats <- read.table(file.path(path, "stats", paste(task, type, "stats.txt", sep="_")), head=T) # read stats table
+      for(col in names(params)) stats[[col]] <- as.factor(stats[[col]]) # params need to be factors
+      for(col in c("accuracy", "accuracyMost")) stats[[col]] <- abs(stats[[col]]) # need to absolute value the accuracies for comparison
+      if(opts$dropped) stats <- removeDropped(stats, params, measures, task) # option to remove dropped (default count<2/3, dropped>1/3)      
+      if(opts$outliers) stats <- removeOutliers(stats, params, measures) # option to remove outliers (default=2.5sd)      
+      if(opts$resids) stats <- getRes(stats, params, measures) # option to do age mixed model, get residuals and use those for stats      
+      for(measure in measures){ for(par in names(params)){
+        # creating random effects regressor which collapses over id, date and param NOT being examined to focus on param effects
+        stats$id_date_param <- with(stats, paste(id, date, params[[which(!names(params) %in% par)]], sep="_"))
+        # current model
+        f <- as.formula(paste(measure, "~", par, "+ (1|id_date_param)"))
+        m <- lmer(f, stats)
+        # null model
+        f0 <- as.formula(paste(measure, "~ 1 + (1|id_date_param)"))
+        m0 <- lmer(f0, stats)
+        # log likelihood comparison
+        ll <- anova(m, m0)
+        paramStats <- rbind(paramStats, data.frame(
+          task = task, type = type, measure = measure, param = par,
+          b = round(fixef(m)[[2]],2),
+          se = round(sqrt(diag(vcov(m)))[2],2),
+          t = round(fixef(m)[[2]] / sqrt(diag(vcov(m)))[2],1),
+          chisq = round(ll$Chisq[2],1),
+          p = prettyNum(ll$Pr[2],digits=2)
+        ))
+      }}
+    }
+  }
+  if(!is.null(outputTable)) write.table(paramStats, file=outputTable, row.names=F, quote=F)
+  return(paramStats)
+}
+
+getParamStats(outputTable="~/Dropbox/COG/stats/paramStats.txt")
+getParamStats(opts=list(resids=F, dropped=T, outliers=F), outputTable="~/Dropbox/COG/stats/paramStatsDropped.txt")
+getParamStats(opts=list(resids=F, dropped=T, outliers=T), outputTable="~/Dropbox/COG/stats/paramStatsDroppedOut.txt")
+getParamStats(opts=list(resids=T, dropped=F, outliers=F), outputTable="~/Dropbox/COG/stats/paramStatsResids.txt")
+getParamStats(opts=list(resids=T, dropped=T, outliers=F), outputTable="~/Dropbox/COG/stats/paramStatsResidsDropped.txt")
+getParamStats(opts=list(resids=T, dropped=T, outliers=T), outputTable="~/Dropbox/COG/stats/paramStatsResidsDroppedOut.txt")
+
+# todo
+  # dropped reasons
+  # individual residuals
+  # individual age changes
+  # group age changes
+  # 
+
+##################
+## NOTES
+
+# code to get number of 
+#awk '$7==TRUE' $path/$task/$id/$date/${id}_${date}_${task}_run${run}_preproc.txt | wc -l
+
+# SCORING ALGORITHM
+# 1) initially start with finding locations with velocity > 30-40deg/s (Fischer et al., 1993; Gitelman et al., 2002)
+#   - current threshold 4px/samp (~15deg/s)
+# 2) next find the bounds of the saccade, points >=15% of peak velocity (assuming 15% * 30deg/s = 4.5deg/s)
+#   - current threshold 1px/samp (~4deg/s)
+
+# some things to do straight from saccades file
+  # dropped reasons
+
+# saccade level - note: minVel=4px/samp, slowVel=1px/samp
+  # iterate on minVels (4 vs 8)
+    # minimum peak speed to be registered as a saccade (asl units)
+  # iterate on slowVels (1 vs 4)
+    # speed threshold for the boundaries of the saccade (asl units)
+  # return? number of saccades, average length, droppedReasons
+# task level
+  # return correct, incorrect, dropped, latency, accuracy, accuracyMost
+# group level
+  # within subject, which has the lowest residuals
+  # run basic group regression (or my analyses), where are the biggest age effects?
+
+# (ILAB, from Gitelman et al., 2002)
+# Fixations:  Fixations are calculated using the moving window algorithm described by Widdel (1984) and later reviewed by Salvucci and Goldberg (2000) as an example of a dispersion-type algorithm. As compared with a variety of other methods for identifying fixations, including those based on velocity, hidden Markov models, minimum spanning trees, and areas of interest, Widdel’s algorithm was found to be accurate, robust, reasonably fast, and fairly easy to implement (Salvucci & Goldberg, 2000; Widdel, 1984). However, this algorithm is sensitive to the choice of parameters defining a fixation, including the maximum horizontal and vertical eye movements and the minimum duration of the fixation (Karsh & Breitenbach, 1983). Thus, it is important for the user to define these parameters on the basis of the experimental goals and type of equipment and to keep these parameters constant across subjects in an experiment (Karsh & Breitenbach, 1983). ILAB allows the user to define and save these parameters in order to standardize this analysis. The algorithm is also relatively resistant to the presence of missing points—for example, owing to eye blinks (see Figure 3A)—by skipping over these intervals as long as the POR remains within the developing fixation cluster before and after the loss of data. If the POR leaves the cluster, a new fixation is searched for.
+# Saccades:  Saccades are calculated using an algorithm outlined by Fischer et al. (1993). The algorithm first searches for intervals during which the eye’s velocity exceeds a threshold (e.g., 30–40 deg/sec), as a first pass definition for locating a saccade. Within each interval, the peak velocity is located, and the final bounds of the saccade are those points that equal or exceed 15% of the peak velocity. Calculation of saccades at 60 Hz, as shown in Figure 3, is a highly debated topic in the eye movement literature (Karn, 2000), and its usefulness depends on the size of saccades being studied. The algorithm used in ILAB was originally validated at a 1-kHz acquisition rate (Fischer et al., 1993). When used at other acquisition rates, the velocity display (Figure 3B) in ILAB allows the user to assess the performance of the algorithm. In the example shown, with an initial threshold of 40 deg/sec, the saccade algorithm found the exact number of saccades made by the subject (101) after blinks were filtered from the datastream.
+# Eye blinks:  During eye blinks, the eye tracker loses track of the pupil center and corneal reflection. Because eye blinks are not instantaneous, the amount of data loss can be variable. Furthermore, when the eye opens and the pupil and corneal positions are reacquired, there are frequently distortions in the eyes’ calculated POR as they rotate back to their original positions (Calkins, Katsanis, Hammer, & Iacono, 2001). A particularly dramatic example of these distortions is shown in Figure 4A. Eye-tracking systems deal with this loss of eye position information in a variety of ways... ASL systems(ASL, Natick, MA) usually mark the pupil size as 0 during a blink, incorrect eye position information may still not be marked as invalid. In order to remove eye blink artifacts from the data, two methods have been used: (1) filtering the data by incorrect position information and (2) filtering by 0 pupil size. For the first method, data points are eliminated when they are outside the bounds of the computer screen. The second method eliminates those data points at which the pupil size is 0. The combination of these two strategies can be quite effective at minimizing blink-related artifacts. When a user selects both methods, the data are examined recursively to fulfill both criteria.
+
