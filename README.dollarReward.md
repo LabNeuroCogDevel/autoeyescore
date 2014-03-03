@@ -1,3 +1,4 @@
+
 To score, in a terminal window, run the following:
 
     cd ~/autoeyescore/
