@@ -696,7 +696,7 @@ browser()
       # get timings
       indTimings <- intersect(indType, switch(outcome,
         correct = which(!is.na(correct)),
-        incorrect = intersect(which(is.na(incorrect)), which(is.na(corrected))),
+        incorrect = intersect(which(!is.na(incorrect)), which(is.na(corrected))),
         corrected = which(!is.na(corrected)),
         dropped = which(!is.na(dropped))
       ))
