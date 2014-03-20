@@ -6,15 +6,17 @@ pathScripts=$path/autoeyescore/dani
 eyescoreFunctions=$pathScripts/eyescoreFunctions.R
 eyescoreScript=$pathScripts/eyescoreScript.R
 logFile=$path/.log
+errorLogFile=$path/.errorLog
 
 tasks="MGSEncode AntiState"
 for task in $tasks; do
-  ids=$( ls -d $path/$task )
+  ids=$( ls $path/$task )
   for id in $ids; do
-    dates=$( ls -d $path/$task/$id )
+    dates=$( ls $path/$task/$id )
     for date in $dates; do
       pathSession=$path/$task/$id/$date
-      Rscript $eyescoreScript path=$path task=$task id=$id date=$date eyescoreFunctions=$eyescoreFunctions logFile=$logFile &
+      echo $pathSession
+      Rscript $eyescoreScript path=\"$pathSession\" task=\"$task\" id=$id date=$date eyescoreFunctions=\"$eyescoreFunctions\" logFile=\"$errorLogFile\" &
       maxJobs=$( cat $path/maxJobs )
       while [ $( jobs | wc -l ) -ge $maxJobs ]; do sleep 1; done
     done
