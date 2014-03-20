@@ -318,7 +318,7 @@ scoreTrial <- function(startInd, minOnsetDelay=4, preTargetFix=10, blinkSample=6
     # 1) if no central fixation at start of trial, drop
     if(abs(xposCenterFix-xposCenter)>xposPadding){
       dropped[ind] <- T
-      droppedReason[ind] <- "no central fix"
+      droppedReason[ind] <- "no_central_fix"
       rm(list=rmList); return()
     }
 
@@ -353,7 +353,7 @@ scoreTrial <- function(startInd, minOnsetDelay=4, preTargetFix=10, blinkSample=6
       # i don't think this is necessary, so included feature but defaults to not using (magCheck=F)
     if(opts$magCheck & abs(eyeData$xpos[end[ind]]-eyeData$xpos[start[ind]])<sacMinMag){
       dropped[ind] <- T
-      droppedReason[ind] <- "low magnitude"
+      droppedReason[ind] <- "low_magnitude"
       rm(list=rmList); return()
     }
 
@@ -368,7 +368,7 @@ scoreTrial <- function(startInd, minOnsetDelay=4, preTargetFix=10, blinkSample=6
       # further, trial shouldn't be dropped if not held and incorrect (should just count as incorrect)
     if(opts$heldCheck & ind<length(start) & is.na(incorrect[ind]) & start[ind+1]-end[ind]<sacHeld){ # saccade held?
       dropped[ind] <- T
-      droppedReason[ind] <- "not held"
+      droppedReason[ind] <- "not_held"
       rm(list=rmList); return()
     }
 
@@ -376,7 +376,7 @@ scoreTrial <- function(startInd, minOnsetDelay=4, preTargetFix=10, blinkSample=6
       # not sure if this will come up, but if direction and center fix are ok but the side is wrong, something is wrong so drop the trial
     if(sideExp!=sideAct & is.na(incorrect[ind])){
       dropped[ind] <- T
-      droppedReason[ind] <- "impossible side+direction combo"
+      droppedReason[ind] <- "impossible_side+direction_combo"
       rm(list=rmList); return()
     }
 
@@ -403,11 +403,11 @@ scoreTrial <- function(startInd, minOnsetDelay=4, preTargetFix=10, blinkSample=6
       # magnitude/held checks, drop saccades but not whole trial at this point (only first saccade matters for that)
       if(opts$magCheck & abs(eyeData$xpos[end[ind+add]]-eyeData$xpos[start[ind+add]])<sacMinMag){
         dropped[ind+add] <- T
-        droppedReason[ind+add] <- paste("low magnitude")
+        droppedReason[ind+add] <- paste("low_magnitude")
       }
       if(opts$heldCheck & ind<length(start) & !is.na(incorrect[ind+add]) & start[ind+add+1]-end[ind+add]<sacHeld){ # saccade held?
         dropped[ind+add] <- T
-        droppedReason[ind+add] <- paste("not held")
+        droppedReason[ind+add] <- paste("not_held")
       }
 
       # log accuracy and latency
@@ -483,6 +483,13 @@ strFreq <- function(strIn){ # input is string vector
   return(strOut)
 }
 
+# convenience multi-intersect function; gets intersect of all indices in list
+multiIntersect <- function(x){
+  if(class(x)!="list" | length(x)<2) stop("incorrect input - either not a list or less than two sets of indices")
+  ind <- x[[1]]; for(i in 2:length(x)) ind <- intersect(ind, x[[i]])
+  return(ind)
+}
+
 # 
 summaryData <- function(task, saccades, outputTable=NULL){
 
@@ -501,24 +508,22 @@ summaryData <- function(task, saccades, outputTable=NULL){
       indT <- which(trialType==trialTypes[t])
       summaryData <- rbind(summaryData, data.frame(
         type = trialTypes[t],
-        #count = length(intersect(which(saccade==1),indT)), # changed count/dropped because saccades sometimes end before trials do
-                                                            # rest should count as dropped 
-        count = expectedTrialCount[t],
+        count = length(intersect(which(saccade==1),indT)),
         correct = length(intersect(which(correct),indT)),
         incorrect = length(intersect(which(incorrect),indT)),
         corrected = length(intersect(which(corrected),indT)),
-        dropped = length(intersect(intersect(which(saccade==1),which(dropped)),indT)),
-        droppedReason = strFreq(droppedReason[intersect(intersect(which(saccade==1),which(dropped)),indT)]),
+        dropped = length(multiIntersect(list(which(saccade==1),which(dropped),indT))),
+        droppedReason = strFreq(droppedReason[multiIntersect(list(which(saccade==1),which(dropped),indT))]),
         percCorrect = round(100 * length(intersect(which(correct),indT)) / (length(intersect(which(correct),indT))+length(intersect(which(incorrect),indT))), 1),
         latency = ifelse(length(intersect(which(correct),indT))>0, round(mean(latency[intersect(which(correct),indT)])), NA),
         accuracy = ifelse(length(intersect(which(correct),indT))>0, round(mean(abs(accuracy[intersect(which(correct),indT)])),2), NA),
         accuracyMost = ifelse(length(intersect(which(correct),indT))>0, round(mean(abs(sapply(intersect(which(correct),indT), function(i){
-          j<-i; while(!is.na(scored[j+1])) j<-j+1; accuracy[i-1+which.min(abs(accuracy[i:j]))]}))), 2), NA)
+          j<-i; while(!is.na(scored[j+1])) j<-j+1; accuracy[i-1+which.min(abs(accuracy[i:j]))]}))), 2), NA),
+        stringsAsFactors=F
       ))
       # fill in missing end trials
-      scoredTrialCount <- max(trial, na.rm=T)
-      diff <- expectedTrialCount[t] - scoredTrialCount
-      if(diff>0) summaryData <- within(summaryData, { dropped[t]<-dropped[t]+diff; droppedReason[t]<-paste(droppedReason[t],paste(diff,"no saccades left"),sep=", ") })
+      diff <- expectedTrialCount[t]*max(listInd) - summaryData$count[t]
+      if(diff>0) summaryData <- within(summaryData, { count[t]<-count[t]+diff; dropped[t]<-dropped[t]+diff; droppedReason[t]<-paste(droppedReason[t],paste(diff,"no_saccades_left"),sep=", ") })
     }
 
     # return summaryData
@@ -655,14 +660,6 @@ taskList$AntiState <- function(path="~/Dropbox/COG", file="Anti_Mix_Design_Lists
     # custom code for mgs to get delay periods (also mark delay period saccades so they don't end up in unscored regressor), also separate by cue and delay length
     # custom code for anti to subtract 1.5s from each time so start is prep period
 
-# quick multi-intersect function; gets intersect of all indices in list
-  # note: not used, but keeping anyways for future reference
-multiIntersect <- function(x){
-  if(class(x)!="list" | length(x)<2) stop("incorrect input - either not a list or less than two sets of indices")
-  ind <- x[[1]]; for(i in 2:length(x)) ind <- intersect(ind, x[[i]])
-  return(ind)
-}
-
 ## NOTE: should have a task-specific "timings settings" function, just like for the saccades
 
 writeTimings <- function(filePrefix, task, eyeData, saccades, outcomes=c("correct","incorrect","corrected","dropped"), nullRegs=c("unscored","blinks","capped"), outputTable=NULL, opts=list()){
@@ -687,7 +684,7 @@ writeTimings <- function(filePrefix, task, eyeData, saccades, outcomes=c("correc
     MGSEncode = trialStart[which(saccade==1)[1]] - 90, # starts 1.5s (90 samples) before first cue
     AntiState = trialStart[which(saccade==1)[1]] - 90 - ms2asl(1000*(time[1])) # variable time to first trial; also, index is target, subtract 1.5s (90 samples) to get cue (will model as 4.5s block)
   )
-browser()
+
   # run for each trial type and outcome
   for(type in 1:length(trialTypes)){
     stimTimes <- runData[[switch(task, MGSEncode=switch(type,"1"="cueTime","2"="delayTime"), AntiState="time")]] # stim times column name different for different tasks
@@ -736,9 +733,11 @@ browser()
           }
         }else{
           if(type==1) for(c in c("short","long")) cat(timings, file=file.path(outPath, paste(trialTypes[type], outcome, "cue", c, sep="_")))
-          if(type==2) for(c in c("short","long")) for(d in c("short","long")){
-            cat(timings, file=file.path(outPath, paste(trialTypes[type], outcome, "cue", c, "delay", d, sep="_")))
-            cat(timings, file=file.path(outPath, paste("delay", outcome, "cue", c, "delay", d, sep="_")))
+          if(type==2){ cat(timings, file=file.path(outPath, paste("delay", outcome, sep="_"))) # write delay timings
+            for(c in c("short","long")) for(d in c("short","long")){
+              cat(timings, file=file.path(outPath, paste(trialTypes[type], outcome, "cue", c, "delay", d, sep="_")))
+              cat(timings, file=file.path(outPath, paste("delay", outcome, "cue", c, "delay", d, sep="_")))
+            }
           }
         }
       }
@@ -746,9 +745,9 @@ browser()
   }
 
   # if MGSEncode, mark saccades as scored during delay, so they don't count in unscored
-  if(task=="MGSEncode") for(t in 1:settings$expectedTrialCount[2]) {
+  if(task=="MGSEncode") for(t in 1:expectedTrialCount[2]) {
     delaySacs <- intersect(which(saccade==1), which(trial %in% t))
-    if(length(delaySacs)==2 & diff(delaySacs)>1) scored[(delaySacs[1]+1):(delaySacs[2]-1)] <- T
+    if(length(delaySacs)==2) if(diff(delaySacs)>1) scored[(delaySacs[1]+1):(delaySacs[2]-1)] <- T
   }
 
   # null regressors
