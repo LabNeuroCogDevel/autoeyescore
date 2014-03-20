@@ -62,7 +62,7 @@ if(length(scoredList)>0){
   stats <- try(
     summaryData(task, list2data(scoredList), outputTable=file.path(path, paste(id, date, task, "stats.txt", sep="_"))),
     silent=T)
-  if(class(stats)!="data.frame") { cat(date(), "\n", filePrefix, "stats", "\n", stats, "\n\n"); next }
+  if(class(stats)!="data.frame") cat(date(), "\n", filePrefix, "stats", "\n", stats, "\n\n")
 }
 
 # close log file (commented out, as per above)
