@@ -23,6 +23,13 @@ for task in $tasks; do
   done
 done
 
+# errors (across both tasks):
+  # numbers of columns of arguments do not match (session level) -- 74
+  # number of XXX trials detected from xdats (XXX) do not match expectedTrialCount (XXX) -- 102
+  # missing value where TRUE/FALSE needed (xposCenterFix) -- 59
+  # mean of actual eye fixation across run (XXX) differs from expected eye fixation (XXX) by >XX -- 49
+  # Error in ts(x) : 'ts' object must have one or more observations -- 11
+
 # todo next
   # behavior spreadsheet to exclude
   # cross check fmri and behavior, for first pass just use subjects with all runs for both
