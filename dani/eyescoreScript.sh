@@ -6,7 +6,6 @@ pathScripts=$path/autoeyescore/dani
 eyescoreFunctions=$pathScripts/eyescoreFunctions.R
 eyescoreScript=$pathScripts/eyescoreScript.R
 logFile=$path/.log
-errorLogFile=$path/.errorLog
 
 tasks="MGSEncode AntiState"
 for task in $tasks; do
@@ -16,12 +15,17 @@ for task in $tasks; do
     for date in $dates; do
       pathSession=$path/$task/$id/$date
       echo $pathSession
-      Rscript $eyescoreScript path=\"$pathSession\" task=\"$task\" id=$id date=$date eyescoreFunctions=\"$eyescoreFunctions\" logFile=\"$errorLogFile\" &
+      Rscript --vanilla --quiet $eyescoreScript path=\"$pathSession\" taskPath=\"$path\" task=\"$task\" id=$id date=$date eyescoreFunctions=\"$eyescoreFunctions\" logFile=\"$logFile\" >> $pathSession/.log &
       maxJobs=$( cat $path/maxJobs )
       while [ $( jobs | wc -l ) -ge $maxJobs ]; do sleep 1; done
     done
   done
 done
+
+# todo next
+  # behavior spreadsheet to exclude
+  # cross check fmri and behavior, for first pass just use subjects with all runs for both
+  # 3dDeconvolve - events, beta series
 
 ###################
 ###### NOTES ######

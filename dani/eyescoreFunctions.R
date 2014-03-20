@@ -55,8 +55,8 @@ eyd2txt <- function(id, date, task, run, eydScript="~/src/autoeyescore/dataFromA
 
 preprocessEyd <- function(eyeData, outputTable=NULL, xmax=261, minSpikeVel=30, adjFilter=rep(1/5,5), adjThresh=0.4, smoothFilter=c(0.1,0.2,0.4,0.2,0.1), opts=list(capped=T, removeCapped=T, spikes=T, blink=T, blinkID="pupil", removeAdj=T, smooth=T)){
 
-  require(zoo) # for rollapply and na.approx time series function
-
+  suppressPackageStartupMessages( require(zoo) ) # for rollapply and na.approx time series function
+                                                   # suppressing messages so less log clutter
   # quick utility function to fill in NAs at ends
   naFill <- function(x, avgPts=10){
     # NA stats
@@ -670,7 +670,7 @@ writeTimings <- function(filePrefix, task, eyeData, saccades, outcomes=c("correc
 
   # create timings folder
   outPath <- file.path(path, "timings", filePrefix)
-  dir.create(outPath, recursive=T)
+  suppressWarnings( dir.create(outPath, recursive=T) ) # suppressing warning message if directory already exists
 
   # get run/script info for run
   filePrefix <- strsplit(filePrefix, "_")[[1]]
@@ -704,39 +704,39 @@ writeTimings <- function(filePrefix, task, eyeData, saccades, outcomes=c("correc
         scoredTrialCount <- max(trial, na.rm=T); diff <- expectedTrialCount[type]-scoredTrialCount
         if(diff>0){
           endDropped <- stimTimes[(scoredTrialCount+1):expectedTrialCount[type]]
-          if(timings=="*") timings <- endDropped else timings <- c(timings, endDropped)
+          if(class(timings)!="character") timings <- c(timings, endDropped) else timings <- endDropped
         }
       }
       # write file
-      cat(timings, file=file.path(outPath, paste(trialTypes[type], outcome, sep="_")))
+      cat(timings, "\n", file=file.path(outPath, paste(trialTypes[type], outcome, sep="_")))
 
       # custom code to get delay period and separate by cue and delay length (could be in separate function, but keeping here now)
       if(task=="MGSEncode"){
         cueLengths <- ifelse(cueLength==1.5, "short", "long")
         delayLengths <- ifelse(delayLength==1.5, "short", "long")
-        if(timings!="*"){
+        if(class(timings)!="character"){
           indMatch <- sapply(timings, function(t) which.min(abs(stimTimes-t)))
           if(type==1){
             for(c in c("short","long")){
               ind <- which(cueLengths[indMatch]==c); if(length(ind)==0) timings1<-"*" else timings1<-timings[ind]
-              cat(timings1, file=file.path(outPath, paste(trialTypes[type], outcome, "cue", c, sep="_")))
+              cat(timings1, "\n", file=file.path(outPath, paste(trialTypes[type], outcome, "cue", c, sep="_")))
             }
           }else if(type==2){
             timingsDelay <- timings-delayTime[indMatch]
-            cat(timingsDelay, file=file.path(outPath, paste("delay", outcome, sep="_"))) # write delay timings
+            cat(timingsDelay, "\n", file=file.path(outPath, paste("delay", outcome, sep="_"))) # write delay timings
             for(c in c("short","long")) for(d in c("short","long")){
               ind <- which(cueLengths[indMatch]==c & delayLengths[indMatch]==d)
               if(length(ind)==0){ timings2<-"*"; timings3<-"*" } else { timings2<-timings[ind]; timings3<-timingsDelay[ind] }
-              cat(timings2, file=file.path(outPath, paste(trialTypes[type], outcome, "cue", c, "delay", d, sep="_")))
-              cat(timings3, file=file.path(outPath, paste("delay", outcome, "cue", c, "delay", d, sep="_")))
+              cat(timings2, "\n", file=file.path(outPath, paste(trialTypes[type], outcome, "cue", c, "delay", d, sep="_")))
+              cat(timings3, "\n", file=file.path(outPath, paste("delay", outcome, "cue", c, "delay", d, sep="_")))
             }
           }
         }else{
-          if(type==1) for(c in c("short","long")) cat(timings, file=file.path(outPath, paste(trialTypes[type], outcome, "cue", c, sep="_")))
-          if(type==2){ cat(timings, file=file.path(outPath, paste("delay", outcome, sep="_"))) # write delay timings
+          if(type==1) for(c in c("short","long")) cat(timings, "\n", file=file.path(outPath, paste(trialTypes[type], outcome, "cue", c, sep="_")))
+          if(type==2){ cat(timings, "\n", file=file.path(outPath, paste("delay", outcome, sep="_"))) # write delay timings
             for(c in c("short","long")) for(d in c("short","long")){
-              cat(timings, file=file.path(outPath, paste(trialTypes[type], outcome, "cue", c, "delay", d, sep="_")))
-              cat(timings, file=file.path(outPath, paste("delay", outcome, "cue", c, "delay", d, sep="_")))
+              cat(timings, "\n", file=file.path(outPath, paste(trialTypes[type], outcome, "cue", c, "delay", d, sep="_")))
+              cat(timings, "\n", file=file.path(outPath, paste("delay", outcome, "cue", c, "delay", d, sep="_")))
             }
           }
         }
@@ -762,7 +762,7 @@ writeTimings <- function(filePrefix, task, eyeData, saccades, outcomes=c("correc
     if(length(timings)>0 & min(timings)<0) timings <- timings[-which(timings<0)] # can be saccades, blinks etc... before run starts
     if(length(timings)==0) timings <- "*"
     # write file
-    cat(timings, file=file.path(outPath, paste(nullReg, sep="_")))
+    cat(timings, "\n", file=file.path(outPath, paste(nullReg, sep="_")))
   }
 
   detach(saccades)
