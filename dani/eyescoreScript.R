@@ -39,7 +39,9 @@ for(file in files){
   if(class(eyeData)!="data.frame") { cat(date(), "\n", filePrefix, "eyeData_preproc", "\n", eyeData, "\n\n"); next } 
 
   # get saccades
-  saccades <- try(getSaccades(eyeData), silent=T)
+  saccades <- try(
+    getSaccades(eyeData),
+    silent=T)
   if(class(saccades)!="data.frame") { cat(date(), "\n", filePrefix, "saccades", "\n", saccades, "\n\n"); next } 
 
   # score saccades
@@ -49,15 +51,19 @@ for(file in files){
   if(class(saccades)=="data.frame") scoredList[[which(files %in% file)]] <- saccades else { cat(date(), "\n", filePrefix, "saccades_scored", "\n", saccades, "\n\n"); next }
 
   # get timing files
-  timings <- try(writeTimings(filePrefix, task, eyeData, saccades), silent=T)
+  timings <- try(
+    writeTimings(filePrefix, task, eyeData, saccades),
+    silent=T)
   if(!is.null(timings)) { cat(date(), "\n", filePrefix, "timings", "\n", timings, "\n\n"); next } 
 }
 
 # run stats on all the scored runs
-if(length(scoredList)>0) try(
-  stats <- summaryData(task, list2data(scoredList), outputTable=file.path(path, paste(id, date, task, "stats.txt", sep="_"))),
-  silent=T)
-if(class(stats)!="data.frame") { cat(date(), "\n", filePrefix, "stats", "\n", stats, "\n\n"); next }
+if(length(scoredList)>0){
+  stats <- try(
+    summaryData(task, list2data(scoredList), outputTable=file.path(path, paste(id, date, task, "stats.txt", sep="_"))),
+    silent=T)
+  if(class(stats)!="data.frame") { cat(date(), "\n", filePrefix, "stats", "\n", stats, "\n\n"); next }
+}
 
 # close log file (commented out, as per above)
 #sink()
