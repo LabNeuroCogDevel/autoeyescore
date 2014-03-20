@@ -455,7 +455,7 @@ scoreSaccades <- function(task, eyeData, saccades, outputTable=NULL, xposCenter=
     if(length(startInd) != expectedTrialCount[type]) stop(paste("number of ", trialTypes[type], " trials detected from xdats (", length(startInd), ") do not match expectedTrialCount (", expectedTrialCount[type], ")", sep=""))
 
     # loop through and process saccades for each trial
-    for(t in 1:length(startInd)) { while("tempList" %in% search()) detach(tempList); tempList<-makeList(c("scoring","type","t","xposCenter","xposPadding")); attach(tempList); scoring <- scoreTrial(startInd[t]); detach(tempList) } # need to get those vars into nested function environment
+    for(t in 1:length(startInd)) { while("tempList" %in% search()) detach(tempList); tempList<-makeList(c("scoring","type","t","xposCenter","xposPadding")); attach(tempList); scoring <- scoreTrial(startInd[t]) } # need to get those vars into nested function environment
   }
   detach(settings)
 
