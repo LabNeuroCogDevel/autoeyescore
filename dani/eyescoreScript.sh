@@ -7,6 +7,8 @@ eyescoreFunctions=$pathScripts/eyescoreFunctions.R
 eyescoreScript=$pathScripts/eyescoreScript.R
 logFile=$path/.log
 
+if [ ! -e $path/maxJobs ]; then exit 1; fi # need maxJobs for multicore
+
 tasks="MGSEncode AntiState"
 for task in $tasks; do
   ids=$( ls $path/$task )
@@ -14,6 +16,7 @@ for task in $tasks; do
     dates=$( ls $path/$task/$id )
     for date in $dates; do
       pathSession=$path/$task/$id/$date
+      echo $pathSession
       Rscript --vanilla --quiet $eyescoreScript path=\"$pathSession\" taskPath=\"$path\" task=\"$task\" id=$id date=$date eyescoreFunctions=\"$eyescoreFunctions\" >> $logFile 2>&1 &
       maxJobs=$( cat $path/maxJobs ); while [ $( jobs | wc -l ) -ge $maxJobs ]; do sleep 1; done
     done

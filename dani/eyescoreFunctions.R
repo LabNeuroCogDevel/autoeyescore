@@ -430,6 +430,10 @@ scoreTrial <- function(startInd, minOnsetDelay=4, preTargetFix=10, blinkSample=6
 # score saccades
 scoreSaccades <- function(task, eyeData, saccades, outputTable=NULL, xposCenter=261/2, fixCode=250, xposPadding=30, opts=list(fixCheck=T)){
 
+  # get settings for all functions and attach
+    # in case there was an error at a previous time that left a list attached, detach it (i do this each time i attach something to avoid warnings from previous times)
+  while("settings" %in% search()) detach(settings); settings <- settingsList[[task]](); attach(settings)
+
   # add scoring columns to saccades
   scoring <- within(saccades, {trialStart<-NA; trialType<-NA; trial<-NA; saccade<-NA; scored<-NA; dropped<-NA; droppedReason<-NA; correct<-NA; correctPad<-NA; incorrect<-NA; corrected<-NA; blinkStart<-NA; accuracy<-NA; latency<-NA})
 
@@ -438,10 +442,6 @@ scoreSaccades <- function(task, eyeData, saccades, outputTable=NULL, xposCenter=
     xposCenterFix <- mean(eyeData$xpos[which(eyeData$XDAT %in% fixCode)], na.rm=T)
     if(xposCenterFix-xposCenter>xposPadding) stop(paste("mean of actual eye fixation across run (", xposCenterFix, ") differs from expected eye fixation (", xposCenter, ") by >", xposPadding, sep=""))
   }
-
-  # get settings for all functions and attach
-    # in case there was an error at a previous time that left a list attached, detach it (i do this each time i attach something to avoid warnings from previous times)
-  while("settings" %in% search()) detach(settings); settings <- settingsList[[task]](); attach(settings)
 
   # run for each trial type
   for(type in 1:length(trialTypes)){
@@ -490,8 +490,7 @@ multiIntersect <- function(x){
 # 
 summaryData <- function(task, saccades, outputTable=NULL){
 
-  settings <- settingsList[[task]]()
-  attach(settings)
+  while("settings" %in% search()) detach(settings); settings <- settingsList[[task]](); attach(settings)
 
   # sort through saccades, pull trial data
   summaryData <- with(saccades, {
@@ -526,7 +525,6 @@ summaryData <- function(task, saccades, outputTable=NULL){
     # return summaryData
     summaryData
   })
-  detach(settings)
   
   # write table and return scored saccades
   if(!is.null(outputTable)) write.table(summaryData, file=outputTable, row.names=F, quote=F)
