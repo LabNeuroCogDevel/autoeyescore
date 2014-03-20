@@ -472,11 +472,11 @@ scoreSaccades <- function(task, eyeData, saccades, outputTable=NULL, xposCenter=
 
 # convenience function for getting counts of different dropped reasons
 strFreq <- function(strIn){ # input is string vector 
-  strOut <- "" # output is single string with counts of unique inputs, for example: "3 anticipatory, 1 not held"
+  strOut <- "" # output is single string with counts of unique inputs, for example: "anticipatory:3,not_held:1"
   ustr <- unique(strIn)
   for(u in ustr){
-    str <- paste(length(which(strIn %in% u)), u)
-    if(nchar(strOut)==0) strOut <- str else strOut <- paste(strOut, str, sep=", ")
+    str <- paste(u, length(which(strIn %in% u)), sep=":")
+    if(nchar(strOut)==0) strOut <- str else strOut <- paste(strOut, str, sep=",")
   }
   return(strOut)
 }
