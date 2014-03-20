@@ -3,12 +3,12 @@ ept <- function(x) eval(parse(text=x),env=0)
 args <- commandArgs(T)
 for(arg in args) ept(arg)
 # if required args are missing, stop
-requiredArgs <- c("path","taskPath","task","id","date","eyescoreFunctions","logFile")
+requiredArgs <- c("path","taskPath","task","id","date","eyescoreFunctions")
 for(arg in requiredArgs) if(!(arg %in% ls())) stop(arg," is missing")
 
-# write all output to log
+# write all output to log (commenting out because doing logging in bash script)
   # tried to make sure that only errors will be present (some suppression of messages from warnings, startup, packages)
-sink(logFile, append=T)
+#sink(logFile, append=T)
 
 # load eyescore functions
 source(eyescoreFunctions)
@@ -52,5 +52,5 @@ for(file in files){
 # run stats on all the scored runs
 if(length(scoredList)>0) stats <- summaryData(task, list2data(scoredList), outputTable=file.path(path, paste(id, date, task, "stats.txt", sep="_")))
 
-# close log file
-sink()
+# close log file (commented out, as per above)
+#sink()

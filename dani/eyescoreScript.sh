@@ -14,10 +14,8 @@ for task in $tasks; do
     dates=$( ls $path/$task/$id )
     for date in $dates; do
       pathSession=$path/$task/$id/$date
-      echo $pathSession
-      Rscript --vanilla --quiet $eyescoreScript path=\"$pathSession\" taskPath=\"$path\" task=\"$task\" id=$id date=$date eyescoreFunctions=\"$eyescoreFunctions\" logFile=\"$logFile\" >> $pathSession/.log &
-      maxJobs=$( cat $path/maxJobs )
-      while [ $( jobs | wc -l ) -ge $maxJobs ]; do sleep 1; done
+      Rscript --vanilla --quiet $eyescoreScript path=\"$pathSession\" taskPath=\"$path\" task=\"$task\" id=$id date=$date eyescoreFunctions=\"$eyescoreFunctions\" >> $logFile 2>&1 &
+      maxJobs=$( cat $path/maxJobs ); while [ $( jobs | wc -l ) -ge $maxJobs ]; do sleep 1; done
     done
   done
 done

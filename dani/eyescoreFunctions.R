@@ -440,10 +440,8 @@ scoreSaccades <- function(task, eyeData, saccades, outputTable=NULL, xposCenter=
   }
 
   # get settings for all functions and attach
-  if("settings" %in% search()) detach(settings) # in case there was an error at a previous time that left a list attached, detach it
-  if("tempList" %in% search()) detach(tempList) # in case there was an error at a previous time that left a list attached, detach it
-  settings <- settingsList[[task]]()
-  attach(settings)
+    # in case there was an error at a previous time that left a list attached, detach it (i do this each time i attach something to avoid warnings from previous times)
+  while("settings" %in% search()) detach(settings); settings <- settingsList[[task]](); attach(settings)
 
   # run for each trial type
   for(type in 1:length(trialTypes)){
@@ -457,9 +455,8 @@ scoreSaccades <- function(task, eyeData, saccades, outputTable=NULL, xposCenter=
     if(length(startInd) != expectedTrialCount[type]) stop(paste("number of ", trialTypes[type], " trials detected from xdats (", length(startInd), ") do not match expectedTrialCount (", expectedTrialCount[type], ")", sep=""))
 
     # loop through and process saccades for each trial
-    for(t in 1:length(startInd)) { tempList<-makeList(c("scoring","type","t","xposCenter","xposPadding")); attach(tempList); scoring <- scoreTrial(startInd[t]); detach(tempList) } # need to get those vars into nested function environment
+    for(t in 1:length(startInd)) { while("tempList" %in% search()) detach(tempList); tempList<-makeList(c("scoring","type","t","xposCenter","xposPadding")); attach(tempList); scoring <- scoreTrial(startInd[t]) } # need to get those vars into nested function environment
   }
-  detach(settings)
 
   # write table and return scored saccades
   if(!is.null(outputTable)) write.table(scoring, file=outputTable, quote=F)
@@ -664,20 +661,20 @@ taskList$AntiState <- function(path="~/Dropbox/COG", file="Anti_Mix_Design_Lists
 
 writeTimings <- function(filePrefix, task, eyeData, saccades, outcomes=c("correct","incorrect","corrected","dropped"), nullRegs=c("unscored","blinks","capped"), outputTable=NULL, opts=list()){
 
-  settings <- settingsList[[task]]()
-  attach(settings)
-  attach(saccades)
+  # attach settings and saccades
+  while("settings" %in% search()) detach(settings); settings <- settingsList[[task]](); attach(settings)
+  while("saccades" %in% search()) detach(saccades); attach(saccades)
 
   # create timings folder
   outPath <- file.path(path, "timings", filePrefix)
   suppressWarnings( dir.create(outPath, recursive=T) ) # suppressing warning message if directory already exists
 
-  # get run/script info for run
+  # get run/script info for run, attach
   filePrefix <- strsplit(filePrefix, "_")[[1]]
   r <- gsub("run", "", filePrefix[4])
   if(task=="AntiState"){ s<-filePrefix[5]; if(nchar(s)==4 & substr(s,1,1)=="0") s<-gsub("0","",s) }
   runData <- taskData[switch(task, MGSEncode=grep(r,taskData$run), AntiState=grep(s,taskData$script)),]
-  attach(runData)
+  while("runData" %in% search()) detach(runData); attach(runData)
 
   # start of run
   runStartInd <- switch(task,
@@ -765,9 +762,6 @@ writeTimings <- function(filePrefix, task, eyeData, saccades, outcomes=c("correc
     cat(timings, "\n", file=file.path(outPath, paste(nullReg, sep="_")))
   }
 
-  detach(saccades)
-  detach(settings)
-  detach(runData)
   return(NULL)
 }
 
