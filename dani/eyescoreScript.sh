@@ -23,6 +23,9 @@ for task in $tasks; do
   done
 done
 
+# totals
+  # MGSEncode: 456 sessions, 1343 runs
+  # AntiState: 464 sessions, 1826 runs
 # errors (across both tasks):
   # numbers of columns of arguments do not match (session level) -- 74
   # number of XXX trials detected from xdats (XXX) do not match expectedTrialCount (XXX) -- 102
@@ -30,8 +33,21 @@ done
   # mean of actual eye fixation across run (XXX) differs from expected eye fixation (XXX) by >XX -- 49
   # Error in ts(x) : 'ts' object must have one or more observations -- 11
 
-# todo next
-  # behavior spreadsheet to exclude
+# behavior spreadsheets
+header="id date type count correct incorrect corrected dropped droppedReason percCorrect latency accuracy accuracyMost"
+for task in $tasks; do
+  case $task in "MGSEncode") types="vgs mgs" ;; "AntiState") types="as ps" ;; esac
+  for type in $types; do
+    echo $header > $path/${task}_${type}.txt
+    for file in $( ls $path/$task/*/*/*stats.txt ); do
+      id=$( echo $file | cut -d/ -f6 )
+      date=$( echo $file | cut -d/ -f7 )
+      echo $id $date $( grep "$type " $file ) >> $path/${task}_${type}.txt
+    done
+  done
+done
+# fmri spreadsheets
+
   # cross check fmri and behavior, for first pass just use subjects with all runs for both
   # 3dDeconvolve - events, beta series
 
