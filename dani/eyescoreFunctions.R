@@ -521,7 +521,7 @@ summaryData <- function(task, saccades, outputTable=NULL){
       # fill in missing end trials
       diff <- expectedTrialCount[t]*max(listInd) - summaryData$count[t]
       if(diff>0) summaryData <- within(summaryData, { count[t]<-count[t]+diff; dropped[t]<-dropped[t]+diff; droppedReason[t]<-paste(droppedReason[t],paste("no_saccades_left",diff,sep=":"),sep=",") })
-      if(dropped[t]==0) droppedReason[t] <- "NA"
+      if(summaryData$dropped[t]==0) summaryData$droppedReason[t] <- "NA" # need to have something in droppedReason column or else there will be wrong # of columns
     }
 
     # return summaryData
