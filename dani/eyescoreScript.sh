@@ -9,6 +9,7 @@ logFile=$path/.log
 
 if [ ! -e $path/maxJobs ]; then exit 1; fi # need maxJobs for multicore
 
+cd $path
 tasks="MGSEncode AntiState"
 for task in $tasks; do
   ids=$( ls $path/$task )
@@ -33,6 +34,17 @@ done
   # mean of actual eye fixation across run (XXX) differs from expected eye fixation (XXX) by >XX -- 49
   # Error in ts(x) : 'ts' object must have one or more observations -- 11
 
+# quick loop to hide unused timing files
+for task in $tasks; do
+  case $task in
+    "MGSEncode") hideFiles=$( echo "capped" $( for cond in vgs delay mgs; do for out in correct incorrect corrected dropped; do echo ${cond}_${out}; done; done ) ) ;;
+    "AntiState") hideFiles="capped" ;;
+  esac
+  for hideFile in $hideFiles; do 
+    for file in $( ls $path/$task/*/*/timings/*/$hideFile ); do mv $file $( dirname $file )/.$( basename $file ); done
+  done
+done
+
 # behavior spreadsheets
 header="id date type count correct incorrect corrected dropped droppedReason percCorrect latency accuracy accuracyMost"
 for task in $tasks; do
@@ -46,10 +58,53 @@ for task in $tasks; do
     done
   done
 done
-# fmri spreadsheets
 
-  # cross check fmri and behavior, for first pass just use subjects with all runs for both
-  # 3dDeconvolve - events, beta series
+# fmri spreadsheets
+  # cross check fmri and behavior, create timing files for glms
+ids=$( basename $( ls -d $path/1* ))
+mkdir -p $path/GLM
+for task in $tasks; do
+  mkdir -p $path/GLM/$task
+  case $task in "MGSEncode") runs=3; runID="MS" ;; "AntiState") runs=4; runID="AS" ;; esac
+  runString=$( for run in $( seq $runs ); do echo run${run}; done )
+  runStringBeh=$( for run in $( seq $runs ); do echo beh${run}; done )
+  header="id date $runString $runStringBeh"
+  echo $header > $path/${task}_fmri.txt
+  for id in $ids; do
+    dates=$( ls $path/$id )
+    for date in $dates; do
+      sessLogic=""
+      sessLogicBeh=""
+      for run in $( seq $runs ); do
+        runLogic=$( ls $path/$id/$date | grep ${runID}${run} | wc -w )
+        sessLogic=$( echo $sessLogic $runLogic )
+        runLogicBeh=$( ls $path/$task/$id/$date/timings | grep run${run} | wc -w )
+        sessLogicBeh=$( echo $sessLogicBeh $runLogicBeh )
+        if [ $runLogic == 1 ] && [ $runLogicBeh == 1 ]; then
+          mkdir -p $path/GLM/$task/$id/$date/timings
+          for file in $( ls $path/$task/$id/$date/timings/*run${run}* ); do
+            cat $path/$task/$id/$date/timings/*run${run}*/$file >> $path/GLM/$task/$id/$date/timings/$file
+          done
+        fi
+      done
+      echo "$id $date $sessLogic $sessLogicBeh" >> $path/${task}_fmri.txt
+    done
+  done
+done
+
+# 3dDeconvolve - events, beta series
+glmScript=$pathScripts/eyescoreGlms.sh # needs path, task, id, date, model (activation, beta_series), mask, glm (TRUE or FALSE), reml (TRUE or FALSE)
+model="activation", glm="TRUE", reml="FALSE" # defaults
+mask=$HOME/standard/mni_icbm152_nlin_asym_09c/mni_icbm152_t1_tal_nlin_asym_09c_brain_3mm.nii
+for task in $tasks; do
+  ids=$( ls $path/GLM/$task )
+  for id in $ids; do
+    dates=$( ls $path/GLM/$task/$id )
+    for date in $dates; do
+      set -x; . $glmScript $path $task $id $date $model $mask $glm $reml; set +x # showing command so know which one we are up to and what variable values are
+    done
+  done
+done
 
 ###################
 ###### NOTES ######
