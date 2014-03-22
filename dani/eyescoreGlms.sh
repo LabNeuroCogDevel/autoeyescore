@@ -30,7 +30,7 @@ if [ ! -e $motionCat ]; then for c in $censor; do cat $c >> $motionCat; done; fi
 
 # write command to variable (will write to file)
 deconvolveScript=$pathModel/glm_out.cmd
-echo "3dDeconvolve -input $inputs -mask $mask -nfirst 0 -polort 3 -allzero_OK -GOFORIT 99 -censor $pathGlm/mcplots_censor_cat.1D \\" > $deconvolveScript
+echo -n "3dDeconvolve -input $( echo inputs ) -mask $mask -nfirst 0 -polort 3 -allzero_OK -GOFORIT 99 -censor $pathGlm/mcplots_censor_cat.1D \\" > $deconvolveScript
 
 # add line for each folder in timings file
 timings=( $( ls $pathTimings ) )
