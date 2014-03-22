@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e # exit on error
+#set -e # exit on error
 #set -x # print output
 
 # read arguments
@@ -29,12 +29,13 @@ motionCat=$pathGlm/mcplots_censor_cat.1D
 if [ ! -e $motionCat ]; then for c in $censor; do cat $c >> $motionCat; done; fi
 
 # write command to variable (will write to file)
-cmd=$( echo "3dDeconvolve -input $inputs -mask $mask -nfirst 0 -polort 3 -allzero_OK -GOFORIT 99 -censor $pathGlm/mcplots_censor_cat.1D" )
+deconvolveScript=$pathModel/glm_out.cmd
+echo "3dDeconvolve -input $inputs -mask $mask -nfirst 0 -polort 3 -allzero_OK -GOFORIT 99 -censor $pathGlm/mcplots_censor_cat.1D \\" > $deconvolveScript
 
 # add line for each folder in timings file
 timings=( $( ls $pathTimings ) )
 num_stimts=${#timings[@]}
-cmd=$( echo $cmd "-num_stimts $num_stimts -basis_normall 1" )
+echo "-num_stimts $num_stimts -basis_normall 1 \\" >> $deconvolveScript
 for t in $( seq $num_stimts ); do
   timing=${timings[$((t-1))]}
   stim_times="-stim_times"; deconvolveFun="GAM" # defaults
@@ -50,27 +51,25 @@ for t in $( seq $num_stimts ); do
       deconvolveFun="BLOCK(9,1)" ;;
   esac
   #if [ $model == "beta_series" ]; then stim_times="-stim_times_IM" --> obviously will need more extensive code for beta series, holding off for now
-  cmd=$( echo $cmd "$stim_times $t $pathTimings/$timing \'${deconvolveFun}\' -stim_label $t $timing" )
+  echo "$stim_times $t $pathTimings/$timing \'${deconvolveFun}\' -stim_label $t $timing \\" >> $deconvolveScript
 done
 
 # add contrasts for MGSEncode task (to combine across different cue/delay lengths)
 if [ $task == "MGSEncode" ]; then
-  cmd=$( echo $cmd "-num_glt 8")
-  cmd=$( echo $cmd "-gltsym \'SYM: +0.5*vgs_correct_cue_short +0.5*vgs_correct_cue_long\' -glt_label 1 cue")
-  cmd=$( echo $cmd "-gltsym \'SYM: +vgs_correct_cue_short -vgs_correct_cue_long\' -glt_label 2 cue_short-long")
-  cmd=$( echo $cmd "-gltsym \'SYM: +0.25*delay_correct_cue_short_delay_short +0.25*delay_correct_cue_long_delay_short +0.25*delay_correct_cue_short_delay_long +0.25*delay_correct_cue_long_delay_long\' -glt_label 3 delay")
-  cmd=$( echo $cmd "-gltsym \'SYM: +0.5*delay_correct_cue_short_delay_short -0.5*delay_correct_cue_long_delay_short +0.5*delay_correct_cue_short_delay_long -0.5*delay_correct_cue_long_delay_long\' -glt_label 4 delay_cueShort-cueLong")
-  cmd=$( echo $cmd "-gltsym \'SYM: +0.5*delay_correct_cue_short_delay_short +0.5*delay_correct_cue_long_delay_short -0.5*delay_correct_cue_short_delay_long -0.5*delay_correct_cue_long_delay_long\' -glt_label 5 delay_delayShort-delayLong")
-  cmd=$( echo $cmd "-gltsym \'SYM: +0.25*mgs_correct_cue_short_delay_short +0.25*mgs_correct_cue_long_delay_short +0.25*mgs_correct_cue_short_delay_long +0.25*mgs_correct_cue_long_delay_long\' -glt_label 6 target")
-  cmd=$( echo $cmd "-gltsym \'SYM: +0.5*mgs_correct_cue_short_delay_short -0.5*mgs_correct_cue_long_delay_short +0.5*mgs_correct_cue_short_delay_long -0.5*mgs_correct_cue_long_delay_long\' -glt_label 7 target_cueShort-cueLong")
-  cmd=$( echo $cmd "-gltsym \'SYM: +0.5*mgs_correct_cue_short_delay_short +0.5*mgs_correct_cue_long_delay_short -0.5*mgs_correct_cue_short_delay_long -0.5*mgs_correct_cue_long_delay_long\' -glt_label 8 target_delayShort-delayLong")
+  echo "-num_glt 8 \\" >> $deconvolveScript
+  echo "-gltsym \'SYM: +0.5*vgs_correct_cue_short +0.5*vgs_correct_cue_long\' -glt_label 1 cue \\" >> $deconvolveScript
+  echo "-gltsym \'SYM: +vgs_correct_cue_short -vgs_correct_cue_long\' -glt_label 2 cue_short-long \\" >> $deconvolveScript
+  echo "-gltsym \'SYM: +0.25*delay_correct_cue_short_delay_short +0.25*delay_correct_cue_long_delay_short +0.25*delay_correct_cue_short_delay_long +0.25*delay_correct_cue_long_delay_long\' -glt_label 3 delay \\" >> $deconvolveScript
+  echo "-gltsym \'SYM: +0.5*delay_correct_cue_short_delay_short -0.5*delay_correct_cue_long_delay_short +0.5*delay_correct_cue_short_delay_long -0.5*delay_correct_cue_long_delay_long\' -glt_label 4 delay_cueShort-cueLong \\" >> $deconvolveScript
+  echo "-gltsym \'SYM: +0.5*delay_correct_cue_short_delay_short +0.5*delay_correct_cue_long_delay_short -0.5*delay_correct_cue_short_delay_long -0.5*delay_correct_cue_long_delay_long\' -glt_label 5 delay_delayShort-delayLong \\" >> $deconvolveScript
+  echo "-gltsym \'SYM: +0.25*mgs_correct_cue_short_delay_short +0.25*mgs_correct_cue_long_delay_short +0.25*mgs_correct_cue_short_delay_long +0.25*mgs_correct_cue_long_delay_long\' -glt_label 6 target \\" >> $deconvolveScript
+  echo "-gltsym \'SYM: +0.5*mgs_correct_cue_short_delay_short -0.5*mgs_correct_cue_long_delay_short +0.5*mgs_correct_cue_short_delay_long -0.5*mgs_correct_cue_long_delay_long\' -glt_label 7 target_cueShort-cueLong \\" >> $deconvolveScript
+  echo "-gltsym \'SYM: +0.5*mgs_correct_cue_short_delay_short +0.5*mgs_correct_cue_long_delay_short -0.5*mgs_correct_cue_short_delay_long -0.5*mgs_correct_cue_long_delay_long\' -glt_label 8 target_delayShort-delayLong \\" >> $deconvolveScript
 fi
 
 # output data info
-cmd=$( echo $cmd "-xjpeg $pathModel/glm_matrix.jpg -tout -fout -bucket $pathModel/glm_out" )
+echo "-xjpeg $pathModel/glm_matrix.jpg -tout -fout -bucket $pathModel/glm_out \\" >> $deconvolveScript
 
-# write glm script file
-echo $cmd > $pathModel/glm_out.cmd
 # run models
 if [ $glm == "TRUE" ]; then
   sh $pathModel/glm_out.cmd ## runs glm
