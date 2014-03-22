@@ -68,7 +68,7 @@ if [ $task == "MGSEncode" ]; then
 fi
 
 # output data info
-echo "  -xjpeg $pathModel/glm_matrix.jpg -tout -fout -bucket $pathModel/glm_out" >> $deconvolveScript
+echo "  -quiet -jobs 1 -xjpeg $pathModel/glm_matrix.jpg -tout -fout -bucket $pathModel/glm_out" >> $deconvolveScript
 
 # run models
 if [ $glm == "TRUE" ]; then

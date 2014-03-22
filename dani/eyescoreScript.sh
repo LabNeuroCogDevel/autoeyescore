@@ -19,7 +19,7 @@ for task in $tasks; do
       pathSession=$path/$task/$id/$date
       #echo $task $id $date
       Rscript --vanilla --quiet $eyescoreScript path=\"$pathSession\" taskPath=\"$path\" task=\"$task\" id=$id date=$date eyescoreFunctions=\"$eyescoreFunctions\" >> $logFile 2>&1 &
-      maxJobs=$( cat $path/maxJobs ); while [ $( jobs | wc -l ) -ge $maxJobs ]; do sleep 1; done
+      set +x; maxJobs=$( cat $path/maxJobs ); while [ $( jobs | wc -l ) -ge $maxJobs ]; do sleep 1; done; set -x # set +x for suppressing clutter
     done
   done
 done
@@ -103,7 +103,8 @@ for task in $tasks; do
   for id in $ids; do
     dates=$( ls $path/GLM/$task/$id )
     for date in $dates; do
-      . $glmScript $path $task $id $date $model $mask $glm $reml
+      . $glmScript $path $task $id $date $model $mask $glm $reml &
+      set +x; maxJobs=$( cat $path/maxJobs ); while [ $( jobs | wc -l ) -ge $maxJobs ]; do sleep 1; done; set -x # set +x for suppressing clutter
     done
   done
 done
