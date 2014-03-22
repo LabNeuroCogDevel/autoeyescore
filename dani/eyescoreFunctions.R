@@ -680,7 +680,7 @@ writeTimings <- function(filePrefix, task, eyeData, saccades, outcomes=c("correc
   # start of run
   runStartInd <- switch(task,
     MGSEncode = trialStart[which(saccade==1)[1]] - 90, # starts 1.5s (90 samples) before first cue
-    AntiState = trialStart[which(saccade==1)[1]] - 180 - ms2asl(1000*(time[1])) # variable time to first trial; also, index is target, subtract 3s (180 samples) to get cue (will model as 4.5s block)
+    AntiState = trialStart[which(saccade==1)[1]] - ms2asl(1000*(time[1])) # variable time to first trial (will model as 4.5s block)
   )
 
   # run for each trial type and outcome
@@ -696,7 +696,10 @@ writeTimings <- function(filePrefix, task, eyeData, saccades, outcomes=c("correc
         dropped = which(!is.na(dropped))
       ))
       # convert to seconds
-      if(length(indTimings)==0) timings <- "*" else timings <- asl2ms(trialStart[indTimings]-runStartInd)/1000
+      if(length(indTimings)==0) timings <- "*" else {
+        timings <- asl2ms(trialStart[indTimings]-runStartInd)/1000
+        if(task=="AntiState") timings <- timings-3 # if AntiState, subtract 3s from timing, to start of cue (instead of target)
+      }
       # if dropped, make sure any missing trials (due to no remaining saccades) are counted as dropped
       if(outcome=="dropped"){
         scoredTrialCount <- max(trial, na.rm=T); diff <- expectedTrialCount[type]-scoredTrialCount
