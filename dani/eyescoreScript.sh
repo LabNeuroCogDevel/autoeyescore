@@ -1,5 +1,5 @@
 #!/bin/bash
-#set -x
+set -x
 
 path=/Volumes/Phillips/COG
 pathScripts=$path/autoeyescore/dani
@@ -17,7 +17,7 @@ for task in $tasks; do
     dates=$( ls $path/$task/$id )
     for date in $dates; do
       pathSession=$path/$task/$id/$date
-      echo $task $id $date
+      #echo $task $id $date
       Rscript --vanilla --quiet $eyescoreScript path=\"$pathSession\" taskPath=\"$path\" task=\"$task\" id=$id date=$date eyescoreFunctions=\"$eyescoreFunctions\" >> $logFile 2>&1 &
       maxJobs=$( cat $path/maxJobs ); while [ $( jobs | wc -l ) -ge $maxJobs ]; do sleep 1; done
     done
@@ -41,7 +41,7 @@ for task in $tasks; do
     "AntiState") hideFiles="capped" ;;
   esac
   for hideFile in $hideFiles; do 
-    for file in $( ls $path/$task/*/*/timings/*/$hideFile ); do mv $file $( dirname $file )/.$( basename $file ); done
+    set +x; for file in $( ls $path/$task/*/*/timings/*/$hideFile ); do mv $file $( dirname $file )/.$( basename $file ); done; set -x # turning off output for this section because too much output clutter
   done
 done
 
@@ -51,11 +51,13 @@ for task in $tasks; do
   case $task in "MGSEncode") types="vgs mgs" ;; "AntiState") types="as ps" ;; esac
   for type in $types; do
     echo $header > $path/${task}_${type}.txt
+    set +x # too much output clutter in this section
     for file in $( ls $path/$task/*/*/*stats.txt ); do
       id=$( echo $file | cut -d/ -f6 )
       date=$( echo $file | cut -d/ -f7 )
       echo $id $date $( grep "$type " $file ) >> $path/${task}_${type}.txt
     done
+    set -x #
   done
 done
 
@@ -92,16 +94,16 @@ for task in $tasks; do
   done
 done
 
-# 3dDeconvolve - events, beta series
+# 3dDeconvolve - regular (still need to add beta series
 glmScript=$pathScripts/eyescoreGlms.sh # needs path, task, id, date, model (activation, beta_series), mask, glm (TRUE or FALSE), reml (TRUE or FALSE)
-model="activation", glm="TRUE", reml="FALSE" # defaults
+model="glm" glm="TRUE", reml="FALSE" # defaults
 mask=$HOME/standard/mni_icbm152_nlin_asym_09c/mni_icbm152_t1_tal_nlin_asym_09c_brain_3mm.nii
 for task in $tasks; do
   ids=$( ls $path/GLM/$task )
   for id in $ids; do
     dates=$( ls $path/GLM/$task/$id )
     for date in $dates; do
-      set -x; . $glmScript $path $task $id $date $model $mask $glm $reml; set +x # showing command so know which one we are up to and what variable values are
+      . $glmScript $path $task $id $date $model $mask $glm $reml
     done
   done
 done
@@ -109,6 +111,8 @@ done
 ###################
 ###### NOTES ######
 ###################
+
+## NOTE: HAVE NOT ACTUALLY MADE BELOW CHANGES
 
 # AntiState
   # 10133/20081217 - 4th run redone, hiding incomplete file

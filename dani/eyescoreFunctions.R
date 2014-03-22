@@ -723,7 +723,7 @@ writeTimings <- function(filePrefix, task, eyeData, saccades, outcomes=c("correc
               cat(timings1, "\n", file=file.path(outPath, paste(trialTypes[type], outcome, "cue", c, sep="_")))
             }
           }else if(type==2){
-            timingsDelay <- timings-delayTime[indMatch]
+            timingsDelay <- timings-delayLength[indMatch]
             cat(timingsDelay, "\n", file=file.path(outPath, paste("delay", outcome, sep="_"))) # write delay timings
             for(c in c("short","long")) for(d in c("short","long")){
               ind <- which(cueLengths[indMatch]==c & delayLengths[indMatch]==d)
@@ -761,6 +761,8 @@ writeTimings <- function(filePrefix, task, eyeData, saccades, outcomes=c("correc
     )
     timings <- asl2ms(indTimings-runStartInd)/1000
     if(length(timings)>0 & min(timings)<0) timings <- timings[-which(timings<0)] # can be saccades, blinks etc... before run starts
+    tr <- 1.5; volumes <- switch(task, MGSEncode=229, AntiState=244); maxTime <- tr*(volumes-1)
+    if(length(timings)>0 & max(timings)>maxTime) timings <- timings[-which(timings>maxTime)] # ... after run ends
     if(length(timings)==0) timings <- "*"
     # write file
     cat(timings, "\n", file=file.path(outPath, paste(nullReg, sep="_")))
