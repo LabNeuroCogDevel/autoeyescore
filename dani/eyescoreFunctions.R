@@ -680,7 +680,7 @@ writeTimings <- function(filePrefix, task, eyeData, saccades, outcomes=c("correc
   # start of run
   runStartInd <- switch(task,
     MGSEncode = trialStart[which(saccade==1)[1]] - 90, # starts 1.5s (90 samples) before first cue
-    AntiState = trialStart[which(saccade==1)[1]] - 90 - ms2asl(1000*(time[1])) # variable time to first trial; also, index is target, subtract 1.5s (90 samples) to get cue (will model as 4.5s block)
+    AntiState = trialStart[which(saccade==1)[1]] - 180 - ms2asl(1000*(time[1])) # variable time to first trial; also, index is target, subtract 3s (180 samples) to get cue (will model as 4.5s block)
   )
 
   # run for each trial type and outcome
