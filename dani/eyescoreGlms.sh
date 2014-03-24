@@ -48,7 +48,7 @@ for t in $( seq $num_stimts ); do
     delay*delay_long)
       deconvolveFun="BLOCK(9,1)" ;;
   esac
-  if [ $model == "beta_series" ] & [[ $timing == *correct* ]]; then stim_times="-stim_times_IM"; fi
+  if [ $model == "beta_series" ] & [[ $timing == *correct* ]] & [[ ! $timing == *incorrect* ]] & [[ ! $timing == *corrected* ]]; then stim_times="-stim_times_IM"; fi
   echo "  $stim_times $t $pathTimings/$timing '${deconvolveFun}' -stim_label $t $timing \\" >> $deconvolveScript
 done
 
