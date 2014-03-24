@@ -96,10 +96,10 @@ for task in $tasks; do
   done
 done
 
-# 3dDeconvolve - regular (still need to add beta series
-glmScript=$pathScripts/eyescoreGlms.sh # needs path, task, id, date, model (activation, beta_series), mask, glm (TRUE or FALSE), reml (TRUE or FALSE)
+# 3dDeconvolve - regular and beta series
+glmScript=$pathScripts/eyescoreGlms.sh # needs path, task, id, date, model (glm, beta_series), mask
 models="glm beta_series"
-writeScript="TRUE"; runGlm="FALSE"; runReml="FALSE" # defaults
+writeScript="TRUE"; runGlm="TRUE"; runReml="FALSE" # defaults
 mask=$HOME/standard/mni_icbm152_nlin_asym_09c/mni_icbm152_t1_tal_nlin_asym_09c_brain_3mm.nii
 for task in $tasks; do
   for model in $models; do
@@ -107,18 +107,18 @@ for task in $tasks; do
     for id in $ids; do
       dates=$( ls $path/GLM/$task/$id )
       for date in $dates; do
-        mkdir -p $path/GLM/$task/$id/$date/$model
-        cd $path/GLM/$task/$id/$date/$model
+        pathModel=$path/GLM/$task/$id/$date/$model
+        mkdir -p $pathModel
+        cd $pathModel
         if [ -e "glm_out+tlrc.HEAD" ]; then continue; fi
-        if [ $writeScript == "TRUE" ]; then . $glmScript $path $task $id $date $model $mask > .writeScript.log 2>&1 & fi
-        if [ $runGlm == "TRUE" ]; then sh $pathModel/glm_out.cmd > .runGlm.log 2>&1 & fi ## runs glm
-        if [ $runReml == "TRUE" ]; then sh $pathModel/glm_out.REML_cmd > .runReml.log 2>&1 & fi ## runs reml glm
+        if [ $writeScript == "TRUE" ]; then sh $glmScript $path $task $id $date $model $mask > .writeScript.log 2>&1; fi
+        if [ $runGlm == "TRUE" ] && [ -e "glm_out.cmd" ]; then sh glm_out.cmd > .runGlm.log 2>&1 & fi ## runs glm
+        if [ $runReml == "TRUE" ] && [ -e "glm_out.REML_cmd" ]; then sh glm_out.REML_cmd > .runReml.log 2>&1 & fi ## runs reml glm
         set +x; maxJobs=$( cat $path/maxJobs ); while [ $( jobs | wc -l ) -ge $maxJobs ]; do sleep 1; done; set -x # set +x for suppressing clutter
       done
     done
   done
 done
-
 
 ## STILL TO DO
   ## BEHAVIOR GROUP RESULTS

@@ -772,24 +772,3 @@ writeTimings <- function(filePrefix, task, eyeData, saccades, outcomes=c("correc
   return(NULL)
 }
 
-
-## FUNCTION, GET RUN INPUTS, PUT TOGETHER FINAL TIMINGS
-
-
-
-
-
-
-# 6) get eprime lists to check against, log discrepancies
-#   - trial count, types, timing
-
-
-# 7) get index for start of scanning, writing timing files
-#
-
-
-# ..
-# this should be in a bash file that accepts arguments for other functions
-# for(arg in commandArgs()) eval(parse(text=arg))
-# need to have id, date, task, etc...
-
