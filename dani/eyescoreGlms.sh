@@ -10,8 +10,6 @@ id=$3
 date=$4
 model=$5
 mask=$6
-glm=$7
-reml=$8
 
 # set up paths
 pathPreproc=$path/$id/$date
@@ -50,7 +48,7 @@ for t in $( seq $num_stimts ); do
     delay*delay_long)
       deconvolveFun="BLOCK(9,1)" ;;
   esac
-  if [ $model == "beta_series" ] & [[ $timing == *correct* ]]; then stim_times="-stim_times_IM"
+  if [ $model == "beta_series" ] & [[ $timing == *correct* ]]; then stim_times="-stim_times_IM"; fi
   echo "  $stim_times $t $pathTimings/$timing '${deconvolveFun}' -stim_label $t $timing \\" >> $deconvolveScript
 done
 

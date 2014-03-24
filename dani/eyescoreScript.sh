@@ -98,19 +98,23 @@ done
 
 # 3dDeconvolve - regular (still need to add beta series
 glmScript=$pathScripts/eyescoreGlms.sh # needs path, task, id, date, model (activation, beta_series), mask, glm (TRUE or FALSE), reml (TRUE or FALSE)
-model="glm"; writeScript="TRUE"; runGlm="FALSE"; runReml="FALSE" # defaults
+models="glm beta_series"
+writeScript="TRUE"; runGlm="FALSE"; runReml="FALSE" # defaults
 mask=$HOME/standard/mni_icbm152_nlin_asym_09c/mni_icbm152_t1_tal_nlin_asym_09c_brain_3mm.nii
 for task in $tasks; do
-  ids=$( ls $path/GLM/$task )
-  for id in $ids; do
-    dates=$( ls $path/GLM/$task/$id )
-    for date in $dates; do
-      cd $path/GLM/$task/$id/$date/$model
-      if [ -e "glm_out+tlrc.HEAD" ]; then continue; fi
-      if [ $writeScript == "TRUE" ]; then . $glmScript $path $task $id $date $model $mask > .writeScript.log 2>&1 &; fi
-      if [ $runGlm == "TRUE" ]; then sh $pathModel/glm_out.cmd > .runGlm.log 2>&1 &; fi ## runs glm
-      if [ $runReml == "TRUE" ]; then sh $pathModel/glm_out.REML_cmd > .runReml.log 2>&1 &; fi ## runs reml glm
-      set +x; maxJobs=$( cat $path/maxJobs ); while [ $( jobs | wc -l ) -ge $maxJobs ]; do sleep 1; done; set -x # set +x for suppressing clutter
+  for model in $models; do
+    ids=$( ls $path/GLM/$task )
+    for id in $ids; do
+      dates=$( ls $path/GLM/$task/$id )
+      for date in $dates; do
+        mkdir -p $path/GLM/$task/$id/$date/$model
+        cd $path/GLM/$task/$id/$date/$model
+        if [ -e "glm_out+tlrc.HEAD" ]; then continue; fi
+        if [ $writeScript == "TRUE" ]; then . $glmScript $path $task $id $date $model $mask > .writeScript.log 2>&1 & fi
+        if [ $runGlm == "TRUE" ]; then sh $pathModel/glm_out.cmd > .runGlm.log 2>&1 & fi ## runs glm
+        if [ $runReml == "TRUE" ]; then sh $pathModel/glm_out.REML_cmd > .runReml.log 2>&1 & fi ## runs reml glm
+        set +x; maxJobs=$( cat $path/maxJobs ); while [ $( jobs | wc -l ) -ge $maxJobs ]; do sleep 1; done; set -x # set +x for suppressing clutter
+      done
     done
   done
 done
