@@ -50,12 +50,12 @@ for t in $( seq $num_stimts ); do
     delay*delay_long)
       deconvolveFun="BLOCK(9,1)" ;;
   esac
-  #if [ $model == "beta_series" ]; then stim_times="-stim_times_IM" --> obviously will need more extensive code for beta series, holding off for now
+  if [ $model == "beta_series" ] & [[ $timing == *correct* ]]; then stim_times="-stim_times_IM"
   echo "  $stim_times $t $pathTimings/$timing '${deconvolveFun}' -stim_label $t $timing \\" >> $deconvolveScript
 done
 
 # add contrasts for MGSEncode task (to combine across different cue/delay lengths)
-if [ $task == "MGSEncode" ]; then
+if [ $task == "MGSEncode" ] && [ $model == "glm" ]; then
   echo "  -num_glt 8 \\" >> $deconvolveScript
   echo "  -gltsym 'SYM: +0.5*vgs_correct_cue_short +0.5*vgs_correct_cue_long' -glt_label 1 cue \\" >> $deconvolveScript
   echo "  -gltsym 'SYM: +vgs_correct_cue_short -vgs_correct_cue_long' -glt_label 2 cue_short-long \\" >> $deconvolveScript
@@ -69,12 +69,4 @@ fi
 
 # output data info
 echo "  -quiet -jobs 1 -xjpeg $pathModel/glm_matrix.jpg -tout -fout -bucket $pathModel/glm_out" >> $deconvolveScript
-
-# run models
-if [ $glm == "TRUE" ]; then
-  sh $pathModel/glm_out.cmd ## runs glm
-  if [ $reml == "TRUE" ]; then
-    sh $pathModel/glm_out.REML_cmd ## runs 3dREMLfit which includes ARMA(1,1) autocorrelation
-  fi
-fi
 
