@@ -1,0 +1,26 @@
+notes:
+- fill in missing codes from task data
+
+two algorithms to test:
+1) based on pre-trial fixation:
+- from trial start indices, get 1.5s (90 samples) fixation periods before them
+- get median x-position of these samples (allow for some looking away, etc...)
+- make time series of these medians
+- remove high influence points
+- fit linear model (mean=offset, slope=drift), adjust xpos
+--> advantage: doesn't depend on scoring, can count as a preprocessing step and no issues with capping
+--> disadvantage: if they are looking around, may throw off estimates
+
+2) based on VGS accuracy
+- score trials as before
+  - may need to leave off capping in preprocessing, or use a more lenient cap, such as xmax*2
+  - also leave off center fix check
+- get number of vgs trials with left and right errors
+  - first saccade? most accurate saccade? last saccade? this is a toughie...
+- proportion tests to determine if they are different from chance
+- if different, fit linear model (mean=offset, slope=drift), adjust xpos
+  - mean or median? probably median...
+  - scored accuracies or go back and adjust xpos and re-preprocess?
+  - maybe skip proportion test, use cooks and adjust everyone?
+--> advantage: more likely they're not just looking around, but actually looking at the stimulus
+--> disadvantage: so many choices!
