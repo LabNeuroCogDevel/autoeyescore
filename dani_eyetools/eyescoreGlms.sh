@@ -25,6 +25,11 @@ inputs=$( ls $pathPreproc/${runID}*/nfswkmtd_functional.nii.gz )
 censor=$( ls $pathPreproc/${runID}*/mcplots_censor.1D )
 motionCat=$pathGlm/mcplots_censor_cat.1D
 if [ ! -e $motionCat ]; then for c in $censor; do cat $c >> $motionCat; done; fi
+# write percent of volumes excluded as a text file, so can use for stats
+censorVols=$( cat $pathGlm/mcplots_censor_cat.1D | grep 0 | wc -l )
+allVols=$( cat $pathGlm/mcplots_censor_cat.1D | wc -l )
+percCensor=$(( 100 * censorVols / allVols ))
+echo $percCensor > $pathGlm/percCensor.txt
 
 # write command to variable (will write to file)
 deconvolveScript=$pathModel/glm_out.cmd
