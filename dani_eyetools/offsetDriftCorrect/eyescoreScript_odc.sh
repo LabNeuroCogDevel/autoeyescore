@@ -11,8 +11,7 @@ correctPath=/Volumes/Phillips/COG/offsetDelayCorrect
 pathScripts=$path/autoeyescore/dani_eyetools
 eyescoreFunctions=$pathScripts/eyescoreFunctions.R
 eyescoreScript=$pathScripts/eyescoreScript.R
-#correctScript=$pathScripts/offsetDriftCorrect/eyescoreScript_odc.R
-correctScript=$path/tempScript.sh
+correctScript=$pathScripts/offsetDriftCorrect/eyescoreScript_odc.R
 logFile=$path/offsetDriftCorrect/.log
 
 if [ ! -e $path/maxJobs ]; then exit 1; fi # need maxJobs for multicore
