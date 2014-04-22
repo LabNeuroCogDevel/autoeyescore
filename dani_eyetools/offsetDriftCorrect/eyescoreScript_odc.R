@@ -11,7 +11,7 @@ for (arg in requiredArgs) if(!(arg %in% ls())) stop(arg, " is missing")
 # tried to make sure that only errors will be present
   # some suppression of messages from warnings, startup, packages
 #sink(logFile, append=T)
-browser()
+
 # load eyescore functions
 source(eyescoreFunctions)
 
