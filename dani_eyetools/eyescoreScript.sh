@@ -18,8 +18,14 @@ for task in $tasks; do
     for date in $dates; do
       pathSession=$path/$task/$id/$date
       #echo $task $id $date
-      Rscript --vanilla --quiet $eyescoreScript path=\"$pathSession\" taskPath=\"$path\" task=\"$task\" id=$id date=$date eyescoreFunctions=\"$eyescoreFunctions\" >> $logFile 2>&1 &
-      set +x; maxJobs=$( cat $path/maxJobs ); while [ $( jobs | wc -l ) -ge $maxJobs ]; do sleep 1; done; set -x # set +x for suppressing clutter
+      Rscript --vanilla --quiet $eyescoreScript \
+        path=\"$pathSession\" taskPath=\"$path\" task=\"$task\" \
+        id=$id date=$date eyescoreFunctions=\"$eyescoreFunctions\" \
+        >> $logFile 2>&1 &
+      set +x # set +x for suppressing clutter
+      maxJobs=$( cat $path/maxJobs )
+      while [ $( jobs | wc -l ) -ge $maxJobs ]; do sleep 1; done
+      set -x
     done
   done
 done
@@ -37,18 +43,28 @@ done
 # quick loop to hide unused timing files
 for task in $tasks; do
   case $task in
-    "MGSEncode") hideFiles=$( echo "capped" $( for cond in vgs delay mgs; do for out in correct incorrect corrected dropped; do echo ${cond}_${out}; done; done ) ) ;;
+    "MGSEncode") hideFiles=$( echo "capped" $( for cond in vgs delay mgs; do
+      for out in correct incorrect corrected dropped; do echo ${cond}_${out}
+      done; done ) ) ;;
     "AntiState") hideFiles="capped" ;;
   esac
   for hideFile in $hideFiles; do 
-    set +x; for file in $( ls $path/$task/*/*/timings/*/$hideFile ); do mv $file $( dirname $file )/.$( basename $file ); done; set -x # turning off output for this section because too much output clutter
+    set +x # turning off output for this section because too much clutter
+    for file in $( ls $path/$task/*/*/timings/*/$hideFile ); do
+      mv $file $( dirname $file )/.$( basename $file )
+    done
+    set -x
   done
 done
 
 # behavior spreadsheets
-header="id date type count correct incorrect corrected dropped droppedReason percCorrect latency accuracy accuracyMost"
+header="id date type count correct incorrect corrected dropped droppedReason \
+percCorrect latency accuracy accuracyMost"
 for task in $tasks; do
-  case $task in "MGSEncode") types="vgs mgs" ;; "AntiState") types="as ps" ;; esac
+  case $task in
+    "MGSEncode") types="vgs mgs" ;;
+    "AntiState") types="as ps" ;;
+  esac
   for type in $types; do
     echo $header > $path/${task}_${type}.txt
     set +x # too much output clutter in this section
@@ -67,7 +83,10 @@ ids=$( basename $( ls -d $path/1* ))
 mkdir -p $path/GLM
 for task in $tasks; do
   mkdir -p $path/GLM/$task
-  case $task in "MGSEncode") runs=3; runID="MS" ;; "AntiState") runs=4; runID="AS" ;; esac
+  case $task in
+    "MGSEncode") runs=3; runID="MS" ;;
+    "AntiState") runs=4; runID="AS" ;;
+  esac
   runString=$( for run in $( seq $runs ); do echo run${run}; done )
   runStringBeh=$( for run in $( seq $runs ); do echo beh${run}; done )
   header="id date $runString $runStringBeh"
