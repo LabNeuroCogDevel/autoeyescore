@@ -55,7 +55,8 @@ for (file in files){
   } 
   
   # score saccades
-  scoredTable <- file.path(path, paste(filePrefix, "scored.txt", sep="_"))
+  #scoredTable <- file.path(path, paste(filePrefix, "scored.txt", sep="_"))
+  scoredTable <- file.path(path, paste(filePrefix, "saccades.txt", sep="_"))
   scored <- try(
     read.table(scoredTable, head=T),
     silent=T)

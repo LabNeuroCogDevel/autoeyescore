@@ -539,7 +539,7 @@ scoreTrial <- function(startInd, minOnsetDelay=4, preTargetFix=9, blinkSample=6,
 
 
 # =============================================================================
-# scoreSaccades - score saccades in run
+# scoreRun - score saccades in run
 # =============================================================================
 
 scoreRun <- function(outputTable=NULL, xposCenter=261/2, xposPadding=30,
@@ -668,7 +668,7 @@ getRunData <- function(outputTable=NULL, opts=list()) {
         uniqueCount <- rle(trialMatch)$l
         excludeInd <- unlist(lapply(which(uniqueCount > 1), function(ind) {
           trial <- rle(trialMatch)$v[ind]
-          xdatInd <- c(1, 1 + cumsum(uniqueCount))
+          xdatInd <- c(1, 1 + cumsum(uniqueCount))[ind]
           xdatInd <- seq(xdatInd, xdatInd + uniqueCount[ind] - 1)
           xdatInd[-which.min(abs(xdatTime[xdatInd] - 
                     runData$time[which(runData$trial %in% trial)]))]
@@ -680,14 +680,16 @@ getRunData <- function(outputTable=NULL, opts=list()) {
         missingTrials <- which(!(1:N %in% trialMatch))
         interpolateTime <- predict(lm(xdatTime ~ matchingTrials),
                                    data.frame(matchingTrials = missingTrials))
-        for (i in missingTrials) {
-          xdatTime <- c(xdatTime[1:(i-1)],
-                        interpolateTime[i], 
-                        xdatTime[i:length(xdatTime)])
-          startInd <- c(startInd[1:(i-1)],
-                        runStartInd + ms2asl(1000 * interpolateTime[i]),
-                        startInd[i:length(startInd)])
-        }
+        #
+        tempTime <- numeric(N)
+        tempTime[matchingTrials] <- xdatTime
+        tempTime[missingTrials] <- interpolateTime
+        xdatTime <- round(tempTime, 3)
+        #
+        tempInd <- numeric(N)
+        tempInd[matchingTrials] <- startInd
+        tempInd[missingTrials] <- ms2asl(1000 * interpolateTime)
+        startInd <- tempInd
       }
     }
 
@@ -703,7 +705,7 @@ getRunData <- function(outputTable=NULL, opts=list()) {
 
 
 # =============================================================================
-# calibration correction - 
+# offset/drift correction - 
 # =============================================================================
 # two options:
 # 1) correct from fixation
