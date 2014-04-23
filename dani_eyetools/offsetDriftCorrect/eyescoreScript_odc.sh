@@ -21,8 +21,7 @@ tasks="MGSEncode AntiState"
 correctionMethods="fixation scored"
 for corMethod in $correctionMethods; do
   for task in $tasks; do
-    #ids=$( ls $path/$task )
-    ids=10124
+    ids=$( ls $path/$task )
     for id in $ids; do
       dates=$( ls $path/$task/$id )
       for date in $dates; do

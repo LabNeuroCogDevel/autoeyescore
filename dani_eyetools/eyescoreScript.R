@@ -94,7 +94,7 @@ for (file in files){
 # run stats on all the scored runs
 if (length(scoredList) > 0) {
   stats <- try(
-    summaryData(task, list2data(scoredList),
+    summaryData(list2data(scoredList),
                 outputTable=file.path(path, paste(id, date, task, "stats.txt",
                                                   sep="_"))),
     silent=T)

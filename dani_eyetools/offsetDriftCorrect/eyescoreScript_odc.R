@@ -60,7 +60,7 @@ for (file in files){
   scored <- try(
     read.table(scoredTable, head=T),
     silent=T)
-  if (class(saccades) != "data.frame") {
+  if (class(scored) != "data.frame") {
     cat(date(), "\n", filePrefix, "scored", "\n", scored, "\n\n")
     next
   }
