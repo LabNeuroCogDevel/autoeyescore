@@ -785,14 +785,14 @@ offsetDriftCorrect <- function(correctionMethod, trialType, fixDuration=90,
 # =============================================================================
 # can run on one or multiple runs
 
-summaryData <- function(scored, outputTable=NULL) {
+getSummaryData <- function(scoredSacs, outputTable=NULL) {
 
   # if preprocessed data not present, stop
   check <- checkVars(c("settings"))
   if (!is.null(check)) stop(check)
 
   # sort through saccades, pull trial data
-  summaryData <- list2data(with(scored, {
+  summaryData <- list2data(with(scoredSacs, {
 
     lapply(1:length(settings$trialTypes), function(t) {
       indT <- which(trialType == settings$trialTypes[t])
@@ -822,17 +822,18 @@ summaryData <- function(scored, outputTable=NULL) {
       )
 
       # fill in missing end trials
-      diff <- settings$expectedTrialCount[t] * max(listInd) - 
-        summaryData$count[t]
+      diff <- ( settings$expectedTrialCount[t] * max(listInd) - 
+        summaryData$count )
       if (diff > 0) summaryData <- within(summaryData, {
-        count[t] <- count[t] + diff
-        dropped[t] <- dropped[t] + diff
-        droppedReason[t] <- paste(droppedReason[t], 
+        count <- count + diff
+        dropped <- dropped + diff
+        droppedReason <- paste(droppedReason, 
           paste("no_saccades_left", diff, sep=":"), sep=",")
       })
       # need to have something in droppedReason column or else there will be
       #   wrong # of columns
-      if (summaryData$dropped[t] == 0) summaryData$droppedReason[t] <- "NA"
+      if (summaryData$dropped == 0) summaryData$droppedReason <- "NA"
+      summaryData
     })
   }))
   
