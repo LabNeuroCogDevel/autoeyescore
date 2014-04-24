@@ -785,7 +785,7 @@ offsetDriftCorrect <- function(correctionMethod, trialType, fixDuration=90,
 # =============================================================================
 # can run on one or multiple runs
 
-getSummaryData <- function(scoredSacs, outputTable=NULL) {
+summaryData <- function(scoredSacs, outputTable=NULL) {
 
   # if preprocessed data not present, stop
   check <- checkVars(c("settings"))
