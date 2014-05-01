@@ -121,7 +121,8 @@ ggplotXpos <- function(est,d,trgt,sac.df,base.val,delt.x.scale,slowpnt.x.scale,p
           scale_y_continuous(breaks=ybreaks,labels=ybreaks,limits=c(0,263) )
 
   if(length(est$x)>0) {
-     g <- g + geom_point(data=data.frame(x=est$x,y=est$y),aes(x=x,y=y),alpha=I(.5))
+     #g <- g + geom_point(data=data.frame(x=est$x,y=est$y),aes(x=x,y=y),alpha=I(.5))
+     g <- g + geom_point(data=data.frame(x=est$x,y=est$y),aes(x=x,y=y))
   }
 
      g <- g + geom_point(data=d[trgt,],x=1:length(trgt), aes(y=xpos,color=as.factor(xdat),size=dil))  +
@@ -133,16 +134,23 @@ ggplotXpos <- function(est,d,trgt,sac.df,base.val,delt.x.scale,slowpnt.x.scale,p
   # show velocity changes and estimated base (center focus) value
   if(length(delt.x.scale)>0) {
      g <- g +
-          geom_vline(xintercept=delt.x.scale,color=I('blue'),alpha=I(.3)) +
-          geom_vline(xintercept=slowpnt.x.scale,color=I('yellow'),alpha=I(.3)) +
-          geom_hline(yintercept=base.val,color=I('green'),alpha=I(.5))+
-          geom_hline(yintercept=screen.x.mid,color=I('darkgreen'),alpha=I(.5))
+          # with alpha
+          #geom_vline(xintercept=delt.x.scale,color=I('blue'),alpha=I(.3)) +
+          #geom_vline(xintercept=slowpnt.x.scale,color=I('yellow'),alpha=I(.3)) +
+          #geom_hline(yintercept=base.val,color=I('green'),alpha=I(.5))+
+          #geom_hline(yintercept=screen.x.mid,color=I('darkgreen'),alpha=I(.5))
+
+          geom_vline(xintercept=delt.x.scale,color=I('blue')) +
+          geom_vline(xintercept=slowpnt.x.scale,color=I('yellow')) +
+          geom_hline(yintercept=base.val,color=I('green'))+
+          geom_hline(yintercept=screen.x.mid,color=I('darkgreen'))
    }
 
   # outline "good" position (with padding) in purple
   g <- g +
        geom_hline(yintercept=c(sac.thres-sac.padding,sac.thres+sac.padding),
-                  color=I('purple'),alpha=I(.2)) +
+                  #color=I('purple'),alpha=I(.2)) +
+                  color=I('purple')) +
        ggtitle(ptitle) + ylab('left to right')+xlab('')
   
   # put colored boxes around saccades
@@ -150,7 +158,8 @@ ggplotXpos <- function(est,d,trgt,sac.df,base.val,delt.x.scale,slowpnt.x.scale,p
      g <- g +
            geom_rect(data=sac.df, aes(xmin=onset*sampleHz,xmax=end*sampleHz,
                                       ymin=-Inf,    ymax=Inf,
-                     fill=as.factor(paste(cordir,corpos)), alpha=intime&gtMinLen  )) + 
+                     #fill=as.factor(paste(cordir,corpos)), alpha=intime&gtMinLen  )) + 
+                     color=as.factor(paste(cordir,corpos)))) + 
            scale_fill_manual(values=positionColors) +
            scale_alpha_manual(values=c('TRUE'=.5,'FALSE'=.2))
   } 
