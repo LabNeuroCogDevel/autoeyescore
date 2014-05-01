@@ -159,7 +159,7 @@ ggplotXpos <- function(est,d,trgt,sac.df,base.val,delt.x.scale,slowpnt.x.scale,p
            geom_rect(data=sac.df, aes(xmin=onset*sampleHz,xmax=end*sampleHz,
                                       ymin=-Inf,    ymax=Inf,
                      #fill=as.factor(paste(cordir,corpos)), alpha=intime&gtMinLen  )) + 
-                     color=as.factor(paste(cordir,corpos)))) + 
+                     color=as.factor(paste(cordir,corpos))),fill=NA,na.value=NA) + 
            scale_fill_manual(values=positionColors) +
            scale_alpha_manual(values=c('TRUE'=.5,'FALSE'=.2))
   } 

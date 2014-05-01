@@ -1,3 +1,10 @@
+RUNNING SINGLE SUBJECT
+see scoreOne.bash -h
+
+
+
+OVERVIEW 
+
 These scripts score eye movements collected by ASL model 5000 or 6000, saved as ASL eyd v602
 input is expected at
    [required] Data/Task/$paradigm/Basic/$lunaid/$date/EyeData/Raw/*eyd
@@ -26,8 +33,6 @@ If there is a xpos velocity over 4samples/60Hz in the .067s after onset before a
 Parameters (particularly velocity and stddev xpos) have been set to maximize agreement with ___XXXX___ trials scored by human inspection. Of the ___XXX__ trials where this algorithm disagrees with human scoring, further manual inspection estimates  ___% can be attributed to human error.
 
 
-RUNNING SINGLE SUBJECT
-see scoreOne.bash
 
 RUNNING BATCH
   

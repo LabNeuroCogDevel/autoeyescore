@@ -206,13 +206,15 @@ cat > $tmp <<HEREDOC
 
  # show each plot
   x11()
-  cat('\npress anykey to plot');
-  readLines(file('stdin'),1)
- for(p in list(p.allbd,p.subj)){
-  print(p)
-  cat('\npress anykey');
-  readLines(file('stdin'),1)
- }
+  #for(p in list(p.allbd,p.subj)){
+  # print(p)
+  # x11()
+  #}
+  print(p.allbd); x11()
+  print(p.subj)
+
+  cat('\ndone?');
+ readLines(file('stdin'),1)
 HEREDOC
 
 # give instructions and run
@@ -223,14 +225,10 @@ echo "
 To rerun open R and run: source('$tmp')
 =====================================
 
-(1) Push enter when window opens
-(2)  enter again for the next plot
-(3)  enter again to close the window
-
 "
-R=$(which R)
-[ "$R" = "/Library/Frameworks/R.framework/Resources/bin/R" ] && R=/sw/bin/R
-$R CMD BATCH --no-save --no-restore $tmp 
+#R=$(which R)
+#[ "$R" = "/Library/Frameworks/R.framework/Resources/bin/R" ] && R=/sw/bin/R
+R CMD BATCH --vanilla --no-save --no-restore $tmp 
 
 cat "$(basename $tmp)out"
 mv "$(basename $tmp)out" $TMPDIR
