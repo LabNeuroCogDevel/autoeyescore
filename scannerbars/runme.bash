@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-scorebase='/mnt/B/bea_res/Data/Tasks/BarsScan/Basic'
+scorebase='/Users/lncd/rcn/bea_res/Data/Tasks/BarsScan/Basic'
 old=old/$(date +%F); 
 
 # some days we have a lot of old files

@@ -24,7 +24,7 @@ for f in $( find $basicdir -maxdepth 5 -mindepth 5 -iname \*.eyd ); do
   echo $f \> $tsv
   ../dataFromAnyEyd.pl $f > $tsv
   # remove if cannot understand it's format
-  [ $(wc -l $tsv|cut -f1 -d' ') -lt 10 ] && echo "Removed $tsv!" && rm $tsv
+  [ "$(cat $tsv|wc -l)" -lt 10 ] && echo "Removed $tsv!" && rm $tsv
  fi
 
 
@@ -40,7 +40,7 @@ for f in $( find $basicdir -maxdepth 5 -mindepth 5 -iname \*.eyd ); do
  [ -r $eptxt -o -z "$eplog" ] && continue
  # proceed if we can read eplog
  [ -r "$eplog" ] && ../parseEP.pl "$eplog" > "$eptxt" && echo "$eplog > $eptxt"
- [ $(wc -l $eptxt|cut -f1 -d' ') -lt 10 ] && echo "Removed $eptxt (bad $eplog?)!" && rm $eptxt
+ [ "$(cat $eptxt|wc -l)" -lt 10 ] && echo "Removed $eptxt (bad $eplog?)!" && rm $eptxt
 
 done
 

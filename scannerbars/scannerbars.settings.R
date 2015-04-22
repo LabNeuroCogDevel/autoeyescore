@@ -62,14 +62,14 @@ names(sac.thresholds)<-1:4
 
 ## FUNCTIONS
 # where are the files?
-filebasedir <- '/mnt/B/bea_res/Data/Tasks/BarsScan/Basic/'
+filebasedir <- '/Users/lncd/rcn/bea_res/Data/Tasks/BarsScan/Basic/'
 getFiles <- function(filesFrom=sprintf('%s/*/*/Raw/EyeData/txt/*.data.tsv',filebasedir)) {
- #/mnt/B/bea_res/Data/Tasks/Anti/Basic/11146/20130313/Raw/EyeData/txt/11146.20130313.anti.1.tsv
+ #/Users/lncd/rcn/bea_res/Data/Tasks/Anti/Basic/11146/20130313/Raw/EyeData/txt/11146.20130313.anti.1.tsv
  files     <- Sys.glob(filesFrom)
  #files <-c(
- # '/mnt/B/bea_res/Data/Tasks/BarsScan/Basic/10590/20080815/Raw/EyeData/txt/10590.20080815.1.data.tsv',
- # '/mnt/B/bea_res/Data/Tasks/BarsScan/Basic/11162/20130521/Raw/EyeData/txt/11162.20130521.3.data.tsv',
- # '/mnt/B/bea_res/Data/Tasks/BarsScan/Basic/11162/20130521/Raw/EyeData/txt/11162.20130521.4.data.tsv'
+ # '/Users/lncd/rcn/bea_res/Data/Tasks/BarsScan/Basic/10590/20080815/Raw/EyeData/txt/10590.20080815.1.data.tsv',
+ # '/Users/lncd/rcn/bea_res/Data/Tasks/BarsScan/Basic/11162/20130521/Raw/EyeData/txt/11162.20130521.3.data.tsv',
+ # '/Users/lncd/rcn/bea_res/Data/Tasks/BarsScan/Basic/11162/20130521/Raw/EyeData/txt/11162.20130521.4.data.tsv'
  #)
  splitfile <- strsplit(basename(files),'\\.')
  splitfile <- as.data.frame(t(sapply(splitfile,rbind)))[,-4]

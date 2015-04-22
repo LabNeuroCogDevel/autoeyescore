@@ -143,6 +143,8 @@ willtask=${beaTowill[$paradigm]}
 source $willtask/nameTSV.bash
 for f in $dir/Raw/EyeData/*eyd; do
  outdir="$(dirname "$f")/txt"
+ outname=$(nameTSV $f)
+ [ -z "$outname" ] && echo "$f couldn't be resolved to outputname" && exit 1
  tsv="$outdir/$(nameTSV $f)"
 
  #[ -r $tsv ] && continue

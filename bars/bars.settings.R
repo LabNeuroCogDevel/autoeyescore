@@ -64,6 +64,7 @@ names(sac.thresholds)<-1:4
 ## FUNCTIONS
 # where are the files?
 filebasedir <- '/mnt/B/bea_res/Data/Tasks/BarsBehavioral/Basic/'
+filebasedir <- '/Users/lncd/rcn/bea_res/Data/Tasks/BarsBehavioral/Basic/'
 getFiles <- function(filesFrom=sprintf('%s/*/*/Raw/EyeData/txt/*.data.tsv',filebasedir)) {
  #/mnt/B/bea_res/Data/Tasks/Anti/Basic/11146/20130313/Raw/EyeData/txt/11146.20130313.anti.1.tsv
  files     <- Sys.glob(filesFrom)

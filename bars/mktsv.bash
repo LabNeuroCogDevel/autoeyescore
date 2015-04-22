@@ -5,7 +5,7 @@
 # convert to tsv if needed
 #
 for f in $(
-         find /mnt/B/bea_res/Data/Tasks/BarsBehavioral/Basic/ -maxdepth 5 -mindepth 5 -iname \*.eyd | 
+         find /Users/lncd/rcn/bea_res/Data/Tasks/BarsBehavioral/Basic/ -maxdepth 5 -mindepth 5 -iname \*.eyd | 
           sort -t/ -k10nr # do newest first
          ); do
 

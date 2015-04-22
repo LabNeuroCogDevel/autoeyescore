@@ -4,7 +4,7 @@
 ### only do this if scoring R scripts have changed has changed
 ### todo: check that they pass tests
 echo "===== Moving old scoring files ===="
-scorebase='/mnt/B/bea_res/Data/Tasks/BarsBehavioral/Basic'
+scorebase='/Users/lncd/bea_res/Data/Tasks/BarsBehavioral/Basic'
 old=old/$(date +%F); 
 mkdir -p $old
 ls -1d  $scorebase/*/*/Scored/txt/ |while read file; do
