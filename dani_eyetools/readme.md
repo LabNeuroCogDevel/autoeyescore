@@ -2,7 +2,7 @@
 - Phillips/Cog
 - bea_res
 
-# Mon Jun  1 17:43:34 EDT 2015
+# Pipeline
 
 re-establishing pipeline.
 
@@ -27,7 +27,11 @@ find /Volumes/Phillips/COG/MGSEncode -name createdFromB
  /Volumes/Phillips/COG/MGSEncode/11216/20150513/createdFromB
 
 ```
+
 2. `eyescoreScript_Simple.sh` mod of `eyescoreScript.sh`
 
 loops through `eyescore_lunadate.bash`, creates `scorelog`, `scorecmd` and `scoreerr` (if any errors)
 
+see `ls  /Volumes/Phillips/COG/MGSEncode/*/*/scoreerr|wc -l # 73 visits are not scored`
+
+3. `preprocessMprage` and `preprocessFunctional` -- part of cron scripts, not in this scope
