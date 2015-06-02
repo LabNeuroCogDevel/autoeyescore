@@ -19,14 +19,8 @@ eydparser="$pathScripts/../dataFromAnyEyd.pl"
 eyescoreFunctions=$pathScripts/eyescoreFunctions.R
 eyescoreScript=$pathScripts/eyescoreScript.R
 
-# exit with error message
-# if 2 arguments, only exit if first (a file) is not readable
-function exiterr {
- [ -z "$2" -o ! -r "$1" ] && echo "$@" >&2 && exit 1
- return 0
-}
-# make it obvious that we are exiting with an error b/c of set -e
-trap '[ "$?" -ne 0 ] && echo "$0 ended with error!"' EXIT
+# exiterr and trap
+source $pathScripts/help.bash
 
 for filetocheck in $maxjobfile $eydparser $eyescoreFunctions $eyescoreScript $rcndata; do
   exiterr "$filetocheck" "needed file/folder DNE, cannot run function"
@@ -44,11 +38,6 @@ find $eydpath -iname "*.eyd" | while read eyd; do
    id=${BASH_REMATCH[1]}
    date=${BASH_REMATCH[2]}
    rn=${BASH_REMATCH[3]}
-
-   # rn=$(basename $eyd .eyd)
-   # rn=${rn:(((${#rn}-1)))}
-   # # run number makes sense?
-   # ! [[ -z "$rn" || $rn =~ [1-4] ]] && echo "bad runnum ($rn) in $eyd"
 
    eydout=/Volumes/Phillips/COG/MGSEncode/$id/$date/${id}_${date}_${task}_run${rn}_raw.txt
 
