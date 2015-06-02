@@ -4,7 +4,7 @@
 
 # Pipeline
 
-re-establishing pipeline.
+re-establishing pipeline from `arnold:~/src/autoeyescore/dani_eyetools`.
 
 ## raw eye movements: binary to text
  `eydToRawTXT.sh` to find all eyd files on bea_res, parse to text and save in newly created dirs on Philips (DONE)
