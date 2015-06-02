@@ -6,7 +6,8 @@
 
 re-establishing pipeline.
 
-1. `eydToRawTXT.sh` to find all eyd files on bea_res, parse to text and save in newly created dirs on Philips (DONE)
+## raw eye movements: binary to text
+ `eydToRawTXT.sh` to find all eyd files on bea_res, parse to text and save in newly created dirs on Philips (DONE)
 ```bash
 find /Volumes/Phillips/COG/MGSEncode -name createdFromB                 
  /Volumes/Phillips/COG/MGSEncode/10152/20150312/createdFromB
@@ -28,10 +29,18 @@ find /Volumes/Phillips/COG/MGSEncode -name createdFromB
 
 ```
 
-2. `eyescoreScript_Simple.sh` mod of `eyescoreScript.sh`
+## scoring eye movements
+`eyescoreScript_Simple.sh` mod of `eyescoreScript.sh`
 
 loops through `eyescore_lunadate.bash`, creates `scorelog`, `scorecmd` and `scoreerr` (if any errors)
 
-see `ls  /Volumes/Phillips/COG/MGSEncode/*/*/scoreerr|wc -l # 73 visits are not scored`
+see:
+```
+ls  /Volumes/Phillips/COG/MGSEncode/*/*/scoreerr|wc -l # 73 visits are not scored`
 
-3. `preprocessMprage` and `preprocessFunctional` -- part of cron scripts, not in this scope
+# why
+ls  /Volumes/Phillips/COG/MGSEncode/*/*/scoreerr|sed s/err/log/|xargs head
+```
+
+## imaging
+ `preprocessMprage` and `preprocessFunctional` -- part of cron scripts, not in this scope
