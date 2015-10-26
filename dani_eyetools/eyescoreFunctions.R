@@ -670,9 +670,17 @@ getRunData <- function(outputTable=NULL, opts=list()) {
           trial <- rle(trialMatch)$v[ind]
           xdatInd <- c(1, 1 + cumsum(uniqueCount))[ind]
           xdatInd <- seq(xdatInd, xdatInd + uniqueCount[ind] - 1)
+
+#          print(trial)
+#          print(xdatInd)
+#          print(xdatTime(xdatInd))
+#
           xdatInd[-which.min(abs(xdatTime[xdatInd] - 
                     runData$time[which(runData$trial %in% trial)]))]
         }))
+        # crash here sometimes?
+#        cat(diff,length(xdatTime), N,excludeInd,"\n")
+
         xdatTime <- xdatTime[-excludeInd]
         startInd <- startInd[-excludeInd]
       } else {
