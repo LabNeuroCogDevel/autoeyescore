@@ -137,7 +137,9 @@ preprocessEyd <- function(rawdata, outputTable=NULL, xmax=261, minSpikeVel=30,
       # similar to will's 2 adjacent point threshold
   if (opts$removeAdj) {
     # naFill to replace NAs at end after filter
-    adjacent <- naFill(filter(replacePoints, adjFilter) >= adjThresh)
+    adjacent <- naFill(stats::filter(replacePoints, adjFilter) >= adjThresh)
+    # above broke in newer R? (filter wont work on logicals) -- was using dplyr::filter
+    #adjacent <- naFill( filter(as.numeric(replacePoints),adjFilter))>adjThresh
   } else {
     adjacent <- logical(length(xpos))
   }
@@ -148,7 +150,7 @@ preprocessEyd <- function(rawdata, outputTable=NULL, xmax=261, minSpikeVel=30,
   xpos <- naFill(na.approx(zoo(xpos), na.rm=F))
 
   # smooth and recalculate velocities
-  if (opts$smooth) xpos <- naFill(filter(xpos, smoothFilter))
+  if (opts$smooth) xpos <- naFill(stats::filter(xpos, smoothFilter))
   xvel <- c(0, diff(xpos))
 
   # write table
@@ -609,6 +611,7 @@ getRunData <- function(rawdata,outputTable=NULL, opts=list()) {
 
   # short variable name to save space, since we use it a few times
   # using 1st index, assuming same for rest
+  # N is probably 20 :)
   N <- settings$expectedTrialCount[1]
 
   # get run/script info for run, select run data from task data frame
@@ -618,13 +621,20 @@ getRunData <- function(rawdata,outputTable=NULL, opts=list()) {
     s <- filePrefix[5]
     if (nchar(s) == 4 & substr(s, 1, 1) == "0") s <- gsub("0", "", s)
   }
+  ####
   # format runData so has trial number, trial type, time (s)
-    # will add index to this after merging below
+  # will add index to this after merging below
+  ###
+  # grab taskData matching current run
   runData <- switch(task,
     MGSEncode = taskData[grep(r, taskData$run), ],
     AntiState = taskData[grep(s, taskData$script), ]
   )
+
   # duplicating so we have for both trial types (already duplicated in anti)
+  #   row carries duplicate info of run,cue,target,delay,position
+  # need to add time: AS: time is target
+  #                  MGS: vgs time is cue, mgs is target
   if (task == "MGSEncode") {
     runData <- rbind(runData, runData)
     runData$type <- rep(settings$trialTypes, each=N)
@@ -635,30 +645,35 @@ getRunData <- function(rawdata,outputTable=NULL, opts=list()) {
 
   ###
   # get start index and start times from xdat codes, add to runData
-  parseXdatsByType <- function(type) {
+  parseXdatsByType <- function(gstype) {
 
     # rle to get segments of T/F, then pull indices for T (start of xdat run)
-    xdats <- rle(rawdata$XDAT %in% settings$xdatList[[type]])
-    startInd <- switch(settings$whichIndex[type],
-      first = c(1, 1 + cumsum(xdats$l))[which(c(xdats$v, F))],
-      after = 1 + (cumsum(xdats$l))[which(xdats$v)]
+    xdats <- rle(rawdata$XDAT %in% settings$xdatList[[gstype]])
+    # vgs(1) starts first
+    # mgs(2) starts after
+    startInd <- switch(settings$whichIndex[gstype],
+      first =    c(1, 1 +  cumsum(xdats$l))[which(c(xdats$v, F))],
+      after = 1 + (cumsum(xdats$l)        )[which(  xdats$v   ) ]
     )
 
     # codes in MGSEncode occur at wrong times, need to fix
+    # ~1.4 seconds ?
     if (task == "MGSEncode") {
-      startInd <- switch(type, "1" = startInd + 84, "2" = startInd - 84)
+      startInd <- switch(gstype, 
+              "1" = startInd + 84, 
+              "2" = startInd - 84)
     }
     
     # if incorrect number of trials, stop
       # note: no longer need to error out, will match to expected trials
-    #if(length(startInd) != settings$expectedTrialCount[type]) stop(
-    #  paste("number of ", settings$trialTypes[type],
+    #if(length(startInd) != settings$expectedTrialCount[gstype]) stop(
+    #  paste("number of ", settings$trialTypes[gstype],
     #  " trials detected from xdats (", length(startInd),
-    #  ") do not match expectedTrialCount (", settings$expectedTrialCount[type], 
+    #  ") do not match expectedTrialCount (", settings$expectedTrialCount[gstype], 
     #  ")", sep=""))
 
     # index of start of run to get times from xdats
-    if (type == 1) {
+    if (gstype == 1) {
       # assigning runStartInd to global environment so can use for other fns
       assign("runStartInd", switch(task,
         # starts 1.5s (90 samples) before first cue
@@ -679,7 +694,7 @@ getRunData <- function(rawdata,outputTable=NULL, opts=list()) {
     # if too few, put in NAs for missing trials
     #N.xdat <- length(xdatTime)
     #diff <- N - N.xdat
-    excludeInd <- findbadxdatidx(xdatTime,runData,settings$trialTypes[type])
+    excludeInd <- findbadxdatidx(xdatTime,runData,settings$trialTypes[gstype])
     # ignore negative in scoreRun
     #browser()
     #excludeInd <- unique(c(excludeInd,which(xdatTime<0)))
@@ -691,7 +706,7 @@ getRunData <- function(rawdata,outputTable=NULL, opts=list()) {
 
     ### now find missing
     # redo matching trials (based on what we've potentially excluded)
-    trialMatch <- trialMatches(xdatTime,runData,settings$trialTypes[type] )
+    trialMatch <- trialMatches(xdatTime,runData,settings$trialTypes[gstype] )
 
     # interpet missing
     matchingTrials <- which(1:N %in% trialMatch$rel) 
@@ -711,10 +726,10 @@ getRunData <- function(rawdata,outputTable=NULL, opts=list()) {
        startInd <- tempInd
     }
 
-    data.frame(startInd, xdatTime) #,listInd=type)
+    data.frame(startInd, xdatTime) #,listInd=gstype)
   }
   
-  # do for each type (1=vgs,2=mgs)
+  # do for each gstype (1=vgs,2=mgs)
   sistxc <- lapply(1:length(settings$trialTypes),parseXdatsByType )
 
   # merge into datafram
