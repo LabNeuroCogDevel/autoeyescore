@@ -1,0 +1,9 @@
+statMGSE(10132,20081223) # XDAT all 0 (at least on run 1 and 3)
+statMGSE(10136,20070721) # XDAT all 0 (only checked run 1)
+statMGSE(10138,20050908)
+statMGSE(10147,20050913)
+statMGSE(10150,20050831)
+statMGSE(10163,20050817)
+statMGSE(10176,20050914)
+statMGSE(10186,20090108) # XDAT all 255
+statMGSE(10248,20060626) # XDAT all 4s on all runs

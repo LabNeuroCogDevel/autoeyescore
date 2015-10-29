@@ -1,13 +1,12 @@
-# debuging
-library(debug)
-options(error=recover) # prompt to browse after error
+#
+# scoreMGSE for a run and
+# statMGSE  for all runs in a visit 
+#
 
 # GLOBALS
 source('eyescoreFunctions.R')
-# 10125/20061021
-# 11217/20141203
 
-# make a file name 
+# make a file name , .txt is only diff over paste0
 mkfilen <- function(pf,sfx,ext=".txt") {
   sprintf('%s%s%s',pf,sfx,ext)
 }
@@ -38,12 +37,35 @@ scoreMGSE <- function(lunaid,date,runno) {
 }
 
 statMGSE <- function(lunaid,date) {
-  # score all 3 runs
-  scoredList <- lapply(1:3,function(rn){ scoreMGSE(lunaid,date,rn) })
-  # rename fields
-  names(scoredList) <-lapply(names(scoredList), function(rn){sprintf('run%d',rn)})
+  # open file to report to
+  conn <-file('fail.log',open="a") # append to fail log
 
-  outfile  <- sprintf("/Volumes/Phillips/COG/MGSEncode/%d/%d/%d_%d_MGSEncode_stats.txt",lunaid,date,lunaid,date)
-  cat("saved to ",outfile,"\n")
-  stats    <-  summaryData(list2data(scoredList), outfile )
+  ## score all 3 runs
+  tryCatch({
+    # scoreMGSE for all 3 runs
+    scoredList <- lapply(1:3,function(rn){ scoreMGSE(lunaid,date,rn) })
+
+    # rename fields
+    names(scoredList) <-lapply(names(scoredList), function(rn){sprintf('run%d',rn)})
+
+    outfile  <- sprintf("/Volumes/Phillips/COG/MGSEncode/%d/%d/%d_%d_MGSEncode_stats.txt",lunaid,date,lunaid,date)
+    # write results
+    stats    <-  summaryData(list2data(scoredList), outfile )
+
+    # print our save dir so we know it worked
+    cat("saved to ",outfile,"\n")
+
+  },error=function(e){
+
+    # why did it fail?
+    print(e)
+    # probably an issue with the raw files, so lets make it easy to find those
+    rawfiles  <- sprintf("/Volumes/Phillips/COG/MGSEncode/%d/%d/%d_%d_MGSEncode_run*_raw.txt\n",lunaid,date,lunaid,date)
+    cat(sprintf("statMGSE(%d,%d) #FAILED %s",lunaid,date,rawfiles))
+
+    # record what we'd need to do to run it again in the log file
+    writeLines(sprintf("statMGSE(%d,%d) #%s FAILED %s",lunaid,date,date(),rawfiles), conn)
+  })
+
+  close(conn)
 }

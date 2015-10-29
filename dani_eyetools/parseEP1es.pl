@@ -1,13 +1,25 @@
 #!/usr/bin/env perl
 # use to extract dur and xdat from e.g.
-# /Users/lncd/rcn/bea_res/Personal/Will/Will please convert to E-Prime 2.0/MGS Encode - v. 1.es
-# for f in ~/rcn/bea_res/Personal/Will/Will\ please\ convert\ to\ E-Prime\ 2.0/*MGS*es; do echo ./parseEP1es.pl "$f" \> taskData/$(echo $f|sed 's/.*\([1-3]\).es/\1/' ).txt;done
-# later to be read by R
+#   for f in eptaskfiles/*es; do 
+#      echo ./parseEP1es.pl "$f" \> taskData/$(echo $f|sed 's/.*\([1-3]\).es/\1/' ).txt;
+#   done
+#
+# later to be read by R: parseEP1es.R
+#
+# - first pass
+#    use Levels "spreasheet" to get order of top level events
+#    read in each object and record name,dur, and xdat
+# - second pass
+#   go through object array and make hash, keyed by object name
+#   go through levels, recursively opening objects and print xdat and duration
+#
+#
 use strict; use warnings; use feature 'say';
 use Data::Dumper;
 
 my $i=0;
 my @a=();
+my @taskorder=();
 
 while(<>){
  chomp while chomp;
@@ -16,11 +28,18 @@ while(<>){
     $i=$1;
     next;
  }
- m/(\w+)=([^]*)/ or next;
+ m/([.()\w]+)=([^]*)/ or next;
  my ($f,$v) = ($1,$2);
- next unless $f =~ /^(Name|Code|_ItemList|Duration)/;
+
  $v=~s/^"//;
  $v=~s/"$//;
+
+ # "Spreadsheet" of task order stored in lines like
+ #Levels(34).ValueString="5\t\tFix\t \t"
+ push @taskorder, [ (split/\\t/,$v)[0,2] ]  if $f =~ m/Levels.*Value/;
+
+ # grab useful event info, put into array "a"
+ next unless $f =~ /^(Name|Code|_ItemList|Duration)/;
  $a[$i]->{$f} = $v;
  $a[$i]->{xdat} = 10+$1 if $v=~m/EventStrobe\+(\d+)/;
 }
@@ -41,5 +60,8 @@ sub lookup {
 
 
 ### parse
-lookup($h{SessionProc}[2],1)
+lookup('disacq',1); # first 6 seconds before going into MgsErExpt
+for my $t (@taskorder) {
+  lookup($t->[1],1) for (1..$t->[0]);
+}
 
