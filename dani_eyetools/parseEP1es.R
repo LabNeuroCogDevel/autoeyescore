@@ -2,7 +2,10 @@
 readxdats <- function(f.in) {
   d<-setNames(read.table(f.in),c('level','event','dur','xdat'))
   d$dur[d$dur < 0|is.na(d$dur) ] <- 0
-  d$time<-cumsum(d$dur)/1000
+  #d$time<-cumsum(d$dur)/1000
+  # first time is 0 not duration of first event. 
+  # doesn't matter though, xdats are 0 dur and occur after event
+  d$time<-head(n=-1, cumsum(c(0,d$dur)/1000)  )
   xdat <- d[!is.na(d$xdat),c('event','xdat','time')] 
   xdat$trial <- cumsum(xdat$xdat < 100)
   xdat$etype <- cut(xdat$xdat,breaks=c(0,100,200,260),labels=c('start','delay','end'))

@@ -11,29 +11,40 @@ mkfilen <- function(pf,sfx,ext=".txt") {
   sprintf('%s%s%s',pf,sfx,ext)
 }
 
-scoreMGSE <- function(lunaid,date,runno) {
-  task       <- "MGSEncode"
-  filePrefix <- sprintf("/Volumes/Phillips/COG/MGSEncode/%d/%d/%d_%d_MGSEncode_run%d_",lunaid,date,lunaid,date,runno)
-  taskData   <- taskList$MGSEncode(path="/Volumes/Phillips/COG")
-  settings   <- settingsList$MGSEncode()
-  
-  ## scoring pipeline
-  # saccades
-  rawdata  <- read.table( mkfilen(filePrefix,'raw') ,header=T)
-  preproc  <- preprocessEyd(rawdata,mkfilen(filePrefix,'preproc'))
-  saccades <- getSaccades(preproc)
+# get file names for each stage/step
+filesMGS <- function(lunaid,date,runno) {
+  fp <- sprintf("/Volumes/Phillips/COG/MGSEncode/%d/%d/%d_%d_MGSEncode_run%d_",lunaid,date,lunaid,date,runno)
 
-  # match to task
-  runData  <- getRunData(rawdata, outputTable=mkfilen(filePrefix,'runData') )
-
-  scored   <- scoreRun(outputTable=mkfilen(filePrefix,'scored'))
-
+  sapply(c("raw","preproc","runData","scored"),
+         function(s){ mkfilen(fp,s)} )
   # files, eg.
   # "/Volumes/Phillips/COG/MGSEncode/10125/20061021/10125_20061021_MGSEncode_run2_raw.txt"
   # "/Volumes/Phillips/COG/MGSEncode/10125/20061021/10125_20061021_MGSEncode_run2_preproc.txt"
   # "/Volumes/Phillips/COG/MGSEncode/10125/20061021/10125_20061021_MGSEncode_run2_runData.txt"
   # "/Volumes/Phillips/COG/MGSEncode/10125/20061021/10125_20061021_MGSEncode_run2_scored.txt"
   # "/Volumes/Phillips/COG/MGSEncode/10125/20061021/10125_20061021_MGSEncode_run2_stats.txt")
+}
+
+scoreMGSE <- function(lunaid,date,runno) {
+  # globals used by getRundata and scoredata
+  task       <- "MGSEncode"
+  filePrefix <- sprintf("/Volumes/Phillips/COG/MGSEncode/%d/%d/%d_%d_MGSEncode_run%d_",lunaid,date,lunaid,date,runno)
+  taskData   <- taskList$MGSEncode(path="/Volumes/Phillips/COG")
+  settings   <- settingsList$MGSEncode()
+  
+  # get where files should be
+  f<-filesMGS(lunaid,date,runno)
+
+  ## scoring pipeline
+  # saccades
+  rawdata  <- read.table( f[['raw']] ,header=T)
+  preproc  <- preprocessEyd(rawdata,f[['preproc']])
+  saccades <- getSaccades(preproc)
+
+  # match to task
+  runData  <- getRunData(rawdata, outputTable=f[['runData']] )
+
+  scored   <- scoreRun(preproc,saccades,runData,outputTable=f[['scored']])
 }
 
 statMGSE <- function(lunaid,date) {

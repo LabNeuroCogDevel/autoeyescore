@@ -349,7 +349,7 @@ settingsList$MGSEncode <- function(){
 # defined in main environment (when eyescoreFunctions.R is sourced)
 # environment reassigned in scoreRun to give access to its variables
 
-scoreTrial <- function(startInd, minOnsetDelay=4, preTargetFix=9, blinkSample=6,
+scoreTrial <- function(startInd,preproc,scoring, minOnsetDelay=4, preTargetFix=9, blinkSample=6,
   sacMinMag=8, sacHeld=6, opts=list(blinkDrop=F, magCheck=F, heldCheck=T)) {
 
   # run custom code before evaluating 
@@ -550,12 +550,12 @@ scoreTrial <- function(startInd, minOnsetDelay=4, preTargetFix=9, blinkSample=6,
 # scoreRun - score saccades in run
 # =============================================================================
 
-scoreRun <- function(outputTable=NULL, xposCenter=261/2, xposPadding=30,
+#scoreRun <- function(outputTable=NULL, xposCenter=261/2, xposPadding=30,
+#  # if preprocessed data not present, stop
+#  check <- checkVars(c("preproc", "saccades", "runData", "settings"))
+#  if (!is.null(check)) stop(check)
+scoreRun <- function(preproc,saccades,runData,outputTable=NULL, xposCenter=261/2, xposPadding=30,
   opts=list(fixCheck=T)) {
-
-  # if preprocessed data not present, stop
-  check <- checkVars(c("preproc", "saccades", "runData", "settings"))
-  if (!is.null(check)) stop(check)
 
   # need to switch scoreTrial environment so can see variables in this function
   environment(scoreTrial) <- environment()
@@ -582,8 +582,8 @@ scoreRun <- function(outputTable=NULL, xposCenter=261/2, xposPadding=30,
       startind <- runData$startInd[runData$type == settings$trialTypes[type]][t]
       #if(startind < 0) browser()
       if(startind <0 ) {warning(sprintf("SKIPPING: startind/time does not makes sense (%d) in type %d trial %d",startind,type,t)); next}
-      scoring <- scoreTrial(runData$startInd[runData$type == 
-                                               settings$trialTypes[type]][t])
+      thisidx <- runData$startInd[runData$type == settings$trialTypes[type]][t]
+      scoring <- scoreTrial(thisidx,preproc,scoring)
     }
   }
 

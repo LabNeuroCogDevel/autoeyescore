@@ -5,6 +5,12 @@ source('score_lunadaterun.R')
 #eg
 source('rerun/excludeError.R')
 ```
+
+# checking
+```
+for f in /Volumes/Phillips/COG/MGSEncode/*/*/*_MGSEncode_stats.txt; do cut -d' ' -f8 $f|sed "1d;s|$| $(stat -f '%SB' -t '%Y%m%d' $f)|"; done > txt/pcorr.txt
+```
+
 # Deriving
 
 these files are the outputs of looking through errors reported by `/Volumes/Phillips/COG/MGSEncode/*/*/scorelog`
