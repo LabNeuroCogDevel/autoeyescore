@@ -5,6 +5,17 @@
 ##
 # ./eyescore_lunadate.bash 11217 20141203 
 # REDO=1 ./eyescore_lunadate.bash 11217 20141203 
+#
+#
+# main function is to run:
+# Rscript --vanilla --quiet eyescoreScript.R \
+#   taskPath=\"/Volumes/Phillips/COG\" task=\"MGSEncode\" \
+#   eyescoreFunctions=\"eyescoreFunctions.R\" \
+#   path=\"/Volumes/Phillips/COG/MGSEncode/$id/$date/\" 
+#   id=$id date=$date \
+#     2>&1 | tee -a $logFile | tee $scorelog 
+#
+#
 
 ## standard top
 set -e

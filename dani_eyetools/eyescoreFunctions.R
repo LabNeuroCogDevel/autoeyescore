@@ -6,6 +6,7 @@
 #   another computer can change eydScript/dataPath and it should work
 # default is consistent with will's naming, i like it different so manually
 #   specify most of the arguments myself anyways
+library(dplyr) # for rbind_all
 
 eyd2txt <- function(id, date, task, run,
   eydScript = "~/src/autoeyescore/dataFromAnyEyd.pl",
@@ -66,13 +67,14 @@ eyd2txt <- function(id, date, task, run,
 # interpolate removed time points
 # smooth time series
 
-preprocessEyd <- function(outputTable=NULL, xmax=261, minSpikeVel=30,
+preprocessEyd <- function(rawdata, outputTable=NULL, xmax=261, minSpikeVel=30,
   adjFilter=rep(1/5,5), adjThresh=0.4, smoothFilter=c(0.1,0.2,0.4,0.2,0.1),
   opts=list(capped=T, removeCapped=T, spikes=T, blink=T, blinkID="pupil", 
             removeAdj=T, smooth=T)) {
 
-  # if raw data not present, stop
-  check <- checkVars("raw"); if (!is.null(check)) stop(check)
+  # if rawdata data not present, stop
+  #check <- checkVars("raw"); if (!is.null(check)) stop(check)
+  if(is.null(rawdata) || length(rawdata)==0L) stop("no or empty raw data!")
 
   # for rollapply and na.approx time series function
   # suppressing messages so less log clutter
@@ -88,7 +90,7 @@ preprocessEyd <- function(outputTable=NULL, xmax=261, minSpikeVel=30,
   }
 
   # x position
-  xpos <- raw$horz
+  xpos <- rawdata$horz
 
   # cap values >xmax
   if (opts$capped) { 
@@ -118,8 +120,8 @@ preprocessEyd <- function(outputTable=NULL, xmax=261, minSpikeVel=30,
     # option "pupil": blink if pupil diameter=0
     # option "all":   blink if pupil diameter, horz and vert position are all 0 
     zeros <- switch(opts$blinkID,
-      pupil = raw$pupil == 0,
-      all = raw$pupil == 0 & raw$horz == 0 & raw$vert == 0
+      pupil = rawdata$pupil == 0,
+      all = rawdata$pupil == 0 & rawdata$horz == 0 & rawdata$vert == 0
     )
   } else {
     zeros <- logical(length(xpos))
@@ -135,7 +137,9 @@ preprocessEyd <- function(outputTable=NULL, xmax=261, minSpikeVel=30,
       # similar to will's 2 adjacent point threshold
   if (opts$removeAdj) {
     # naFill to replace NAs at end after filter
-    adjacent <- naFill(filter(replacePoints, adjFilter) >= adjThresh)
+    adjacent <- naFill(stats::filter(replacePoints, adjFilter) >= adjThresh)
+    # above broke in newer R? (filter wont work on logicals) -- was using dplyr::filter
+    #adjacent <- naFill( filter(as.numeric(replacePoints),adjFilter))>adjThresh
   } else {
     adjacent <- logical(length(xpos))
   }
@@ -146,11 +150,11 @@ preprocessEyd <- function(outputTable=NULL, xmax=261, minSpikeVel=30,
   xpos <- naFill(na.approx(zoo(xpos), na.rm=F))
 
   # smooth and recalculate velocities
-  if (opts$smooth) xpos <- naFill(filter(xpos, smoothFilter))
+  if (opts$smooth) xpos <- naFill(stats::filter(xpos, smoothFilter))
   xvel <- c(0, diff(xpos))
 
   # write table
-  preproc <- data.frame(raw, xpos, xvel, cappedX, capped, spikes, zeros,
+  preproc <- data.frame(rawdata, xpos, xvel, cappedX, capped, spikes, zeros,
                         adjacent, replacePoints)
   if (!is.null(outputTable)) write.table(preproc, file=outputTable,
                                          row.names=F, quote=F)
@@ -174,11 +178,12 @@ preprocessEyd <- function(outputTable=NULL, xmax=261, minSpikeVel=30,
 #   this is the new END of saccade
 # 3) set index to first index exceeding minVel after END and continue
 
-getSaccades <- function(outputTable=NULL, minVel=4, slowVel=1, minSacLength=4,
+getSaccades <- function(preproc,outputTable=NULL, minVel=4, slowVel=1, minSacLength=4,
   minSacGap=3, replacedThr=0.7, opts=list(merge=T)) {
 
   # if preprocessed data not present, stop
-  check <- checkVars("preproc"); if (!is.null(check)) stop(check)
+  #check <- checkVars("preproc"); if (!is.null(check)) stop(check)
+  checkEmptyVar(preproc,"missing scoredSacs")
 
   # pulling out variables needed from preproc
   xvel <- preproc$xvel; replacePoints <- preproc$replacePoints
@@ -344,7 +349,7 @@ settingsList$MGSEncode <- function(){
 # defined in main environment (when eyescoreFunctions.R is sourced)
 # environment reassigned in scoreRun to give access to its variables
 
-scoreTrial <- function(startInd, minOnsetDelay=4, preTargetFix=9, blinkSample=6,
+scoreTrial <- function(startInd,preproc,scoring, minOnsetDelay=4, preTargetFix=9, blinkSample=6,
   sacMinMag=8, sacHeld=6, opts=list(blinkDrop=F, magCheck=F, heldCheck=T)) {
 
   # run custom code before evaluating 
@@ -369,6 +374,7 @@ scoreTrial <- function(startInd, minOnsetDelay=4, preTargetFix=9, blinkSample=6,
   if (length(xposTarget) == 0) return(scoring)
 
   # mean fixation value for preTargetFix samples before trial
+  #if(startInd<0 ) browser()
   xposCenterFix <- mean(preproc$xpos[startInd - preTargetFix:1])
 
   # rmList is a cleanup list so can use within function successfully
@@ -427,6 +433,8 @@ scoreTrial <- function(startInd, minOnsetDelay=4, preTargetFix=9, blinkSample=6,
     # 4) if there is a blink before/during the first saccade, note it
       # latency is unreliable), but don't drop
       # not exactly sure what will did but this seems the most reasonable to me
+    #if(startInd<0 ) browser()
+
     if (length(which(preproc$zeros[startInd:end[ind]])) > blinkSample) {
       blinkStart[ind] <- T
       if(opts$blinkDrop){
@@ -542,12 +550,12 @@ scoreTrial <- function(startInd, minOnsetDelay=4, preTargetFix=9, blinkSample=6,
 # scoreRun - score saccades in run
 # =============================================================================
 
-scoreRun <- function(outputTable=NULL, xposCenter=261/2, xposPadding=30,
+#scoreRun <- function(outputTable=NULL, xposCenter=261/2, xposPadding=30,
+#  # if preprocessed data not present, stop
+#  check <- checkVars(c("preproc", "saccades", "runData", "settings"))
+#  if (!is.null(check)) stop(check)
+scoreRun <- function(preproc,saccades,runData,outputTable=NULL, xposCenter=261/2, xposPadding=30,
   opts=list(fixCheck=T)) {
-
-  # if preprocessed data not present, stop
-  check <- checkVars(c("preproc", "saccades", "runData", "settings"))
-  if (!is.null(check)) stop(check)
 
   # need to switch scoreTrial environment so can see variables in this function
   environment(scoreTrial) <- environment()
@@ -571,8 +579,11 @@ scoreRun <- function(outputTable=NULL, xposCenter=261/2, xposPadding=30,
   # run for each trial type and trial
   for (type in 1:length(settings$trialTypes)) {
     for (t in 1:length(which(runData$type == settings$trialTypes[type]))) {
-      scoring <- scoreTrial(runData$startInd[runData$type == 
-                                               settings$trialTypes[type]][t])
+      startind <- runData$startInd[runData$type == settings$trialTypes[type]][t]
+      #if(startind < 0) browser()
+      if(startind <0 ) {warning(sprintf("SKIPPING: startind/time does not makes sense (%d) in type %d trial %d",startind,type,t)); next}
+      thisidx <- runData$startInd[runData$type == settings$trialTypes[type]][t]
+      scoring <- scoreTrial(thisidx,preproc,scoring)
     }
   }
 
@@ -587,14 +598,20 @@ scoreRun <- function(outputTable=NULL, xposCenter=261/2, xposPadding=30,
 # getRunData - gets data for stimuli in run
 # =============================================================================
 
-getRunData <- function(outputTable=NULL, opts=list()) {
+getRunData <- function(rawdata,outputTable=NULL, opts=list()) {
 
+  # GLOBALS
   # if necessary variables are not present, stop
-  check <- checkVars(c("raw", "settings", "task", "filePrefix", "taskData"))
+  check <- checkVars(c("settings", "task", "filePrefix", "taskData"))
   if (!is.null(check)) stop(check)
+
+  # locals
+  checkEmptyVar(rawdata,"getRunData: missing rawdata")
+  #checkEmptyVar(saccades,"getRunData: missing saccades")
 
   # short variable name to save space, since we use it a few times
   # using 1st index, assuming same for rest
+  # N is probably 20 :)
   N <- settings$expectedTrialCount[1]
 
   # get run/script info for run, select run data from task data frame
@@ -604,13 +621,20 @@ getRunData <- function(outputTable=NULL, opts=list()) {
     s <- filePrefix[5]
     if (nchar(s) == 4 & substr(s, 1, 1) == "0") s <- gsub("0", "", s)
   }
+  ####
   # format runData so has trial number, trial type, time (s)
-    # will add index to this after merging below
+  # will add index to this after merging below
+  ###
+  # grab taskData matching current run
   runData <- switch(task,
     MGSEncode = taskData[grep(r, taskData$run), ],
     AntiState = taskData[grep(s, taskData$script), ]
   )
+
   # duplicating so we have for both trial types (already duplicated in anti)
+  #   row carries duplicate info of run,cue,target,delay,position
+  # need to add time: AS: time is target
+  #                  MGS: vgs time is cue, mgs is target
   if (task == "MGSEncode") {
     runData <- rbind(runData, runData)
     runData$type <- rep(settings$trialTypes, each=N)
@@ -619,32 +643,37 @@ getRunData <- function(outputTable=NULL, opts=list()) {
     runData$time <- runData[["targetTime"]]
   }
 
+  ###
   # get start index and start times from xdat codes, add to runData
-  runData <- data.frame(runData,
-    list2data(lapply(1:length(settings$trialTypes), function(type) {
+  parseXdatsByType <- function(gstype) {
 
     # rle to get segments of T/F, then pull indices for T (start of xdat run)
-    xdats <- rle(raw$XDAT %in% settings$xdatList[[type]])
-    startInd <- switch(settings$whichIndex[type],
-      first = c(1, 1 + cumsum(xdats$l))[which(c(xdats$v, F))],
-      after = 1 + (cumsum(xdats$l))[which(xdats$v)]
+    xdats <- rle(rawdata$XDAT %in% settings$xdatList[[gstype]])
+    # vgs(1) starts first
+    # mgs(2) starts after
+    startInd <- switch(settings$whichIndex[gstype],
+      first =    c(1, 1 +  cumsum(xdats$l))[which(c(xdats$v, F))],
+      after = 1 + (cumsum(xdats$l)        )[which(  xdats$v   ) ]
     )
 
     # codes in MGSEncode occur at wrong times, need to fix
+    # ~1.4 seconds ?
     if (task == "MGSEncode") {
-      startInd <- switch(type, "1" = startInd + 84, "2" = startInd - 84)
+      startInd <- switch(gstype, 
+              "1" = startInd + 84, 
+              "2" = startInd - 84)
     }
     
     # if incorrect number of trials, stop
       # note: no longer need to error out, will match to expected trials
-    #if(length(startInd) != settings$expectedTrialCount[type]) stop(
-    #  paste("number of ", settings$trialTypes[type],
+    #if(length(startInd) != settings$expectedTrialCount[gstype]) stop(
+    #  paste("number of ", settings$trialTypes[gstype],
     #  " trials detected from xdats (", length(startInd),
-    #  ") do not match expectedTrialCount (", settings$expectedTrialCount[type], 
+    #  ") do not match expectedTrialCount (", settings$expectedTrialCount[gstype], 
     #  ")", sep=""))
 
     # index of start of run to get times from xdats
-    if (type == 1) {
+    if (gstype == 1) {
       # assigning runStartInd to global environment so can use for other fns
       assign("runStartInd", switch(task,
         # starts 1.5s (90 samples) before first cue
@@ -653,48 +682,60 @@ getRunData <- function(outputTable=NULL, opts=list()) {
         AntiState = startInd[1] - ms2asl(1000 * runData$time[1])
       ), env=globalenv())
     }
+    
+    # if we started recording before the task, set time=0 to first xdat sent
+    # (subtract away non task eye tracking)
+    # N.B we are only looking at cue xdats, trial starts 1.5s before them
     xdatTime <- asl2ms(startInd - runStartInd) / 1000
 
     # match up xdat index/times to taskData times
-      # may be off due to xdat code errors (not sure of the reasons for this)
-      # if too many, remove inappropriate indices
-      # if too few, put in NAs for missing trials
-    diff <- N - length(xdatTime)
-    if (diff != 0) {
-      trialMatch <- sapply(1:length(xdatTime), function(i) {
-        which.min(abs(xdatTime[i] - runData$time))
-      })
-      if (diff < 0) {
-        uniqueCount <- rle(trialMatch)$l
-        excludeInd <- unlist(lapply(which(uniqueCount > 1), function(ind) {
-          trial <- rle(trialMatch)$v[ind]
-          xdatInd <- c(1, 1 + cumsum(uniqueCount))[ind]
-          xdatInd <- seq(xdatInd, xdatInd + uniqueCount[ind] - 1)
-          xdatInd[-which.min(abs(xdatTime[xdatInd] - 
-                    runData$time[which(runData$trial %in% trial)]))]
-        }))
-        xdatTime <- xdatTime[-excludeInd]
-        startInd <- startInd[-excludeInd]
-      } else {
-        matchingTrials <- which(1:N %in% trialMatch) 
-        missingTrials <- which(!(1:N %in% trialMatch))
-        interpolateTime <- predict(lm(xdatTime ~ matchingTrials),
-                                   data.frame(matchingTrials = missingTrials))
-        #
-        tempTime <- numeric(N)
-        tempTime[matchingTrials] <- xdatTime
-        tempTime[missingTrials] <- interpolateTime
-        xdatTime <- round(tempTime, 3)
-        #
-        tempInd <- numeric(N)
-        tempInd[matchingTrials] <- startInd
-        tempInd[missingTrials] <- ms2asl(1000 * interpolateTime)
-        startInd <- tempInd
-      }
+    # may be off due to xdat code errors (not sure of the reasons for this)
+    # if too many, remove inappropriate indices
+    # if too few, put in NAs for missing trials
+    #N.xdat <- length(xdatTime)
+    #diff <- N - N.xdat
+    excludeInd <- findbadxdatidx(xdatTime,runData,settings$trialTypes[gstype])
+    # ignore negative in scoreRun
+    #browser()
+    #excludeInd <- unique(c(excludeInd,which(xdatTime<0)))
+
+    if(length(excludeInd)>0L){
+      xdatTime <- xdatTime[-excludeInd]
+      startInd <- startInd[-excludeInd]
     }
 
-    data.frame(startInd, xdatTime)
-  }), opts=list(listInd=F)))
+    ### now find missing
+    # redo matching trials (based on what we've potentially excluded)
+    trialMatch <- trialMatches(xdatTime,runData,settings$trialTypes[gstype] )
+
+    # interpet missing
+    matchingTrials <- which(1:N %in% trialMatch$rel) 
+    missingTrials <- setdiff(1:N,matchingTrials) #which(!(1:N %in% trialMatch))
+    if(length(missingTrials)>0L){
+       interpolateTime <- predict(lm(xdatTime ~ matchingTrials),
+                                  data.frame(matchingTrials = missingTrials))
+       #
+       tempTime <- numeric(N)
+       tempTime[matchingTrials] <- xdatTime
+       tempTime[missingTrials] <- interpolateTime
+       xdatTime <- round(tempTime, 3)
+       #
+       tempInd <- numeric(N)
+       tempInd[matchingTrials] <- startInd
+       tempInd[missingTrials] <- ms2asl(1000 * interpolateTime)
+       startInd <- tempInd
+    }
+
+    data.frame(startInd, xdatTime) #,listInd=gstype)
+  }
+  
+  # do for each gstype (1=vgs,2=mgs)
+  sistxc <- lapply(1:length(settings$trialTypes),parseXdatsByType )
+
+  # merge into datafram
+  #runData <- data.frame(runData, list2data(sistxc, opts=list(listInd=F)))
+  runData <- data.frame(runData, rbind_all(sistxc))
+
 
   # write table and return run data
   if (!is.null(outputTable)) write.table(runData, file=outputTable, 
@@ -766,11 +807,11 @@ offsetDriftCorrect <- function(correctionMethod, trialType, fixDuration=90,
   }
   
   # apply correction to raw data
-  newRaw <- raw
+  newRaw <- rawdata
   newRaw$correction <- round(predict(correctionModel, 
-                          data.frame(runInd = 1:dim(raw)[1] - runStartInd)), 1)
-  newRaw$horz_gaze_coord <- raw$horz - newRaw$correction
-  newRaw$orig_horz_gaze_coord <- raw$horz
+                          data.frame(runInd = 1:dim(rawdata)[1] - runStartInd)), 1)
+  newRaw$horz_gaze_coord <- rawdata$horz - newRaw$correction
+  newRaw$orig_horz_gaze_coord <- rawdata$horz
   
   # write table and return
   if (!is.null(outputTable)) write.table(newRaw, file=outputTable, 
@@ -790,6 +831,8 @@ summaryData <- function(scoredSacs, outputTable=NULL) {
   # if preprocessed data not present, stop
   check <- checkVars(c("settings"))
   if (!is.null(check)) stop(check)
+  #checkEmptyVar(scoredSacs,"missing scoredSacs")
+
 
   # sort through saccades, pull trial data
   summaryData <- list2data(with(scoredSacs, {
@@ -1181,3 +1224,70 @@ multiIntersect <- function(x) {
   for(i in 2:length(x)) ind <- intersect(ind, x[[i]])
   ind
 }
+
+checkEmptyVar <- function(var,stopstr="missing or empty variable") {
+ if(is.null(var) || length(var) == 0L) stop(stopstr) 
+}
+
+# report indices to remove
+# need xdatTime, runData[type,time,trial], and type (=1,2)
+# uses global settings to get "mgs" or "vgs" from type (1,2)
+trialMatches <- function(xdatTime,runData,strtype) {
+   # what part of runData has this type
+   tidx <- runData$type == strtype
+
+   trialMatch<-list()
+   # get the expected times for just this trial type
+   trialMatch$typetrialTimes <- runData$time[tidx]
+   # match trials to the time for both relative (just this type)  and full (all types)
+   trialMatch$rel <- sapply(xdatTime, function(x) {which.min(abs(x - trialMatch$typetrialTimes))})
+   # update to match the part of the dataframe the indexes originally came from
+   trialMatch$full <- which(tidx)[trialMatch$rel]
+
+   return(trialMatch)
+}
+findbadxdatidx <- function(xdatTime,runData,strtype){
+   trialMatch <- trialMatches(xdatTime,runData,strtype)
+   r <- rle(trialMatch$full)
+   uniqueCount <- r$l
+
+   # return which indexes to exclude
+   excludeInd <- unlist(lapply(
+     which(uniqueCount > 1),
+     function(ind) {
+      trial <- r$v[ind] # trial is trial of all types (e.g. 30 instead of 10 if type==2)
+
+      # DS magic to get the repeated xdat indexes
+      xdatInd <- c(1, 1 + cumsum(uniqueCount))[ind]
+      xdatInd <- seq(xdatInd, xdatInd + uniqueCount[ind] - 1)
+
+      # ERROR HERE, runData missing trial column (20151026 WF)
+      #xdatInd[-which.min(abs(xdatTime[xdatInd] - 
+      #          runData$time[which(runData$trial %in% trial)]))]
+
+      # excludeInd should NOT have the closests of the duplicat trial starts
+      closest <- which.min( abs( xdatTime[xdatInd] - runData$time[trial] ) )
+      if(length(closest)==0L) return(xdatInd)
+      return(xdatInd[-closest])
+    }))
+}
+
+### useless function, trying to extract what type is used for
+typeinfo <- function(type,task,xdats) {
+    startInd <- switch(settings$whichIndex[type],
+      first = c(1, 1 + cumsum(xdats$l))[which(c(xdats$v, F))],
+      after = 1 + (cumsum(xdats$l))[which(xdats$v)]
+    )
+    # index of start of run to get times from xdats
+    if (type == 1) {
+      # assigning runStartInd to global environment so can use for other fns
+      assign("runStartInd", switch(task,
+        # starts 1.5s (90 samples) before first cue
+        MGSEncode = startInd[1] - 90,
+        # variable time to first trial (will model as 4.5s block)
+        AntiState = startInd[1] - ms2asl(1000 * runData$time[1])
+      ), env=globalenv())
+    }
+
+    strtype <- settings$xdatList[[type]]
+  }

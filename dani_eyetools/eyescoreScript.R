@@ -1,3 +1,26 @@
+# DS, WF - DS wrapper around functions
+# get all raw.txt files matching "id" and "date"
+# use eyescoreFunctions.R in order:
+#  - read or make task_MGSEncode.txt
+#      taskData <- taskList$MGSEncode(path="/Volumes/Phillips/COG")
+#      settings <- settingsList$MGSEncode()
+#  - preprocessEyd
+#  - getSaccades
+#  - getRunData
+#  - scoreRun
+#  - summaryData
+
+#
+#Run like
+# Rscript --vanilla --quiet eyescoreScript.R \
+#   taskPath=\"/Volumes/Phillips/COG\" task=\"MGSEncode\" \
+#   eyescoreFunctions=\"eyescoreFunctions.R\" \
+#   path=\"/Volumes/Phillips/COG/MGSEncode/$id/$date/\" 
+#   id=$id date=$date \
+#     2>&1 | tee -a $logFile | tee $scorelog 
+#
+#
+
 # evaluate arguments
 ept <- function(x) eval(parse(text=x), env=0)
 args <- commandArgs(T)
@@ -29,7 +52,7 @@ for (file in files){
   # if so, write it to the logfile, otherwise continue
 
   # convert from eyd to txt (done already), load txt
-  raw <- try(
+  rawdata <- try(
     #eyd2txt(id, date, task, run, 
     #        eydScript="~/src/autoeyescore/dataFromAnyEyd.pl", 
     #        srcPath="~/rcn/bea_res/Data/Tasks", 
@@ -37,14 +60,14 @@ for (file in files){
     #        fileExt="raw.txt", txtPath=NULL, txtFile=NULL, overwrite=F),
     read.table(file.path(path, file), head=T),
     silent=T)
-  if (class(raw) != "data.frame") { 
+  if (class(rawdata) != "data.frame") { 
     cat(date(), "\n", filePrefix, "raw", "\n", raw, "\n\n")
     next
   } 
 
   # preprocess data
   preproc <- try(
-    preprocessEyd(outputTable=file.path(path, paste(filePrefix, "preproc.txt", 
+    preprocessEyd(rawdata,outputTable=file.path(path, paste(filePrefix, "preproc.txt", 
                                                     sep="_"))),
     silent=T)
   if (class(preproc) != "data.frame") { 
@@ -54,7 +77,7 @@ for (file in files){
 
   # get saccades
   saccades <- try(
-    getSaccades(),
+    getSaccades(preproc),
     silent=T)
   if (class(saccades) != "data.frame") { 
     cat(date(), "\n", filePrefix, "saccades", "\n", saccades, "\n\n")
@@ -63,7 +86,7 @@ for (file in files){
 
   # get run data for scoring
   runData <- try(
-    getRunData(outputTable=file.path(path, paste(filePrefix, "runData.txt", 
+    getRunData(rawdata,saccades,outputTable=file.path(path, paste(filePrefix, "runData.txt", 
                                                  sep="_"))),
     silent=T)
   if (class(runData) != "data.frame") { 

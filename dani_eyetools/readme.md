@@ -4,8 +4,22 @@
 
 # Pipeline
 
-re-establishing pipeline from `arnold:~/src/autoeyescore/dani_eyetools`.
+see 
+* `example_score.R` for a verbose outline
+* `score_lunadaterun.R` and `rerun/readme.md` for more generalized
 
+
+## Initial
+this is a re-establishing pipeline from `arnold:~/src/autoeyescore/dani_eyetools`.
+intial re-run done with `eyescoreScript_Simple.sh` looping over `eyescore_lunadate.bash` executing `eyescoreScript.R`
+
+## Fixes
+* some raw eye files need to be corrected with `correctRaw.bash`.
+* errors were parsed and rerun (leaving old scorelog files behind), see `rerun/readme.md`
+
+
+
+# Steps
 ## raw eye movements: binary to text
  `eydToRawTXT.sh` to find all eyd files on bea_res, parse to text and save in newly created dirs on Philips (DONE)
 ```bash
