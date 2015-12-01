@@ -23,6 +23,6 @@ fs <- c(Sys.glob('mix/*anti.manual.txt'),Sys.glob('mix/*vgs.manual.txt'))
 alldata <- do.call(rbind, lapply(fs, extFN) )
 
 # write table with a reasonable order of both rows and columns
-write.csv(alldata[order(d$subj,d$date,d$trial),
+write.csv(alldata[order(alldata$subj,alldata$date,alldata$trial),
                   c('subj','date','trial','sac.type','score','lat')],
           file='mix/allmix.csv',row.names=F,quote=F)

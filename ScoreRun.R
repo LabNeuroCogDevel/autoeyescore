@@ -207,7 +207,9 @@ savePlots <- function(sac.df,g,drv,filename,writetopdf) {
   if(length(sac.df)>0){
       print (
         grid.arrange( nrow=3,heights=c(.5,1,.4),
-                tableGrob( sac.df[,-c(1:3)],gpar.coretext = gpar(fontsize=6),gpar.coltext=gpar(fontsize=8)),  # exclude index values
+                #gpar causes errors :(
+                #tableGrob( sac.df[,-c(1:3)],gpar.coretext = gpar(fontsize=6),gpar.coltext=gpar(fontsize=8)),  # exclude index values
+                tableGrob( sac.df[,-c(1:3)]),  # exclude index values
                  g,
                  drv
            ) 
