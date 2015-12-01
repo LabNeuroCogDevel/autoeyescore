@@ -15,7 +15,7 @@ mkfilen <- function(pf,sfx,ext=".txt") {
 filesMGS <- function(lunaid,date,runno) {
   fp <- sprintf("/Volumes/Phillips/COG/MGSEncode/%d/%d/%d_%d_MGSEncode_run%d_",lunaid,date,lunaid,date,runno)
 
-  sapply(c("raw","preproc","runData","scored"),
+  f <- sapply(c("raw","preproc","runData","scored"),
          function(s){ mkfilen(fp,s)} )
   # files, eg.
   # "/Volumes/Phillips/COG/MGSEncode/10125/20061021/10125_20061021_MGSEncode_run2_raw.txt"
@@ -23,14 +23,21 @@ filesMGS <- function(lunaid,date,runno) {
   # "/Volumes/Phillips/COG/MGSEncode/10125/20061021/10125_20061021_MGSEncode_run2_runData.txt"
   # "/Volumes/Phillips/COG/MGSEncode/10125/20061021/10125_20061021_MGSEncode_run2_scored.txt"
   # "/Volumes/Phillips/COG/MGSEncode/10125/20061021/10125_20061021_MGSEncode_run2_stats.txt")
+  c(f,willout=sprintf("./willout/%d.%d.%d.MGS.txt",lunaid,date,runno))
+}
+
+# dani functions depend on some globals
+# set them here
+setMGSGlobals <- function(){
+  task       <<- "MGSEncode"
+  taskData   <<- taskList$MGSEncode(path="/Volumes/Phillips/COG")
+  settings   <<- settingsList$MGSEncode()
 }
 
 scoreMGSE <- function(lunaid,date,runno) {
   # globals used by getRundata and scoredata
-  task       <- "MGSEncode"
+  setMGSGlobals()
   filePrefix <- sprintf("/Volumes/Phillips/COG/MGSEncode/%d/%d/%d_%d_MGSEncode_run%d_",lunaid,date,lunaid,date,runno)
-  taskData   <- taskList$MGSEncode(path="/Volumes/Phillips/COG")
-  settings   <- settingsList$MGSEncode()
   
   # get where files should be
   f<-filesMGS(lunaid,date,runno)

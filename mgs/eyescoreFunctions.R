@@ -349,29 +349,9 @@ settingsList$MGSEncode <- function(){
 # defined in main environment (when eyescoreFunctions.R is sourced)
 # environment reassigned in scoreRun to give access to its variables
 
-scoreTrial <- function(startInd,preproc,scoring, minOnsetDelay=4, preTargetFix=9, blinkSample=6,
+scoreTrial <- function(startInd,preproc,scoring,xposTarget, type=1,
+  nsamplesDuration=2*60, minOnsetDelay=4, preTargetFix=9, blinkSample=6,
   sacMinMag=8, sacHeld=6, opts=list(blinkDrop=F, magCheck=F, heldCheck=T)) {
-
-  # run custom code before evaluating 
-  custom <- settings$customTrialCode[[type]]
-  if (length(custom) > 0) {
-    for (i in 1:length(custom)) eval(parse(text=custom[i]))
-  }
-    
-  # get xposTarget location
-  if (!exists("xposTarget")){
-    xposInd <- switch(settings$whichIndex[type],
-                      first = startInd, after = startInd - 1)
-    xposTarget <- settings$xposTargetList[preproc$XDAT[xposInd] %% 10]
-  }
-
-  # an important issue encountered
-    # what if there is no delay code following the cue code?
-    # maybe this was a once off (10128, 2006xxxx, MGSEncode, run 3)
-    # did the delay and target for the trial actually get deleted somehow??
-    # if this happens, xposTarget will be empty, so just returing without
-    #   scoring any saccades
-  if (length(xposTarget) == 0) return(scoring)
 
   # mean fixation value for preTargetFix samples before trial
   #if(startInd<0 ) browser()
@@ -424,7 +404,7 @@ scoreTrial <- function(startInd,preproc,scoring, minOnsetDelay=4, preTargetFix=9
     }
 
     # 3) if saccade doesn't end within trial window, discard 
-    if (end[ind] - startInd > settings$targetDuration[type]) {
+    if (end[ind] - startInd > nsamplesDuration) {
       dropped[ind] <- T
       droppedReason[ind] <- "missed"
       rm(list=rmList); return()
@@ -501,7 +481,7 @@ scoreTrial <- function(startInd,preproc,scoring, minOnsetDelay=4, preTargetFix=9
     # 9) score remaining saccades in trial
       # as long as there are saccades left in target period...
     while (ind + add < length(start) &
-             end[ind+add+1] < startInd + settings$targetDuration[type]) {
+             end[ind+add+1] < startInd + nsamplesDuration) { #settings$targetDuration[type]) {
       add <- add + 1
       scored[ind+add] <- T
       saccade[ind+add] <- saccade[ind+add-1] + 1
@@ -554,37 +534,38 @@ scoreTrial <- function(startInd,preproc,scoring, minOnsetDelay=4, preTargetFix=9
 #  # if preprocessed data not present, stop
 #  check <- checkVars(c("preproc", "saccades", "runData", "settings"))
 #  if (!is.null(check)) stop(check)
-scoreRun <- function(preproc,saccades,runData,outputTable=NULL, xposCenter=261/2, xposPadding=30,
+scoreRun <- function(preproc,saccades,runData,
+  outputTable=NULL, 
+  xposCenter=261/2,
+  xposPadding=30,         # how far off can fix be
   opts=list(fixCheck=T)) {
 
   # need to switch scoreTrial environment so can see variables in this function
   environment(scoreTrial) <- environment()
 
   # add scoring columns to saccades
-  scoring <- within(saccades, { trialStart<-NA; trialType<-NA; trial<-NA;
+  scoring <- within(saccades, { trialStart<-NA; trialType<-'mgs'; trial<-NA;
     saccade<-NA; scored<-NA; dropped<-NA; droppedReason<-NA; correct<-NA;
     correctPad<-NA; incorrect<-NA; corrected<-NA; blinkStart<-NA; accuracy<-NA;
     latency<-NA })
 
   ## check that overall fixation is accurate
-  if (opts$fixCheck) {
-    xposCenterFixAll <- mean(preproc$xpos[
-      which(preproc$XDAT %in% settings$fixCode)], na.rm=T)
-    if (xposCenterFixAll - xposCenter > xposPadding) stop(
-      paste("mean of actual eye fixation across run (", xposCenterFixAll,
-            ") differs from expected eye fixation (", xposCenter, ") by >",
-            xposPadding, sep=""))
-  }
+  # if (opts$fixCheck) {
+  #   xposCenterFixAll <- mean(preproc$xpos[
+  #     which(preproc$XDAT %in% settings$fixCode)], na.rm=T)
+  #   if (xposCenterFixAll - xposCenter > xposPadding) stop(
+  #     paste("mean of actual eye fixation across run (", xposCenterFixAll,
+  #           ") differs from expected eye fixation (", xposCenter, ") by >",
+  #           xposPadding, sep=""))
+  # }
 
   # run for each trial type and trial
-  for (type in 1:length(settings$trialTypes)) {
-    for (t in 1:length(which(runData$type == settings$trialTypes[type]))) {
-      startind <- runData$startInd[runData$type == settings$trialTypes[type]][t]
-      #if(startind < 0) browser()
-      if(startind <0 ) {warning(sprintf("SKIPPING: startind/time does not makes sense (%d) in type %d trial %d",startind,type,t)); next}
-      thisidx <- runData$startInd[runData$type == settings$trialTypes[type]][t]
-      scoring <- scoreTrial(thisidx,preproc,scoring)
-    }
+  for (t in 1:max(runData$trial)) {
+    startind <- runData$startInd[t]
+    #if(startind < 0) browser()
+    if(startind <0 ) {warning(sprintf("SKIPPING: startind/time does not makes sense (%d) in type %d trial %d",startind,type,t)); next}
+    thisidx <- runData$startInd[t]
+    scoring <- scoreTrial(thisidx,preproc,scoring,runData$targetPos[t])
   }
 
   # write table and return scored saccades
@@ -760,7 +741,7 @@ getRunData <- function(rawdata,outputTable=NULL, opts=list()) {
   # predict for all indices
   # return correction
 
-offsetDriftCorrect <- function(correctionMethod, trialType, fixDuration=90,
+offsetDriftCorrect <- function(correctionMethod, trialType='mgs', fixDuration=90,
   fixMode="median", xmid=261/2, outputModel=NULL, outputTable=NULL, 
   opts=list()) {
 

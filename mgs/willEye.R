@@ -1,5 +1,7 @@
 #library(zoo)
+#library(plyr)
 library(dplyr)
+library(ggplot2)
 library(tidyr)
 library(data.table)
 # use DNA alignment algo Needleman-Wunsch for xdat alignment
@@ -8,55 +10,128 @@ library(data.table)
 library(Biostrings)
 #source('eyescoreFunctions.R')
 
+## TODO: 
+#  ?? drop trial where saccade during dot flash
+
+## USAGE:
+#
+# setMGSGlobals() sets "settings", called when file is sourced
+# SCORE_ALL()  scores all files that it can find and saves scored sac to willout/
+
+##### 
+# 0. have a raw eye tracking file (parsed from eyd) -- see 00_eyd.bash
+# 1. preprocess the eye data (e.g remove blinks, smooth)
+# 2. get start/stop index of all saccades
+# 3. get task timing and event info (runData) 
+# 4. match saccades to tasks and score
 
 
-# 10133,20071204
+# experimenting:
+## see how well all subjs sacs match to target
+# p <- montezdisplay()
+#
+##  score one run and plot
+# a <- MGSscore.will(10129,20140103)
+# plotAllSacs(norm.lat(a$d %>% mutate(subj=1,date=1)),onlycor=F,allines=T)
+#
+## single trial
+# extractTrialWrap(a,trial=27,showplot=T,sipad=30) 
+
+
 source('score_lunadaterun.R')
 setMGSGlobals() # set Task and settings, used by scoreRun
 
+# narm without having to load zoo, will loose factor labels
 narm <- function(x) { x<-x[-which(is.na(x)) ]; ifelse(length(x)==0L,NA,x) }
-willeyeam <- function() {
- subjdate <- lapply( strsplit(Sys.glob('/Volumes/Phillips/COG/MGSEncode/*/*/'),'/'),FUN='[',c(6,7) )
+# absmin
+minabs <-function(x) { r<-x[which.min(abs(x))]; ifelse(length(r)==0L,NA,r) }
+
+#
+# score everyone
+#
+SCORE_ALL <- function(   globpat='~/rcn/bea_res/Data/Tasks/MGS/Basic/*/*/', # where subjects are
+                      pathsvidx=c(10,11)) {
+
+ # get all subject/visit directories and break into list of vector: c(subj,visit)
+ subjdate <- lapply( strsplit(Sys.glob(globpat),'/'), FUN='[', pathsvidx )
+ # path is strings, make numbers
  subjdate <- lapply(subjdate,as.numeric)
 
- for(sd in subjdate) {
-  for( r in 1:3 ) {
-    tryCatch({
-       allinfo <- MGSscore.will(sd[[1]],sd[[2]],r,r) 
-       d<-allRunSacs(allinfo)
-       d$subj=sd[[1]]
-       d$date=sd[[2]]
-       d$run=r
-
-       write.table(d,row.names=F,quote=F,file=allinfo$files[["willout"]])
-       cat("finished ", sd[[1]],".",sd[[2]],".",r,"\n")
-   }, error=function(e){print(e)})
-  }
+ # for each item in the subjdate date list
+ for(s_d in subjdate) {
+    writeScoreVisit(s_d[[1]],s_d[[2]])
  }
 }
 
-# score a run (MGS) using extractTrial
-allRunSacs <-function(a) {
- d <- rbind_all(lapply(1:20, FUN=function(t){ extractTrial(a$preproc,a$runData,a$scored,strial=t)} ))
+writeScoreVisit <- function(lunaid,visitdate,redo=F) {
+
+  # skip if we have already scored this visit
+  # redundant call to filesMGS :(
+  f<-filesMGS(lunaid,visitdate)
+  if(!file.exists(f[['raw']])){
+    print(sprintf("skipping %d %d do not have raw %s",lunaid,visitdate,f[['raw']]))
+    return()
+  }
+  if(file.exists(f[['willout']]) && !redo){ 
+    print(sprintf("skipping %d %d have %s",lunaid,visitdate,f[['willout']]))
+    return()
+  }
+
+  tryCatch({
+     #print(sprintf('trying %d.%d',lunaid,visitdate))
+     allinfo <- MGSscore.will(lunaid,visitdate) 
+     d<-allinfo$d
+     d$subj=lunaid
+     d$date=visitdate
+
+     write.table(d,row.names=F,quote=F,file=allinfo$files[["willout"]])
+     print(sprintf("wrote %s",allinfo$files[["willout"]]))
+
+ }, error=function(e){cat(sprintf("failed %d %d: ",lunaid,visitdate));print(e)})
 }
 
+
+###
+# montez wants to see what all the (correct) sacs look like 
+# when time=0 (per trial) is the start of the first saccade
+# -- useful to quality check our scoring (all sacs should go to target)
 montezdisplay <- function() {
  d<-readallMGS()
  dnorm <- norm.lat(d)
- print( plotAllSacs(dnorm) )
+ p<- plotAllSacs(dnorm) 
+ print(p)
+ return(p)
+}
 
+
+## stats
+statsPerTrial <- function(d) {
+  # need subj and date to group by
+  if(!"subj" %in% names(d)) d$subj <- 0
+  if(!"date" %in% names(d)) d$date <- 0
+  
+  d %>% 
+   filter(!is.na(trial)) %>% 
+   group_by(trial,subj,date) %>% 
+   summarise(nsac=max(sacno,na.rm=T),
+             score=HMUC[first(which(sacno==1))],
+             lat=first(narm(latency)),
+             prcsn=minabs(accuracy)
+             ) %>%
+   group_by(subj,date,score) %>% 
+   summarise(n=n(),lat.m=mean(lat),lat.sd=sd(lat),prcsn.m=mean(prcsn),prcsn.sd=sd(prcsn),nsac=mean(nsac) )
 }
 
 # read all the scored files into one big dataframe
-readallMGS <-function() {
- d<- rbind_all( lapply( Sys.glob('willout/*MGS.txt'),FUN=read.table,header=T ) )
+readallMGS <-function(globpat='willout/*MGS.txt') {
+ d<- rbind_all( lapply( Sys.glob(globpat),FUN=read.table,header=T ) )
 }
 
 # normalize time to first saccade onset=0
 # only grab max 1.4 seconds after
 # for DM compare
 norm.lat <-  function(d,...) {
-  ddply(d, c('trial','subj','date','run',...), function(x){ 
+  plyr::ddply(d, c('trial','subj','date',...), function(x){ 
     i<-first(which(x$sacno==1))
     x %>% 
       mutate(  time=time-x$time[i], 
@@ -65,25 +140,12 @@ norm.lat <-  function(d,...) {
   }) 
 }
 
-# load only those we recently added
-# looking through reurn/*R for a list, and extracting between lines of 'startMGSE(subj,date)'
-onlychanged <- function(dnorm) {
- #subjvisit <- unique(gsub('^statMGSE\\(|\\)|,','',unlist(lapply(Sys.glob('rerun/*R'),function(x){as.character(read.table(x,header=F)$V1)})))) 
- subjvisit <- Sys.glob('rerun/*R') %>% 
-              lapply(FUN=function(x){as.character(read.table(x,header=F)$V1)}) %>% 
-              unlist %>% 
-              gsub(pattern='^statMGSE\\(|\\)|,',replace='') %>% 
-              unique
 
- newscore <- dnorm %>% 
-             filter(paste0(subj,date) %in% subjvisit)
-
- plotAllSacs(newscore)
-}
-
-plotAllSacs <-function(d,allines=F,showtarget=T){
+# plot all the saccades in dataframe d, output of (or merge of many outputs form) allRunSacs
+plotAllSacs <-function(d,allines=F,showtarget=T,onlycor=T){
+ if(onlycor) d<-d %>% filter(HMUC=='cor' )
  if('file' %in% names(d)) d$trial <- paste(d$trial,d$file)
- p <- ggplot(d %>% filter(HMUC=='cor' ) )+
+ p <- ggplot(d )+
       aes(x=time,y=horz_gaze_coord,group=trial,color=as.factor(targetPos)) + 
       geom_smooth(aes(group=NULL)) +
       facet_wrap(~targetPos) +
@@ -93,19 +155,21 @@ plotAllSacs <-function(d,allines=F,showtarget=T){
  if(allines) p<-p+geom_line(color='yellow',aes(color=NULL))
 
  # targets
+ npos <- length(settings$xposTargetList)
  if(showtarget) p<-p+
-           geom_hline(data=data.frame(targetPos=1:6,px=settings$xposTargetList ),
+           geom_hline(data=data.frame(targetPos=settings$xposTargetList ,px=settings$xposTargetList ),
                       aes(yintercept=px) )
 
  return(p + theme_bw() )
 }
  
+
 # MGSscore.will(lunaid=10125,date=20061021,runno=1,matchrun=2)
 # load a subj's raw data, preproc saccades, scoreRun
 # returns all steps in a list
-MGSscore.will <- function(lunaid=10125,date=20061021,runno=1,matchrun=1) {
-  task <- "MGSEncode"
-  f<-filesMGS(lunaid,date,runno)
+MGSscore.will <- function(lunaid=10129,date=20140103,matchrun=1) {
+  task <- "MGS"
+  f<-filesMGS(lunaid,date)
   rawdata <- read.table(f[['raw']],header=T)
   ## danni's functions
   # smooth data
@@ -114,7 +178,7 @@ MGSscore.will <- function(lunaid=10125,date=20061021,runno=1,matchrun=1) {
   saccades<- getSaccades(eyedata)
 
   # align raw data to expected task xdats
-  tdr     <- getGnrcRun(matchrun) 
+  tdr     <- getGnrcRun(f[['log']]) 
   aligned <- alignToExpected(rawdata, tdr)
   # check that our alignment is good
   if( any(aligned$etyperaw!=aligned$etype) ) warning("some event types are mismatched!")
@@ -139,7 +203,23 @@ MGSscore.will <- function(lunaid=10125,date=20061021,runno=1,matchrun=1) {
               rawdata=rawdata,
               files  =f)
 
+  # combined scored saccades with task info
+  # go get trials score
+  allinfo$d<-allRunSacs(allinfo)
+
   return(allinfo)
+}
+
+# score a run (all trials) using extractTrial
+# a (input) is output of MGSscore.will
+allRunSacs <-function(a,nruns=32) {
+ d <- rbind_all(lapply(1:nruns, FUN=function(t){ extractTrial(a$preproc,a$runData,a$scored,strial=t)} ))
+}
+
+# extract trial for list returned by MGSscore.will
+# add arguments: e.g. showplot=T
+extractTrialWrap <- function(a,trial=1,...) {
+  extractTrial(a$preproc,a$runData,a$scored,strial=trial,...) 
 }
 
 ### extractTrial
@@ -152,8 +232,12 @@ MGSscore.will <- function(lunaid=10125,date=20061021,runno=1,matchrun=1) {
 # scored    saccades and how they were scored
 #
 # tdur is duration of the trial in samples
-# looking at only 60*1.4 (84 samples), length of mgs event, after for vgs doesn't matter?
-extractTrial <- function(eyedata,runData,scored,strial=1,ttype='mgs',tdur=84,showplot=F) {
+# looking at only 60*2 (120 samples), length of mgs event, after for vgs doesn't matter?
+#
+# use _sipad_ and _eipad_ to view before and after a trial, used with showplot=T [NOT for actually scoring]
+# adjust tdur to extend the view window when sipad and eipad are > 120
+###
+extractTrial <- function(eyedata,runData,scored,strial=1,ttype='mgs',tdur=120,showplot=F,sipad=0,eipad=0) {
 
   # index of this trial in the run
   tidx <- which(runData$trial==strial&runData$type==ttype)
@@ -161,8 +245,8 @@ extractTrial <- function(eyedata,runData,scored,strial=1,ttype='mgs',tdur=84,sho
   if(length(tidx) != 1L ) stop("wrong number of trials ",length(tidx) , ". matching trial ", strial," for type ", ttype,"!")
 
   # set start and stop idx
-  si <- runData$startInd[tidx]
-  ei <- si + tdur 
+  si <- runData$startInd[tidx] - sipad
+  ei <- si + tdur              + eipad
 
 
   # subset to just the sacs we care about
@@ -181,7 +265,7 @@ extractTrial <- function(eyedata,runData,scored,strial=1,ttype='mgs',tdur=84,sho
   tscore   <- addsactoeye(trialeye,trialscore)
 
   # set time to trial onset
-  tscore$time <- (tscore$idx - si)/60
+  tscore$time <- (tscore$idx - runData$startInd[tidx])/60
 
   # give a numeric score "how many until correct"
   tscore$HMUC <- HMUCscore(tscore) 
@@ -203,6 +287,7 @@ extractTrial <- function(eyedata,runData,scored,strial=1,ttype='mgs',tdur=84,sho
   return(tscore)
 }
 
+# plot extracted trial. output of  extractTrial 
 plotscored <- function(tscore,targetpos=NULL) {
 
    # get accuracy
@@ -212,7 +297,7 @@ plotscored <- function(tscore,targetpos=NULL) {
    # screen x size: 640
 
    p<- ggplot(tscore) + 
-    aes(x=time,y=horz_gaze_coord) +
+    aes(x=time,y=horz_gaze_coord,shape=as.factor(XDAT)) +
     geom_point() +
     geom_line(data=tscore[!is.na(tscore$sacno),],aes(group=sacno,color=HMUC) ) +
     #scale_color_discrete(c('red','green','orange','blue')) +
@@ -242,62 +327,51 @@ plotscored <- function(tscore,targetpos=NULL) {
 
 # take will's aligned dataframe (each row is xdat)
 # turn into dani's dataframe
-# Dani - taskData 
-#  run           1-3
-#  cueTime       cuexdat + 1.4
-#  cueLength     delayxdattime - cuexdattime - 1.4 (long=3,short=1.5)
-#  targetTime    delayxdattime 
-#  targetPos     mod(delayxdat,10) (pos: 7=1,108=2,214=3,426=4,532=5,633=6)  
-#  delayTime     delayxdattime
-#  delayLength   endxdattime - delayxdattime - 1.4 (short=1.5 or long=9)
-#  + runData
-#  type          vgs or mgs
-#  time          targettime if mgs, cuetime if vgs
-#  startInd      where xdat is
-#  xdatTime      time according to xdat index
-## import to have type and startInd
-# taskstarttime removes the 6s wait of discacq
-# also included trial, because it's useful when plotting
-willtodani <- function(adf,taskstarttime=6.0,samplerate=60) {
+#e.g.
+#  startInd time xdatTime targetPos trial type
+#      567   9.5    9.433       245     1  mgs
+#     1377  23.0   22.933       245     2  mgs
+#     2187  36.5   36.433       188     3  mgs
+willtodani <- function(adf,taskstarttime=0,samplerate=60) {
  # TIMING:
- #  start (.1)                           | start  XDAT [2-5]0 | 
- #  Cross+gap (1.4)   + s/l cue (3|1.5)  | target XDAT 1[2-5][1-6] |
- #  s/l delay (1.4|9) + MGSExecute (1.4) | end    XDAT 250
- # we want to start at s/l cue, and MGSExecute
- # so start + 1.4 (cross+gap)
- # and end  - 1.4 (MGSexecute)
+ #    -> XDAT 42/43
+ #     CueMGS (1.925s)
+ #    -> XDAT 121/
+ #     TargetMGS (.075s)
+ #     WMdelay (Sort/long, 2.5s) 
+ #     MGSExecute (2s)
+ #    -> XDAT 250
+ #     feedback (2s)
+ 
+
  b<- adf %>% 
    # build need vars
    mutate(
-     # xdats 
-     # so target xdat 
-     type      = ifelse(etypetask=='start','vgs','mgs'),
-     # xdat sent after cue "+", + dur is (1.2 + .2)
-     # xdat sent after MGSExecute (end), dur to comp for is 1.4
-     timeadj   = ifelse(type=='vgs', + 1.4, -1.4),
+     # MGS happens 2seconds before the first end
+     timeadj   = ifelse(etypetask=='end', -2, 0),
      # dani has this so the start cue is 1.4
      time      = time     + timeadj - taskstarttime,
      # N.B. startInd (adjusted) is not startind (unadjusted)
      startInd  = startind + timeadj*samplerate,
      # xdattime, we use the adjusted startInd and take out the first actual index 
-     # .1 for startbuffer before any task
-     xdatTime  = round( (startInd - first(startind))/samplerate, 3)  + .1 
+     xdatTime  = round( (startInd - first(startind))/samplerate, 3) ,
+     # targetpos is in screen resolution, we need it in asl
+     targetPos = xposEP2ASL(targetPos)
    ) %>%
    # only want start and end, no FIXes
    # we added      to get to cue onset from start
    #    subtracted to get MGSexcute onset)
-   filter(etypetask %in% c('start','end'), 
-         #!grepl('FIX',event), # target>0 does the same thing
-         # but also kills FIX ends (which don't say FIX in the event name)
-         target>0 ) %>% 
+   filter(etypetask =='end' ) %>% 
    # grab only want we need
-   select(type,startInd,time,xdatTime,targetPos=target,trial=rtrial) #,xdattask,etypetask)
+   select(startInd,time,xdatTime,targetPos,trial=rtrial) #,xdattask,etypetask)
 
  # make vgs targetpos that of mgs
  # this could fail if vgs doesn't always prepceed mgs
  # it would mean something is wrong
  #b$targetPos[b$targetPos==0] <- b$targetPos[b$targetPos!=0]
 
+ # add type is mgs, same for all
+ b$type <- 'mgs'
  return(b)
 }
 
@@ -371,15 +445,15 @@ alignToExpected <- function(rawdata,tdr) {
 
 # get the generic run info from a file
 # function will fail if in wrong directory :(
-getGnrcRun <- function(runno) {
-  r <- setDT(read.table('runOrderXdat/all_xdats.txt'))[run==runno]
+# /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10312/20090828/Raw/EyeData/txt/10312.20090828.MGS.EPxdat.log
+#  0	StartMGSShort	42	600
+getGnrcRun <- function(filen) {
+  r <- setNames(read.table(filen), c('time','event','xdat','targetPos') )
   # set "real" trial number by cumlitive counting cues that are not 60 (exclude fix)
   r$rtrial <- cumsum(r$xdat <100 & r$xdat!=60)
   r$row    <- 1:nrow(r) 
-  # add targetpos: only mod10 not 0 is target e.g 152 -> 2;  50 250 60 -> 0
-  #                so get max for all of the trial, set as target for whole trial
-  merge(r,
-        r %>% group_by(trial) %>% summarise(target=max( xdat%%10 ) ), by='trial')
+  r$etype  <- cut(r$xdat,breaks=c(-Inf,100,200,Inf), labels=c('start','delay','end') )
+  return(setDT(r))
 }
 
  
@@ -474,8 +548,8 @@ doalign <- function(rawdata,runxdats) {
 
 
 ## return vector of indexs i such that subject(i) = expected task
-rangeidx <-function(a) {
- if(a@score<1200) {warning('score: ',round(a@score,2),' is low; matching to wrong run?')}
+rangeidx <-function(a,expectscore=200) {
+ if(a@score<expectscore) {warning('score: ',round(a@score,2),' is low; matching to wrong run?')}
  s <- bstr2num(a@subject)
  p <- bstr2num(a@pattern)
 

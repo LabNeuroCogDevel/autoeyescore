@@ -11,12 +11,100 @@ library(Biostrings)
 
 
 # 10133,20071204
-# willeyeam(lunaid=10125,date=20061021,runno=1,matchrun=2)
 source('score_lunadaterun.R')
+setMGSGlobals() # set Task and settings, used by scoreRun
 
+narm <- function(x) { x<-x[-which(is.na(x)) ]; ifelse(length(x)==0L,NA,x) }
+willeyeam <- function() {
+ subjdate <- lapply( strsplit(Sys.glob('/Volumes/Phillips/COG/MGSEncode/*/*/'),'/'),FUN='[',c(6,7) )
+ subjdate <- lapply(subjdate,as.numeric)
+
+ for(sd in subjdate) {
+  for( r in 1:3 ) {
+    tryCatch({
+       allinfo <- MGSscore.will(sd[[1]],sd[[2]],r,r) 
+       d<-allRunSacs(allinfo)
+       d$subj=sd[[1]]
+       d$date=sd[[2]]
+       d$run=r
+
+       write.table(d,row.names=F,quote=F,file=allinfo$files[["willout"]])
+       cat("finished ", sd[[1]],".",sd[[2]],".",r,"\n")
+   }, error=function(e){print(e)})
+  }
+ }
+}
+
+# score a run (MGS) using extractTrial
+allRunSacs <-function(a) {
+ d <- rbind_all(lapply(1:20, FUN=function(t){ extractTrial(a$preproc,a$runData,a$scored,strial=t)} ))
+}
+
+montezdisplay <- function() {
+ d<-readallMGS()
+ dnorm <- norm.lat(d)
+ print( plotAllSacs(dnorm) )
+
+}
+
+# read all the scored files into one big dataframe
+readallMGS <-function() {
+ d<- rbind_all( lapply( Sys.glob('willout/*MGS.txt'),FUN=read.table,header=T ) )
+}
+
+# normalize time to first saccade onset=0
+# only grab max 1.4 seconds after
+# for DM compare
+norm.lat <-  function(d,...) {
+  ddply(d, c('trial','subj','date','run',...), function(x){ 
+    i<-first(which(x$sacno==1))
+    x %>% 
+      mutate(  time=time-x$time[i], 
+             tscore=first(narm(as.character(unique(HMUC))) ) ) %>% 
+      filter(time>=0,time<=1.4,tscore=='cor')
+  }) 
+}
+
+# load only those we recently added
+# looking through reurn/*R for a list, and extracting between lines of 'startMGSE(subj,date)'
+onlychanged <- function(dnorm) {
+ #subjvisit <- unique(gsub('^statMGSE\\(|\\)|,','',unlist(lapply(Sys.glob('rerun/*R'),function(x){as.character(read.table(x,header=F)$V1)})))) 
+ subjvisit <- Sys.glob('rerun/*R') %>% 
+              lapply(FUN=function(x){as.character(read.table(x,header=F)$V1)}) %>% 
+              unlist %>% 
+              gsub(pattern='^statMGSE\\(|\\)|,',replace='') %>% 
+              unique
+
+ newscore <- dnorm %>% 
+             filter(paste0(subj,date) %in% subjvisit)
+
+ plotAllSacs(newscore)
+}
+
+plotAllSacs <-function(d,allines=F,showtarget=T){
+ if('file' %in% names(d)) d$trial <- paste(d$trial,d$file)
+ p <- ggplot(d %>% filter(HMUC=='cor' ) )+
+      aes(x=time,y=horz_gaze_coord,group=trial,color=as.factor(targetPos)) + 
+      geom_smooth(aes(group=NULL)) +
+      facet_wrap(~targetPos) +
+      scale_y_continuous(limits=c(0,262))
+
+ # individual lines
+ if(allines) p<-p+geom_line(color='yellow',aes(color=NULL))
+
+ # targets
+ if(showtarget) p<-p+
+           geom_hline(data=data.frame(targetPos=1:6,px=settings$xposTargetList ),
+                      aes(yintercept=px) )
+
+ return(p + theme_bw() )
+}
+ 
+# MGSscore.will(lunaid=10125,date=20061021,runno=1,matchrun=2)
 # load a subj's raw data, preproc saccades, scoreRun
 # returns all steps in a list
-willeyeam <- function(lunaid=10125,date=20061021,runno=1,matchrun=1) {
+MGSscore.will <- function(lunaid=10125,date=20061021,runno=1,matchrun=1) {
+  task <- "MGSEncode"
   f<-filesMGS(lunaid,date,runno)
   rawdata <- read.table(f[['raw']],header=T)
   ## danni's functions
@@ -38,10 +126,12 @@ willeyeam <- function(lunaid=10125,date=20061021,runno=1,matchrun=1) {
   #  source('willEye.R'); drunData <- willtodani(aligned);head(drunData)
   
   # score the run
-  scored   <- scoreRun(eyedata,saccades,drunData,outputTable=f[['scored']])
+  #scored   <- scoreRun(eyedata,saccades,drunData,outputTable=f[['scored']])
+  scored   <- scoreRun(eyedata,saccades,drunData,outputTable=NULL)
   
   # everything we've done
   allinfo <- list(
+              files  = f,
               scored =scored,
               runData=drunData,
               aligned=aligned,
@@ -52,6 +142,10 @@ willeyeam <- function(lunaid=10125,date=20061021,runno=1,matchrun=1) {
   return(allinfo)
 }
 
+### extractTrial
+# ---- output
+# raw eye data + sac id,score, and latency
+# ---- input
 # eyedata   preprocessed eye data (actual positions of eye)
 # saccades  start/stop index of a saccade
 # runData   tells us when a trial starts (only look 1.4 seconds in) | NOT orig. rundata, need trial
@@ -64,7 +158,7 @@ extractTrial <- function(eyedata,runData,scored,strial=1,ttype='mgs',tdur=84,sho
   # index of this trial in the run
   tidx <- which(runData$trial==strial&runData$type==ttype)
   # die if we have wrong number of trials
-  if(length(tidx) != 1L ) stop("wrong number of trials ",length(tidx) , "matching trial ", strial," for ", ttype,"!")
+  if(length(tidx) != 1L ) stop("wrong number of trials ",length(tidx) , ". matching trial ", strial," for type ", ttype,"!")
 
   # set start and stop idx
   si <- runData$startInd[tidx]
@@ -91,18 +185,32 @@ extractTrial <- function(eyedata,runData,scored,strial=1,ttype='mgs',tdur=84,sho
 
   # give a numeric score "how many until correct"
   tscore$HMUC <- HMUCscore(tscore) 
+  
+  # target position in runData, also used in accuracy
 
-  # get accuracy
-  #targetPos 7=1,108=2,214=3,426=4,532=5,633=6  
-  # screen x size: 640
-  # asl    x size is 240
-  aslpos <- c(7,108,214,426,532,633) * 240/640
-  #aslpos <- rev(c(7,108,214,426,532,633)) * 240/640
-  targetpos <- aslpos[ runData$targetPos[tidx] ]
-  accpos    <- unique(tscore$accuracy) + targetpos
+  targetpos <- runData$targetPos[tidx]
+
+  #give tscore target pos and type for aggrigating later
+  tscore$targetPos <- targetpos
+  tscore$ttype     <- ttype
+  tscore$trial     <- strial
 
   ## plot
   if(showplot){
+   print(plotscored(tscore,targetpos) )
+  }
+
+  return(tscore)
+}
+
+plotscored <- function(tscore,targetpos=NULL) {
+
+   # get accuracy
+   accpos    <- unique(tscore$accuracy) + targetpos
+
+   #targetPos 7=1,108=2,214=3,426=4,532=5,633=6  
+   # screen x size: 640
+
    p<- ggplot(tscore) + 
     aes(x=time,y=horz_gaze_coord) +
     geom_point() +
@@ -116,13 +224,20 @@ extractTrial <- function(eyedata,runData,scored,strial=1,ttype='mgs',tdur=84,sho
               aes(xintercept=x),
               color='yellow' ) +
     # plot accuracy
-    geom_hline(data=data.frame( y= accpos     ), aes(yintercept=y), color='red', linetype='dotted' ) +
-    geom_hline(data=data.frame( y= targetpos  ), aes(yintercept=y), color='purple') +
-    scale_y_continuous(limits=c(0,240)) +
-    theme_bw()
+    geom_hline(data=data.frame( y= accpos ), aes(yintercept=y), color='red', linetype='dotted' ) +
+    scale_y_continuous(limits=c(0,245)) +
+    theme_bw() +
+    ggtitle(sprintf("trail %d: %s",first(tscore$trial),first(narm(as.character(unique(tscore$HMUC))) )) )
  
-   print(p)
-  }
+   # add targetpos if we have it
+   if(!is.null(targetpos)) {
+     # asl    x size is 240
+     aslpos <- c(7,108,214,426,532,633) * 261/640 #240/640
+     #aslpos <- rev(c(7,108,214,426,532,633)) * 240/640
+     trgloc <- aslpos[ targetpos ]
+     p<-p+geom_hline(data=data.frame( y= trgloc ), aes(yintercept=y), color='purple') 
+   }
+   return(p)
 }
 
 # take will's aligned dataframe (each row is xdat)
@@ -254,11 +369,8 @@ alignToExpected <- function(rawdata,tdr) {
   merge(xraw,tdr,by.x='tdridx',by.y='row',suffixes=c('raw','task'))
 }
 
-# checkAlignment <- function(a) {
-#   a
-# }
-
-
+# get the generic run info from a file
+# function will fail if in wrong directory :(
 getGnrcRun <- function(runno) {
   r <- setDT(read.table('runOrderXdat/all_xdats.txt'))[run==runno]
   # set "real" trial number by cumlitive counting cues that are not 60 (exclude fix)
