@@ -1,6 +1,10 @@
 RUNNING SINGLE SUBJECT
 see scoreOne.bash -h
 
+TASK DIFFERENCES
+ - designed for antisaccades
+ - `mgs` and msgencode (`dani_eyetools_mgsencode`) are scored outside of the main pipeline
+ - `fix` is scored by examping the drops after scoring like antisaccade
 
 
 OVERVIEW 

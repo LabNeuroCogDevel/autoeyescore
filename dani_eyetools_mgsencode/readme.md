@@ -1,3 +1,9 @@
+# Run
+```
+source('score_lunadaterun.R')
+statMGSE(10129,20090825)
+```
+
 # Data
 - Phillips/Cog
 - bea_res
