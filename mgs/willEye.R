@@ -117,7 +117,12 @@ statsPerTrial <- function(d) {
              score=HMUC[first(which(sacno==1))],
              lat=first(narm(latency)),
              prcsn=minabs(accuracy)
-             ) %>%
+             ) 
+}
+
+statsPerRun <-function(d) {
+
+   statsPerTrial(d)          %>%
    group_by(subj,date,score) %>% 
    summarise(n=n(),lat.m=mean(lat),lat.sd=sd(lat),prcsn.m=mean(prcsn),prcsn.sd=sd(prcsn),nsac=mean(nsac) )
 }
