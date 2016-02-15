@@ -1027,9 +1027,44 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
   return(allsacs)
 } 
 
+### SCORE FIXATION
+# x should be like
+#     subj run trial onset slowed end startpos endpos maxpos minpos held cordir
+#    11217   1     3    NA      0   0        0      0     NA     NA    0  FALSE
+#  corpos corside gtMinLen intime distance crossFix MaxMinX gtMinMag startatFix
+#  FALSE   FALSE    FALSE  FALSE       NA        0   FALSE    FALSE      FALSE
+#    p.tracked xdat                reason
+#     0        142                  no saccades (getSacs)
+scoreFixationTrial <-function(x) {
+
+    isFix <-  all( is.na(x$onset) | ( x$corpos & x$distance < 3 ))
+
+    return(data.frame( 
+         trial=x$trial[1],
+         xdat=x$xdat[1],
+         lat=round(x$onset[1]*1000),
+         # proxy for was fix held the whole time
+         fstCorrect=isFix,
+         # cannot correct back to fix -- fix is either held or not!
+         ErrCorr=FALSE,
+         #AS=xdatIsAS(mean(x$xdat)),
+         AS='FX',
+         Desc=''
+       ) )
+ 
+}
+
+### SCORE EVERY TRIAL
 scoreSingleTrial<-function(x,funnybusiness='') { # x is good sacs for that trial
      failreason <-NA
-     if(!is.na(x$reason) && x$reason[1]!=''){
+     dropped <- !is.na(x$reason) && x$reason[1]!=''
+     nosacdrop <- grepl('no saccades', as.character(x$reason[1]) ) 
+
+     # fixes are different from PS and AS
+     # and we can accept a drop if it's because 'no saccades'
+     if (trialIsType(x$xdat[1]) == 'FX' && (!dropped || nosacdrop ) )  {
+       return(scoreFixationTrial(x))
+     } else if(dropped){
        failreason <- as.character(x$reason[1])
      }else if(dim(x)[1]<1 || is.na(x$onset) ){
         failreason <- 'no saccades' 
