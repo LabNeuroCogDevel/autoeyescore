@@ -64,7 +64,7 @@ if [ -n "$usedir" -a -d "$usedir" ]; then
  visitdir=$usedir
 else
  [ -n "$usedir" ] && echo "you provided a bad dir?" && unset AUTO
- subjdir=$(ls -td $TASKDIR/{VGS,Bars*,Anti*}/Basic/*/ | head -n1)
+ subjdir=$(ls -td $TASKDIR/{VGS,Bars*,Anti*,Mix}/Basic/*/ | head -n1)
  visitdir=$(ls -td $subjdir/*/ | head -n1)
 fi
 
@@ -131,7 +131,8 @@ echo "using $dir"
 # convert from bea_res name to will's naming convention (stupid Will)
 declare -A beaTowill=([VGS]='vgs' [BarsScan]='scannerbars' \
                       [BarsBehavioral]='bars' [Anti]='anti'\
-                      [AntiState]="antistate" [Fix]="fix" )
+                      [AntiState]="antistate" [Fix]="fix" \
+                      [Mix]="mix" )
 paradigm=${default[paradigm]}
 paradigm=${paradigm%%/*}
 willtask=${beaTowill[$paradigm]}
