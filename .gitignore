@@ -1,0 +1,11 @@
+*~
+.*.swp
+*/old
+*/results
+*/aux
+*/tsv
+*.Rout
+*.RData
+.*
+audit/
+aux/
