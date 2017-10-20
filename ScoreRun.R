@@ -588,6 +588,15 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     # before was taking the 15th to make sure past any repated start xdat??
     # now only using 1 ahead
 
+    # 20171020 -- sacloc task has some information in the startcode
+    # to get at this we'll modify the actual xdat to include the startcode
+    # startcode:30 |+ target:131 => 30131
+    if( !exists("CAREABOUTSTARTCODE") && CAREABOUTSTARTCODE ) {
+      startcode <- d$xdat[ targetIdxs[trl,1]  - 1]
+      if(startcode == 0 ) warning('startcode is not where expected, this trial is a loss')
+      xdatCode  <- as.numeric(sprintf("%d%d",startcode,xdatCode))
+    }
+
     # getExpPos comes from *.settings.R -- so does sac.thresholds (shouldn't have specified this, but thats how it is now :(  )
     # where the eye should look (opposite of dot if AntiSac, loc of dot if pro. sac)
     ## export to global scopefor plotting
