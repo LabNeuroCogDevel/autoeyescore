@@ -591,7 +591,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     # 20171020 -- sacloc task has some information in the startcode
     # to get at this we'll modify the actual xdat to include the startcode
     # startcode:30 |+ target:131 => 30131
-    if( !exists("CAREABOUTSTARTCODE") && CAREABOUTSTARTCODE ) {
+    if( exists("CAREABOUTSTARTCODE") && CAREABOUTSTARTCODE ) {
       startcode <- d$xdat[ targetIdxs[trl,1]  - 1]
       if(startcode == 0 ) warning('startcode is not where expected, this trial is a loss')
       xdatCode  <- as.numeric(sprintf("%d%d",startcode,xdatCode))
