@@ -132,7 +132,7 @@ echo "using $dir"
 declare -A beaTowill=([VGS]='vgs' [BarsScan]='scannerbars' \
                       [BarsBehavioral]='bars' [Anti]='anti'\
                       [AntiState]="antistate" [Fix]="fix" \
-                      [Mix]="mix" )
+                      [Mix]="mix" [AntiPet]="AntiPet")
 paradigm=${default[paradigm]}
 paradigm=${paradigm%%/*}
 willtask=${beaTowill[$paradigm]}
