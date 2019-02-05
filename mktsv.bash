@@ -22,7 +22,11 @@ for f in $( find $basicdir -maxdepth 5 -mindepth 5 -iname \*.eyd ); do
 
  if [ ! -r $tsv ]; then
   echo $f \> $tsv
-  ../dataFromAnyEyd.pl $f > $tsv
+  if sed 1q $f |grep 'EYEDAT V1.20'; then
+     octave -q <(echo "addpath('..'); read_eyd5('$f','$tsv');")
+  else
+     ../dataFromAnyEyd.pl $f > $tsv
+  fi
   # remove if cannot understand it's format
   [ "$(cat $tsv|wc -l)" -lt 10 ] && echo "Removed $tsv!" && rm $tsv
  fi

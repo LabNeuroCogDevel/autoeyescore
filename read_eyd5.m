@@ -16,7 +16,7 @@ function [outmat] = read_eyd5(full_file, txtout)
 
         fid = fopen(full_file,'r','b');
         if fid == -1
-            error('bad file');
+            error('bad file: %s', full_file);
         end
         
         tmp          = check_line(fid);
@@ -157,9 +157,7 @@ function [outmat] = read_eyd5(full_file, txtout)
                     segflag = 0;
                     if isempty(segbytes)
                         fclose(fid);
-                        ILAB = [];
-                        ILAB.error = 'ASL: No data in file.';
-                        ilabProgressBar('clear')
+                        error('no data in %s',full_file)
                         return
                     end
             end
@@ -373,15 +371,24 @@ function [outmat] = read_eyd5(full_file, txtout)
         end
 
         if ~isempty(txtout)
-           ofid = fopen(txtout,'w');
-           if ofid == -1
-              error('cannot open %s to write', txtout)
-           end
-           fprintf(ofid, 'XDAT\tpupil_diam\thorz_gaze_coord\tvert_gaze_coord\n');
-           fprintf(ofid, '%d\t%d\t%d\t%d\n', outmat');
-           fclose(ofid);
+           write_tsv(txtout, outmat)
         end
+end
 
+function write_tsv(txtout, outmat)
+   if exist(txtout,'file')
+      warning('already have %s; skipping', txtout)
+      return
+   end
+   [tsvdir file]= fileparts(txtout)
+   if ~exist(tsvdir), fprintf('making %s\n', tsvdir); mkdir(tsvdir), end
+   ofid = fopen(txtout,'w');
+   if ofid == -1
+      error('cannot open %s to write', txtout)
+   end
+   fprintf(ofid, 'XDAT\tpupil_diam\thorz_gaze_coord\tvert_gaze_coord\n');
+   fprintf(ofid, '%d\t%d\t%d\t%d\n', outmat');
+   fclose(ofid);
 end
 
 function tmp = check_line(fid)
