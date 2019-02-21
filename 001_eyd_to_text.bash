@@ -24,4 +24,5 @@ export bea_res
    print "read_eyd5('"'"'$F[0]'"','"'$new_file'"'"');";
    ' txt/eyd_version.txt > txt/eyd_to_tsv_120.m
 
-octave txt/eyd_to_tsv_120.m
+echo "NOT RUNNING octave. handled by mktsv.bash or mgs/00_eyd.bash"
+echo "   octave txt/eyd_to_tsv_120.m"

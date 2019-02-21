@@ -6,13 +6,21 @@
 # GLOBALS
 source('eyescoreFunctions.R')
 
+bea_res <- function(...){
+   br <- '/Volumes/L/bea_res/'
+   if (!file.exists(br) ) br <- '~/rcn/bea_res'
+   if (!file.exists(br) ) br <- '/mnt/B/bea_res'
+   if (!file.exists(br) ) stop("cannot find bea_res!")
+   return(file.path(br,...))
+}
+
 # make a file name , .txt is only diff over paste0
 mkfilen <- function(pf,sfx,ext=".txt") {
   sprintf('%s%s%s',pf,sfx,ext)
 }
 
 # get file names for each stage/step
-filesMGS <- function(lunaid,vdate,pfix="~/rcn/bea_res/Data/Tasks/MGS/Basic/") {
+filesMGS <- function(lunaid,vdate,pfix=bea_res("Data/Tasks/MGS/Basic/")) {
   fp <- sprintf("%s/%d/%d/Raw/EyeData/txt/%d.%d.mgs.",pfix,lunaid,vdate,lunaid,vdate)
 
   f <- sapply(c("raw","preproc","runData","scored"),

@@ -191,15 +191,23 @@ scoreEveryone <- function(splitfile,plotfigs=T,saveoutput=T,reuse=T){
    # only do final summaries if we actually grabbed everyone
    if(plotfigs ) {
       #print(perRunStats)
-      p.all<-ggplot(perRunStats, aes(x=as.factor(total),fill=type))+geom_histogram(position='dodge')
+      print("making all graph")
+      p.all<-ggplot(perRunStats) +
+         aes(x=as.factor(total),fill=type) +
+         geom_histogram(position='dodge', stat='count')
 
 
+      print("making subject graph")
       sums<-aggregate(. ~ subj, perRunStats[,c(1:8,match('subj',names(perRunStats))  )],sum)
       longsums <- melt(sums[,names(sums) != 'total'],id.vars="subj")
       p.subj<- ggplot( longsums ) + ggtitle('per subject breakdown of collected data')
-      p.subj<- p.subj +geom_histogram(aes(x=subj,y=value,fill=variable,stat='identity'))
+      p.subj<- p.subj +
+         aes(x=subj,y=value,fill=variable) +
+         geom_histogram(stat='identity')
 
       if(saveoutput){
+
+       print("saving results/sums.tsv and plots")
        write.table(sums,file='results/sums.tsv',sep="\t",quote=F,row.names=F)
        ggsave(p.all,file='results/totalsHist.png')
        ggsave(p.subj,file='results/perSubjHist.png')

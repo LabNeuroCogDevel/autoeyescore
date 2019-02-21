@@ -2,6 +2,9 @@
 set -e
 trap '[ $? -ne 0 ] && echo "exit with error!"' EXIT 
 
+BEA_RES=/Volumes/L/bea_res
+[ $(ls $BEA_RES | wc -l) -lt 1 ] && echo cannot find $BEA_RES && exit 1
+
 function log {
  logfile=logfile.txt
  sed "s/^/[$(date +%F::%H:%M)] /" | tee -a $logfile
@@ -32,8 +35,14 @@ function extractEyd {
   outname="$savedir/$subj.$visit.mgs.raw.txt"
 
   # run if we haven't
+  [ ! -s $eyd ] && echo "# empty eyd file $eyd" >&2 && return 1
   if [ ! -r $outname -o $(cat $outname 2>/dev/null  | wc -l ) -lt 2 ]; then 
-    ../dataFromAnyEyd.pl $eyd > $outname  || echo "$subj $visit: $eyd bad eyetracking data!" >&2
+
+    if sed 1q $eyd |grep 'EYEDAT V1.20'; then
+       octave -q <(echo "addpath('..'); read_eyd5('$eyd','$outname');")  || echo "$subj $visit: $eyd bad eyetracking data!" >&2
+    else
+      ../dataFromAnyEyd.pl $eyd > $outname  || echo "$subj $visit: $eyd bad eyetracking data!" >&2
+    fi 
     checkandrm $outname "removdirtoo"
   fi
 
@@ -48,22 +57,25 @@ function realLog {
     out=$2
     [ -z "$2" -o -z "$1" -o ! -d "$savdir" ] && echo "realLog: bad inputs: savdir '$savdir' out '$out'" >&2 && return 1
 
-    log=( $(find $savdir/../.. -maxdepth 2 -iname 'MGS*txt') )
+    local logpath=$savdir/../..
+    local logpatt='MGS*txt'
+    local log=( $(find $logpath -maxdepth 2 -iname "$logpatt") )
 
     # skip if we dont have exactly one log file
     [ ${#log[@]} -ne 1 ] && 
-      echo "[$s $v] not exactly one log (${#log[@]}) in $logpat: '$log'" >&2 &&
+      echo "[$s $v] not exactly one log (${#log[@]}) in $logpath $logpatt: '$log'" >&2 &&
       return 1
 
     # save log
-    ./parseEP1es.pl ~/rcn/bea_res/Tasks/Behavorial/mgs-beakid/MGS.es $log > $out
+    ./parseEP1es.pl $BEA_RES/Tasks/Behavorial/mgs-beakid/MGS.es $log > $out
 }
 
 function fakeLog {
-    eyein=$1
-    out=$2
+    eyein="$1"
+    out="$2"
     [ -z "$out" -o -z "$eyein" -o ! -r "$eyein" ] && echo "fakelog: bad inputs: eyein '$eyein' out '$out'" >&2 && return 1
     [ $(cat $eyein | wc -l) -lt 2 ]  && echo "bad eyefile" >&2 && return 1
+    echo "#[fakelog] $eyein > $out" >&2
     ./fakeLog.pl $eyein > $out
 }
 
@@ -81,8 +93,10 @@ function extractLog {
     # dont do if we have, comment to redo
     #[ -r $out -a $(cat $out |wc -l) -gt 1 ] && return 0
 
-    realLog $savdir $out || fakeLog $eyein $out
-    checkandrm $out
+    if [ ! -s $out ]; then
+       realLog $savdir $out || fakeLog $eyein $out
+       checkandrm $out
+    fi
 }
 
 
@@ -91,7 +105,7 @@ function extractLog {
 
 # given an eyd or we find all eyds
 eydpat=$@
-[ -z $eydpat ] &&  eydpat=(~/rcn/bea_res/Data/Tasks/MGS/Basic/*/*/[rR]aw/[eE]ye*/*.eyd)
+[ -z $eydpat ] &&  eydpat=($BEA_RES/Data/Tasks/MGS/Basic/*/*/[rR]aw/[eE]ye*/*.eyd)
 
 # for everything we are working on
 for eyd in ${eydpat[@]};do
