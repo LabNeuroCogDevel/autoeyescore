@@ -39,6 +39,7 @@ my $time=0;
 $_=<>; # read header line
 while(<>){
   my ($xdat, $rest)  = split/\s+/;
+  $xdat = 250 if $xdat == 0; # start with zero? call it a stop code
   # increase n if we have a start xdat and we are just starting or we have a previous stop
   $n++ if $xdat < 100 && ($n<0 || $a[$n]->{stop});
   # skip beginning until we have start code

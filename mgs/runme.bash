@@ -1,38 +1,8 @@
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10133/20091230/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10136/20080729/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10141/20090625/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10143/20080728/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10152/20080702/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10153/20080702/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10153/20090604/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10156/20080701/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10157/20080813/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10176/20080813/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10177/20080627/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10181/20091201/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10187/20091223/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10217/20090410/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10218/20090620/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10229/20100421/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10230/20080617/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10230/20090608/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10252/20080613/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10256/20080424/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10263/20070917/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10288/20100517/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10292/20080520/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10300/20080609/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10305/20080724/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10311/20080512/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10315/20080528/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10316/20080527/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10316/20100506/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10343/20090921/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10352/20080822/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10361/20091222/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10365/20081103/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10385/20081119/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10406/20100422/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10451/20081124/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10470/20081024/Raw/EyeData/*eyd
-./00_eyd.bash /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10472/20091012/Raw/EyeData/*eyd
+#!/usr/bin/env bash
+#./00_eyd.bash 
+Rscript <(cat <<EOF
+ source('willEye.R')
+ setMGSGlobals() # sets "settings", called when file is sourced
+ SCORE_ALL(globpat="/Volumes/L/bea_res/Data/Tasks/MGS/Basic/*/*/",pathsvidx=c(9,10))
+EOF
+)

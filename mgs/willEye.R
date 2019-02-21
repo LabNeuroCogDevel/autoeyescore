@@ -200,6 +200,7 @@ MGSscore.will <- function(lunaid=10129,date=20140103,matchrun=1) {
 
   # align raw data to expected task xdats
   tdr     <- getGnrcRun(f[['log']]) 
+
   aligned <- alignToExpected(rawdata, tdr)
   # check that our alignment is good
   if( any(aligned$etyperaw!=aligned$etype) ) warning("some event types are mismatched!")
@@ -530,7 +531,8 @@ alignToExpected <- function(rawdata,tdr) {
 # /Users/lncd/rcn/bea_res/Data/Tasks/MGS/Basic/10312/20090828/Raw/EyeData/txt/10312.20090828.MGS.EPxdat.log
 #  0	StartMGSShort	42	600
 getGnrcRun <- function(filen) {
-  r <- setNames(read.table(filen), c('time','event','xdat','targetPos') )
+  r <- setNames(read.table(filen,sep="\t"), c('time','event','xdat','targetPos') )
+  if(any(is.na(r$xdat))) stop(filen, " has bad xdats!")
   # set "real" trial number by cumlitive counting cues that are not 60 (exclude fix)
   r$rtrial <- cumsum(r$xdat <100 & r$xdat!=60)
   r$row    <- 1:nrow(r) 
