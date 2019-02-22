@@ -28,6 +28,7 @@ filesMGS <- function(lunaid,vdate,pfix=bea_res("Data/Tasks/MGS/Basic/")) {
   
   f[['log']] <- mkfilen(gsub('mgs','MGS',fp),'EPxdat','.log')
   f[['willout']] <- sprintf("./willout/%d.%d.MGS.txt",lunaid,vdate)
+  f[['willout_fix']] <- sprintf("./willout/%d.%d.FIX.txt",lunaid,vdate)
   # files, eg.
   # "/Volumes/Phillips/COG/MGSEncode/10125/20061021/10125.20061021.MGS.raw.txt"
   # "/Volumes/Phillips/COG/MGSEncode/10125/20061021/10125.20061021.MGS.preproc.txt"
