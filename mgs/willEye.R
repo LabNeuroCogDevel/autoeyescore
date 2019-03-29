@@ -23,8 +23,8 @@ library(Biostrings)
 # SCORE_ALL()  scores all files that it can find and saves scored sac to willout/
 # SCORE_ALL(globpat="/Volumes/L/bea_res/Data/Tasks/MGS/Basic/*/*/",pathsvidx=c(9,10))
 
-# indvidual
-# mgscore_list <- MGSscore.will(10767,20110509)
+# indvidual look at fix
+# MGSscore.will(10463,20070924) %>% score_mgs_fix(showplot=T)
 
 ##### 
 # 0. have a raw eye tracking file (parsed from eyd) -- see 00_eyd.bash
@@ -357,12 +357,13 @@ score_mgs_fix <- function(mgsscore_list, showplot=F, redo=F) {
                      s.end=d$s.end - d$i.start)) %>%
        bind_rows
 
-    ggplot(cue_chunks ) +
+    p <- ggplot(cue_chunks ) +
        aes(x=i/60,y=horz_gaze_coord,color=tpos) +
        geom_point() +
        geom_line(data=cue_chunks %>% filter(nsac>0, i >= s.start, i <=s.end), color='black') +
        facet_wrap(~trial) +
        scale_y_continuous(limits=c(0,260)) + theme_bw() 
+    print(p)
   }
 
   return(fix_sacs)
