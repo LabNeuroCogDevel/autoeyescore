@@ -37,7 +37,7 @@
 ### To avoid any conflicts with other R installs (e.g. on arnold)
 ###    use our own packages
 library(devtools)
-dev_mode(TRUE, path = "Rforsoring")
+# dev_mode(TRUE, path = "Rforsoring") # 20190625 - disabled
 
 #
 library(KernSmooth)
@@ -158,10 +158,11 @@ ggplotXpos <- function(est,d,trgt,sac.df,base.val,delt.x.scale,slowpnt.x.scale,p
      g <- g +
            geom_rect(data=sac.df, aes(xmin=onset*sampleHz,xmax=end*sampleHz,
                                       ymin=-Inf,    ymax=Inf,
-                     #fill=as.factor(paste(cordir,corpos)), alpha=intime&gtMinLen  )) + 
-                     color=as.factor(paste(cordir,corpos))),fill=NA,na.value=NA) + 
+                     fill=as.factor(paste(cordir,corpos)), alpha=intime&gtMinLen  )) + 
+                     #color=as.factor(paste(cordir,corpos))),fill=NA,na.value=NA) + 
            scale_fill_manual(values=positionColors) +
            scale_alpha_manual(values=c('TRUE'=.5,'FALSE'=.2))
+
   } 
 
   # put in blinkends if we have any
@@ -187,7 +188,7 @@ ggplotDrv <- function(fst,scnd,slowpnt.x.scale,delt.x.scale) {
   return(drv)
 } 
 
-savePlots <- function(sac.df,g,drv,filename,writetopdf) {
+savePlots <- function(sac.df,g,drv,filename,writetopdf,show_table=F) {
 
   
   # only write to pdf if we are told to
@@ -205,15 +206,15 @@ savePlots <- function(sac.df,g,drv,filename,writetopdf) {
   
   # if we have saccades, show a table
   if(length(sac.df)>0){
-      print (
-        grid.arrange( nrow=3,heights=c(.5,1,.4),
-                #gpar causes errors :(
-                #tableGrob( sac.df[,-c(1:3)],gpar.coretext = gpar(fontsize=6),gpar.coltext=gpar(fontsize=8)),  # exclude index values
-                tableGrob( sac.df[,-c(1:3)]),  # exclude index values
-                 g,
-                 drv
-           ) 
-      )
+     #gpar causes errors :(
+     #tableGrob( sac.df[,-c(1:3)],gpar.coretext = gpar(fontsize=6),gpar.coltext=gpar(fontsize=8)),  # exclude index values
+     # exclude index values
+     if(show_table) {
+        final_plot <- grid.arrange( nrow=3,heights=c(.5,1,.4), tableGrob( sac.df[,-c(1:3)]),  g, drv)
+     } else {
+        final_plot <- grid.arrange( nrow=2,heights=c(1,.4),g, drv)
+     }
+     print(final_plot) 
   }
   # otherwise just show the eye data
   else{
@@ -229,7 +230,7 @@ savePlots <- function(sac.df,g,drv,filename,writetopdf) {
 
 
 ### DROP A TRIAL
-dropTrialSacs <- function(subj,runtype,trl,xdatCode,reason,allsacs,showplot=F,savedas=NULL,writetopdf=F,run=0,rundate=0) {
+dropTrialSacs <- function(subj,runtype,trl,xdatCode,reason,allsacs,showplot=F,savedas=NULL,writetopdf=F,run=0,rundate=0,show_table=F) {
    cat(sprintf('DROP: %s.%s.%s.%s %s\n',subj,rundate, run, trl,reason))
 
    ## write what is dropped
@@ -257,7 +258,7 @@ dropTrialSacs <- function(subj,runtype,trl,xdatCode,reason,allsacs,showplot=F,sa
       filename<-paste(outputdir,'/', filename,'.pdf', sep="")
       if(!file.exists(outputdir)) { dir.create(outputdir,recursive=T) }
 
-      savePlots(sac.df=NULL,g,drv=NULL,filename,writetopdf)
+      savePlots(sac.df=NULL,g,drv=NULL,filename,writetopdf,show_table=show_table)
    }
 
    # return empty data frame -- no sacs
@@ -601,6 +602,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     # where the eye should look (opposite of dot if AntiSac, loc of dot if pro. sac)
     ## export to global scopefor plotting
     sac.thres <<- getExpPos(sac.thresholds,xdatCode)
+    if(is.na(sac.thres)) warning(xdatCode, " is unknown!")
 
     #expected  mag and direction of saccade
     sac.expmag <<- sac.thres - screen.x.mid
@@ -983,7 +985,8 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
       }
     }
 
-    
+    #browser()
+    ## done cacluating things - plot and save? 
 
     
     #cat('mean', base.val , '\n')
@@ -1011,6 +1014,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
        savePlots(sac.df,g,drv,filename,writetopdf)
     }
 
+    # return everying with subject info
     allsacs <- rbind(allsacs,
                    data.frame(
                      subj=subj,run=run,trial=trl,

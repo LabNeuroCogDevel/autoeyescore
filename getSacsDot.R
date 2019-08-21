@@ -30,10 +30,20 @@ getSacDot <- function(dotnotation, showplot=T,funnybusiness='',showcmd=F) {
  # filebasedir come from *settings.R file
  dirbase  <- sprintf("%s/%s/%s",filebasedir,parts['subj'],parts['date'])
 
- eyetrack <- sprintf("%s/Raw/EyeData/txt/%s.%s.%s.data.tsv",dirbase,parts['subj'],parts['date'],parts['run'])
- if(!file.exists(eyetrack)) eyetrack<-sprintf("%s/Raw/EyeData/txt/%s.%s.%s.%s.data.tsv",dirbase,parts['subj'],parts['date'],taskname,parts['run'])
 
- saveto   <- sprintf("%s/Scored/txt/%s.%s.%s.sac.tsv",dirbase,parts['subj'],parts['date'],parts['run'])
+ inputdir <- 'Raw/EyeData/txt'
+ outputdir <- 'Scored/txt'
+ eyetrack <- sprintf("%s/%s/%s.%s.%s.data.tsv",dirbase,inputdir,parts['subj'],parts['date'],parts['run'])
+ saveto   <- sprintf("%s/%s/%s.%s.%s.sac.tsv",dirbase,outputdir,parts['subj'],parts['date'],parts['run'])
+
+ # maybe we have taskname in the file?
+ if(!file.exists(eyetrack)) eyetrack<-sprintf("%s/%s/%s.%s.%s.%s.data.tsv",dirbase,inputdir, parts['subj'],parts['date'],taskname,parts['run'])
+ # 20190625 - RPG/mMR does not match rest of studies
+ if(!file.exists(eyetrack)){
+    eyetrack<-sprintf("%s/%s/%s.%s.%s.fake.tsv",dirbase,'txt', parts['subj'],parts['date'],parts['run'])
+    saveto   <- sprintf("%s/%s/%s.%s.%s.sac.tsv",dirbase,'txt/scored_fake',parts['subj'],parts['date'],parts['run'])
+ }
+
 
  # if we want subj.date.run.* # all trials
  if(grepl('\\*$',dotnotation)){
