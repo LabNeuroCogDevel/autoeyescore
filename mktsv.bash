@@ -21,7 +21,7 @@ findeyd(){
 [ ! -f nameTSV.bash ] && echo "not in a task score directory! cannot find $(pwd)/nameTSV.bash" && exit 1
 source nameTSV.bash
 
-findeyd | while IFS= read -r -d $'\0' f; do
+findeyd  $basicdir | while IFS= read -r -d $'\0' f; do
  outdir="$(mkoutdir "$f")"
  tsvname="$(nameTSV "$f")"
  # make sure we have something that makes sense
