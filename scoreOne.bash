@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+cd $(dirname $0)
 set -e
 ##
 #
@@ -216,8 +217,8 @@ cat > $tmp <<HEREDOC
   print(p.allbd); x11()
   print(p.subj)
 
-  cat('\ndone?');
- readLines(file('stdin'),1)
+  print("waiting for all plots to close")
+  while(length(dev.list())) Sys.sleep(.5)
 HEREDOC
 
 # give instructions and run
@@ -231,7 +232,9 @@ To rerun open R and run: source('$tmp')
 "
 #R=$(which R)
 #[ "$R" = "/Library/Frameworks/R.framework/Resources/bin/R" ] && R=/sw/bin/R
-R CMD BATCH --vanilla --no-save --no-restore $tmp 
+# 20200218 -- R CMD BATCH doesn't run?
+#R CMD BATCH --vanilla --no-save --no-restore $tmp 
+Rscript $tmp 
 
 cat "$(basename $tmp)out"
 mv "$(basename $tmp)out" $TMPDIR
