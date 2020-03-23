@@ -59,8 +59,7 @@ getSacDot <- function(dotnotation, showplot=T,funnybusiness='',showcmd=F) {
  getSacs(eyetrack,parts['subj'],parts['run'],bname,onlyontrials=trial,savedas=saveto,writetopdf=F,showplot=showplot,rundate=parts['date'],funnybusiness=funnybusiness)
 }
 
-getRunDot <- function(dotnotation, showplot=F,funnybusiness='',showcmd=F,auditor=NULL) {
- auditdf <- NULL;
+getRunDot <- function(dotnotation, showplot=F,funnybusiness='',showcmd=F,auditor=NULL, cleanup=T) {
  if(is.null(auditor)) {
   cat('What are your initials? ')
   auditor<-readline()
@@ -70,7 +69,7 @@ getRunDot <- function(dotnotation, showplot=F,funnybusiness='',showcmd=F,auditor
  parts <- as.numeric(parts);
  names(parts) <- c('subj','date','run')
 
- dirbase  <- sprintf("%s/%s/%s",filebasedir,parts['subj'],parts['date'])
+ dirbase  <- sprintf("%s/%s/%s", filebasedir, parts['subj'], parts['date'])
  eyetrack <- sprintf("%s/Raw/EyeData/txt/%s.%s.%s.data.tsv",dirbase,parts['subj'],parts['date'],parts['run'])
  # for mix, maybe also anti?
  if(!file.exists(eyetrack)) eyetrack <- sprintf("%s/Raw/EyeData/txt/%s.%s.%s.%s.data.tsv",dirbase,parts['subj'],parts['date'],taskname,parts['run'])
@@ -84,8 +83,29 @@ getRunDot <- function(dotnotation, showplot=F,funnybusiness='',showcmd=F,auditor
      correct
     },error=function(e){ cat('couldnt open eplog!\n'); NULL })
 
- if(showplot==T){
-    for(trial in 1:expectedTrialLengths){
+ if (showplot==T) {
+    # where to save
+    tname <- basename(gsub("Basic/", "", filebasedir))
+    auditpath <- file.path("audit", tname)
+    if (!dir.exists(auditpath)) dir.create(auditpath)
+    auditfile <- file.path(auditpath, paste0(dotnotation, ".", auditor, ".audit.txt"))
+
+    # if first pass
+    trials <- 1:expectedTrialLengths
+    auditdf <- NULL
+
+    # try to resume from semi completed
+    if (file.exists(auditfile)) {
+       auditdf <- read.table(auditfile)
+       trials <- setdiff(trials, auditdf$trail)
+       if (length(trials)==0L) {
+          warnings("already finished! to redo, rm ", auditfile)
+       } else {
+          cat("resuming from ", trials[1])
+       }
+    }
+
+    for(trial in trials){
        ## TODO, open audit file, redo
        print(trial)
        sacs<-getSacs(eyetrack,
@@ -109,11 +129,14 @@ getRunDot <- function(dotnotation, showplot=F,funnybusiness='',showcmd=F,auditor
         reason="";
        } else {
          good=0;
-         cat('what should the score be\n(-1 drop,0 incorect, 1 correct, 2 error corr, NA = donno)\n')
+         cat("what should the score be\n(-1 drop,0 incorect, 1 correct, 2 error corr, NA = donno)\n")
          shouldbe<-readline()
-         cat('whats wrong?')
+         cat("whats wrong?")
          reason<-readline()
        }
+
+       # cleanup plots when we are done
+       if(showplot & cleanup) dev.off()
 
       # show all of these
       thisrun<-data.frame(subj=parts['subj'],visit=parts['date'], run=parts['run'], 
@@ -127,7 +150,7 @@ getRunDot <- function(dotnotation, showplot=F,funnybusiness='',showcmd=F,auditor
         print('adding')
         auditdf <- rbind(auditdf,thisrun)
        }
-       write.table(file=file.path('audit',paste0(dotnotation,'.',auditor,'.audit.txt')),auditdf)
+       write.table(file=auditfile,auditdf)
     }
  }
  

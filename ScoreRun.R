@@ -602,7 +602,8 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     # where the eye should look (opposite of dot if AntiSac, loc of dot if pro. sac)
     ## export to global scopefor plotting
     sac.thres <<- getExpPos(sac.thresholds,xdatCode)
-    if(is.na(sac.thres)) warning(xdatCode, " is unknown!")
+    if(length(xdatCode)==0) xdatCode=""
+    if(is.na(sac.thres)) warning(sprintf("'%s' is unknown xdatcode!",xdatCode))
 
     #expected  mag and direction of saccade
     sac.expmag <<- sac.thres - screen.x.mid
