@@ -9,6 +9,7 @@ if(!exists('filebasedir')) {
 # arnold (users/lncd/rnc/ vs reese (mnt/b)
 taskdir <- gsub('.*/Data/Tasks','',filebasedir)
 Bdir <- '/mnt/B/'
+if(!file.exists(Bdir)) { Bdir <- "/Volumes/L/" }
 if(!file.exists(Bdir)) { Bdir <- '/Users/lncd/rcn/' }
 if(!file.exists(Bdir)) { stop('cannot find good location for B') }
 
@@ -62,7 +63,7 @@ getSacDot <- function(dotnotation, showplot=T,funnybusiness='',showcmd=F) {
 getRunDot <- function(dotnotation, showplot=F,funnybusiness='',showcmd=F,auditor=NULL, cleanup=T) {
  if(is.null(auditor)) {
   cat('What are your initials? ')
-  auditor<-readline()
+  auditor <- readLines("stdin", n=1)
  }
 
  parts <- unlist(strsplit(dotnotation, '\\.'))
@@ -122,7 +123,7 @@ getRunDot <- function(dotnotation, showplot=F,funnybusiness='',showcmd=F,auditor
 
        ## ask questions
        cat('Scored Correctly?[enter for yes]')
-       good<-readline()
+       good <- readLines("stdin", n=1)
        if(good==""){
         good=1;
         shouldbe=score$Count;
@@ -130,9 +131,9 @@ getRunDot <- function(dotnotation, showplot=F,funnybusiness='',showcmd=F,auditor
        } else {
          good=0;
          cat("what should the score be\n(-1 drop,0 incorect, 1 correct, 2 error corr, NA = donno)\n")
-         shouldbe<-readline()
+         shouldbe <- readLines("stdin", n=1)
          cat("whats wrong?")
-         reason<-readline()
+         reason <- readLines("stdin", n=1)
        }
 
        # cleanup plots when we are done

@@ -6,7 +6,7 @@ setwd("/Volumes/Hera/Projects/autoeyescore/")
 
 
 o <- docopt::docopt(
-"antipet quality check
+"eye quality check
 
 Usage:
   eyeQC.R tasks
@@ -26,7 +26,7 @@ if (o$tasks) {
 
 src <- sprintf("%s/%s.settings.R", o$task, o$task)
 if (!file.exists(src))
-   error("no settings file for task ", task, " like '", src, "'")
+   stop("no settings file for task ", o$task, " like '", src, "'. see eyeQC.R tasks")
 
 source(src)
 source("ScoreRun.R")
@@ -55,11 +55,10 @@ if (o$done) {
    quit()
 }
 if (o$reverse) need <- rev(need)
-if (o$random) need <- need[sample(seq_len(need))]
+if (o$random) need <- need[sample(1:length(need))]
 
 for (dot in need) {
-   getRunDot(dot, showplot=T)
+   getRunDot(dot, showplot=T, auditor=o$auditor)
    cat("====== finished ", dot, "\n\n\n")
-   cat("Want to stop? Push Ctrl-C.\nEnter to continue\n")
-   readline()
+   readline("Want to stop? Push Ctrl-C.\nEnter to continue\n")
 }
