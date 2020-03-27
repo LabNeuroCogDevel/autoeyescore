@@ -10,7 +10,8 @@ o <- docopt::docopt(
 
 Usage:
   eyeQC.R tasks
-  eyeQC.R <task> <auditor> [todo | done | --reverse | --random | <dotnotation> ]
+  eyeQC.R <task> --pdf ( redo | todo | done | <dotnotation> )
+  eyeQC.R <task> <intials> ( todo | done | reverse | random | <dotnotation> ) [ --droponly ] 
   eyeQC.R (-h | --help)
 
 Options:
@@ -27,23 +28,36 @@ if (o$tasks) {
 src <- sprintf("%s/%s.settings.R", o$task, o$task)
 if (!file.exists(src))
    stop("no settings file for task ", o$task, " like '", src, "'. see eyeQC.R tasks")
-
 source(src)
 source("ScoreRun.R")
 source("getSacsDot.R")
 
-# if we only want to do one
-if (length(o$dotnotation)>0L) {
-   getRunDot(o$dotnotation, showplot=T)
-   quit()
-}
 
+outdir <- file.path('audit', o$task)
 # all files
-allfiles <- Sys.glob(sprintf("%s/*/*/Raw/EyeData/txt/*.*.*.data.tsv",
-                             filebasedir))
+if(!is.null(o$dotnotation)) {
+    di <- dot2runinfo(o$dotnotation)
+    allfiles <- Sys.glob(sprintf("%s/%s/%s/Raw/EyeData/txt/%s.data.tsv",
+                                 filebasedir,
+                                 di$part['subj'], di$part['date'],
+                                 o$dotnotation))
+} else {
+    cat("# generating list of all raw eye files\n")
+    allfiles <- Sys.glob(sprintf("%s/*/*/Raw/EyeData/txt/*.*.*.data.tsv",
+                                 filebasedir))
+}
+# how to represent trials
 dots <- gsub(".data.tsv", "", basename(allfiles))
-have <- lapply(Sys.glob(paste0("audit/AntiPet/*_", o$auditor, ".txt")),
-               function(f) gsub("_*", "", basename(f)))
+
+cat("# generating list of all completed files\n")
+if(o$pdf) {
+    have <- lapply(Sys.glob(paste0(outdir,"/pdf/*/")), basename)
+} else if(is.null(o$dotnotation)) {
+    have <- lapply(Sys.glob(paste0(outdir,"/*_", o$intials, ".txt")),
+                   function(f) gsub("_*", "", basename(f)))
+} else {
+    have <- list()
+}
 need <- setdiff(dots, have)
 # just show what we have todo and quit
 if (o$todo) {
@@ -54,11 +68,20 @@ if (o$done) {
    cat(paste(collapse="\n", have), "\n")
    quit()
 }
+
+# how to organize
 if (o$reverse) need <- rev(need)
 if (o$random) need <- need[sample(1:length(need))]
 
+
 for (dot in need) {
-   getRunDot(dot, showplot=T, auditor=o$auditor)
+    if(o$pdf) {
+        pdfdir <- file.path(outdir,'pdf', dot)
+        print(sprintf('pdfrun(%s,%s)', dot,pdfdir))
+        pdfrun(dot, pdfdir)
+        next
+    }
+   getRunDot(dot, showplot=T, auditor=o$intials, pdfdir=pdfdir)
    cat("====== finished ", dot, "\n\n\n")
    readline("Want to stop? Push Ctrl-C.\nEnter to continue\n")
 }

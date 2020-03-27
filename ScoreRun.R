@@ -225,13 +225,19 @@ savePlots <- function(sac.df,g,drv,filename,writetopdf,show_table=F) {
    dev.off()
   }
   #grid.newpage()
+
 }
 
 
 
 ### DROP A TRIAL
-dropTrialSacs <- function(subj,runtype,trl,xdatCode,reason,allsacs,showplot=F,savedas=NULL,writetopdf=F,run=0,rundate=0,show_table=F) {
+dropTrialSacs <- function(subj,runtype,trl,xdatCode,reason,allsacs,showplot=F,savedas=NULL,writetopdf=F,run=0,rundate=0,show_table=F, aslist=F) {
+    # return dropped saccade info
+    # and maybe create a plot
    cat(sprintf('DROP: %s.%s.%s.%s %s\n',subj,rundate, run, trl,reason))
+
+   # for list return. initialize graph
+   g <- NULL
 
    ## write what is dropped
    outputdir=saverootdir;
@@ -241,23 +247,27 @@ dropTrialSacs <- function(subj,runtype,trl,xdatCode,reason,allsacs,showplot=F,sa
           sprintf("%s\n",reason))
    }
 
-   if(showplot==T){
+   if(showplot|aslist){
       ptitle <- paste(subj,runtype, trl,xdatCode, paste('DROPPED!', reason) )
       g    <- ggplotXpos(est=NULL,d,trgt,sac.df=NULL,base.val=NULL,delt.x.scale=NULL,slowpnt.x.scale=NULL,ptitle)
       #g    <- g + theme(legend.position="top") , causes error
-
+    }
+    if(showplot) {
+      ## savedas: *pdf, *txt, or NULL
       # set and make if ness. output directory for plotsj
+      tinfo<-paste(sprintf("%02d",trl),xdatCode,sep="-")
+      print(savedas) 
       if(is.null(savedas)){ 
-        outputdir <- paste(saverootdir, subj,paste(run,runtype,'DROPPED',sep=".") ,sep="/")
+        outputdir <- file.path(saverootdir, subj, paste(run,runtype,'DROPPED',sep="."))
+        filename<-paste(outputdir,'/', tinfo,'.pdf', sep="")
+      } else if(grepl('.pdf$',savedas)){
+        outputdir <- dirname(savedas)
+        filename <- savedas
       } else {
-        outputdir <- paste(dirname(savedas),'img',sep='/')
+        outputdir <- file.path(dirname(savedas),'img')
+        filename <- paste(outputdir,'/', tinfo, '.pdf', sep="")
       }
-      if(!file.exists(outputdir)) { dir.create(outputdir,recursive=T) }
       
-      filename<-paste(sprintf("%02d",trl),xdatCode,sep="-")
-      filename<-paste(outputdir,'/', filename,'.pdf', sep="")
-      if(!file.exists(outputdir)) { dir.create(outputdir,recursive=T) }
-
       savePlots(sac.df=NULL,g,drv=NULL,filename,writetopdf,show_table=show_table)
    }
 
@@ -275,6 +285,8 @@ dropTrialSacs <- function(subj,runtype,trl,xdatCode,reason,allsacs,showplot=F,sa
    } else {
     allsacs <- rbind( allsacs, droppedTrial)
    }
+
+   if(aslist) return(list(allsacs=allsacs, g=g, drv=NULL))
    return(allsacs)
 }
 
@@ -544,7 +556,7 @@ interoplateSamples <- function(trl, funnybusiness=''){
 }
 
 # returns 'allsacs' a list of all saccades in each trial
-getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writetopdf=F,savedas=NULL, showplot=F, funnybusiness=""){
+getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writetopdf=F,savedas=NULL, showplot=F, funnybusiness="", pdffname=NULL, aslist=F){
   
   # this inputs might not come in as numbers
   subj   <-as.numeric(subj)
@@ -559,9 +571,11 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
   targetIdxs <<- parseRawForTargets(eydfile,funnybusiness)
 
   if(is.character(targetIdxs)) {
-    allsacs <- dropTrialSacs(subj,runtype,1:expectedTrialLengths,0,samples,
-                         allsacs,showplot=F,run=run,rundate=rundate)
-    return(allsacs) 
+    r <- dropTrialSacs(subj,runtype,1:expectedTrialLengths,0,samples,
+                       allsacs,showplot=F,run=run,rundate=rundate,
+                       savedas=pdffname, writetopdf=writetopdf, aslist=T)
+    if(aslist) return(r)
+    return(r$allsacs) 
   }
 
   
@@ -580,7 +594,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     nrow(targetIdxs)
     if(trl>nrow(targetIdxs)){
      #cat('BAD TRIAL NUMBER ', trl, ' only have ', nrow(targetIdxs), ' trials')
-     allsacs <- dropTrialSacs(subj,runtype,trl,0,'no trial in data',allsacs,showplot=F,run=run,rundate=rundate)
+     allsacs <- dropTrialSacs(subj,runtype,trl,0,'no trial in data',allsacs,showplot=F,run=run,rundate=rundate,savedas=pdffname, writetopdf=writetopdf)
      next
     }
     # target code xdat is a little past where target index starts
@@ -618,7 +632,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     b.all <- interoplateSamples(trl,funnybusiness)
     if(is.character(b.all)){
      failreason <- b.all
-     allsacs <- dropTrialSacs(subj,runtype,trl,xdatCode,failreason,allsacs,showplot=showplot,run=run,rundate=rundate)
+     allsacs <- dropTrialSacs(subj,runtype,trl,xdatCode,failreason,allsacs,showplot=showplot,run=run,rundate=rundate,savedas=pdffname, writetopdf=writetopdf)
      next
     }
 
@@ -636,7 +650,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     #print(c(SOI.actual,SOI.expect))
     #print(b.all)
     if(SOI.actual < SOI.expect*.30 && !any(grepl('soipercent',funnybusiness))) {
-     allsacs <- dropTrialSacs(subj,runtype,trl,xdatCode,'< 30% tracking for samples of interest',allsacs,showplot=showplot,run=run,rundate=rundate)
+     allsacs <- dropTrialSacs(subj,runtype,trl,xdatCode,'< 30% tracking for samples of interest',allsacs,showplot=showplot,run=run,rundate=rundate,savedas=pdffname, writetopdf=writetopdf)
      next 
     }
 
@@ -650,7 +664,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     if(is.nan(base.val) || abs(base.val-screen.x.mid )>50) {
      allsacs <- dropTrialSacs(subj,runtype,trl,xdatCode,
                    sprintf('average fixpos(%f) is off from baseline(%f)!',base.val,screen.x.mid ),
-                   allsacs,run=run,showplot=showplot,rundate=rundate)
+                   allsacs,run=run,showplot=showplot,rundate=rundate,savedas=pdffname, writetopdf=writetopdf)
      next;
     }
 
@@ -664,7 +678,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
                            numtoofarfrombaseline,
                            max(averageChangeBeforePhysOnset),
                            sac.minmag,base.val),
-                     allsacs,run=run,showplot=showplot,rundate=rundate)
+                     allsacs,run=run,showplot=showplot,rundate=rundate,savedas=pdffname, writetopdf=writetopdf)
      next
     }
 
@@ -674,7 +688,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     if(is.na(averageChange) || (averageChange > xposStdDevMax && !any(grepl('ignorexpossd',funnybusiness)) )   ) {
      allsacs <-  dropTrialSacs(subj,runtype,trl,xdatCode,
                      sprintf('poor tracking: sd of xpos Δ=%f',averageChange),
-                     allsacs,run=run,showplot=showplot,rundate=rundate)
+                     allsacs,run=run,showplot=showplot,rundate=rundate,savedas=pdffname, writetopdf=writetopdf)
      next
     }
 
@@ -682,7 +696,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
    # or way too many
    # 200 might be too low of a threshold
    if (   length(b.all$x ) > 200 ) {
-     dropTrialSacs(subj,runtype,trl,xdatCode,paste('too many samples in trial', dim(b.all$x)[1]),allsacs,showplot=showplot,run=run,rundate=rundate) 
+     dropTrialSacs(subj,runtype,trl,xdatCode,paste('too many samples in trial', dim(b.all$x)[1]),allsacs,showplot=showplot,run=run,rundate=rundate,savedas=pdffname, writetopdf=writetopdf) 
      next 
     }
     
@@ -708,7 +722,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     ){
      allsacs <- dropTrialSacs(subj,runtype,trl,xdatCode,
                  sprintf('moving (%.3f px/60Hz) before target onset',maxBeforeOnset),
-                 allsacs,showplot=showplot,run=run,rundate=rundate)
+                 allsacs,showplot=showplot,run=run,rundate=rundate,savedas=pdffname, writetopdf=writetopdf)
      next
     }
 
@@ -759,7 +773,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     ###### DROP TRIAL CONDITIONS
     # no saccades, also will trap no enough data
     if( nsacs<1  ){
-     allsacs <- dropTrialSacs(subj,runtype,trl,xdatCode,'no saccades (getSacs)',allsacs,run=run,showplot=showplot,rundate=rundate)
+     allsacs <- dropTrialSacs(subj,runtype,trl,xdatCode,'no saccades (getSacs)',allsacs,run=run,showplot=showplot,rundate=rundate,savedas=pdffname, writetopdf=writetopdf)
      next
     }
 
@@ -777,7 +791,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     # test again for no sacs
     if( nsacs<1  ){
      allsacs <- dropTrialSacs(subj,runtype,trl,xdatCode,sprintf('no saccades within sac.time(%.3f)',sac.time),
-                          allsacs,run=run,showplot=showplot,rundate=rundate)
+                          allsacs,run=run,showplot=showplot,rundate=rundate,savedas=pdffname, writetopdf=writetopdf)
      next
     }
 
@@ -952,7 +966,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
      #                        max(fst$y[which(fst$x - x*sampleHz > 0)[1:20]]) > sac.slowvel
      #                   }) )
      if(is.na(unheldblinks) || any(unheldblinks)) {
-        allsacs <-  dropTrialSacs(subj,runtype,trl,xdatCode,'blink ends before any saccades',allsacs,run=run,showplot=showplot,rundate=rundate)
+        allsacs <-  dropTrialSacs(subj,runtype,trl,xdatCode,'blink ends before any saccades',allsacs,run=run,showplot=showplot,rundate=rundate,savedas=pdffname, writetopdf=writetopdf)
         next
      }
 
@@ -981,7 +995,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
       if( firstblinkbeforesac  > maxBlinkLengthBeforeFirstSac){
         allsacs <-  dropTrialSacs(subj,runtype,trl,xdatCode,
                       sprintf('blink starts %.3f before any saccade',firstblinkbeforesac),
-                      allsacs,run=run,showplot=showplot,rundate=rundate)
+                      allsacs,run=run,showplot=showplot,rundate=rundate,savedas=pdffname, writetopdf=writetopdf)
         next
       }
     }
@@ -1010,9 +1024,10 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
        # write out plot
        #filename<-paste(sprintf("%02d",trl),xdatCode,sep="-")
        #filename<-paste(outputdir,'/img/', filename,'.pdf', sep="")
-       filename<-sprintf('%s/img/%d.%d.%d.%02d-%d.pdf',outputdir,subj,rundate,run,trl,xdatCode)
+       if(is.null(pdffname))
+         pdffname<-sprintf('%s/img/%d.%d.%d.%02d-%d.pdf',outputdir,subj,rundate,run,trl,xdatCode)
 
-       savePlots(sac.df,g,drv,filename,writetopdf)
+       savePlots(sac.df,g,drv,pdffname,writetopdf)
     }
 
     # return everying with subject info
@@ -1038,6 +1053,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
    print('wrote')
   }
 
+  if(aslist) return(list(allsacs=allsacs,g=g))
   return(allsacs)
 } 
 
