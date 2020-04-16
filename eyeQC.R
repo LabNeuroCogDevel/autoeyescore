@@ -11,7 +11,7 @@ o <- docopt::docopt(
 Usage:
   eyeQC.R tasks
   eyeQC.R <task> --pdf ( redo | todo | done | <dotnotation> )
-  eyeQC.R <task> <intials> ( todo | done | reverse | random | <dotnotation> ) [ --droponly ] 
+  eyeQC.R <task> <intials> ( todo | done | reverse | random | <dotnotation> ) [ --droponly ]
   eyeQC.R (-h | --help)
 
 Options:
@@ -37,17 +37,15 @@ outdir <- file.path('audit', o$task)
 # all files
 if(!is.null(o$dotnotation)) {
     di <- dot2runinfo(o$dotnotation)
-    allfiles <- Sys.glob(sprintf("%s/%s/%s/Raw/EyeData/txt/%s.data.tsv",
-                                 filebasedir,
-                                 di$part['subj'], di$part['date'],
-                                 o$dotnotation))
+    allinfo <- getFiles(di$eyetrack)
 } else {
     cat("# generating list of all raw eye files\n")
-    allfiles <- Sys.glob(sprintf("%s/*/*/Raw/EyeData/txt/*.*.*.data.tsv",
-                                 filebasedir))
+    allinfo <- getFiles()
 }
-# how to represent trials
-dots <- gsub(".data.tsv", "", basename(allfiles))
+
+# pull out parts we care about
+allfiles <- allinfo$file
+dots <-  allinfo$id
 
 cat("# generating list of all completed files\n")
 if(o$pdf) {
