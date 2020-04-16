@@ -394,7 +394,10 @@ parseRawForTargets <- function(eydfile, funnybusiness=''){
   }
 
   if(! length(goodTargPos) %in% expectedTrialLengths ) {
-    cat('WARNING: unexpected num of trials: ', length(goodTargPos),'\n')
+    cat('WARNING: unexpected num of trials: ',
+        length(goodTargPos), '!%in% ',
+        paste(collaspe=" or ", expectedTrialLengths),
+        '\n')
   }
 
   return(targetIdxs)
