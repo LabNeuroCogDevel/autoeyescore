@@ -43,13 +43,14 @@ all(sacs_old[,n] == sacs_new[,n])
 sacs_new$p.tracked <- tracked_withinsac(sacs_new, eyedf$xpos[tinfo[[1]]$trgidxs])
 all(sacs_new$p.tracked == sacs_old$p.tracked) # all 1 -- full coverage
 
-# add scored
-sacs_new_scored <- score_sacs(sacs_new, sac.expmag, ti1$baseline)
+# add scored - sac.thres and sac.expmag from interpolateSamples globals
+sacs_new_pos <- sac_pos(sacs_new, sac.thres, sac.expmag, ti1$baseline)
 
 
 ### for real, all together
-sacs_new_all <- score_trial(eyedf$xpos[ti1$trgidxs], interp_df$xpos[ti1$trgidxs], interps$b.approx$xpos[ti1$trgidxs], ti1$baseline, opts)
-all(sacs_new_all == sacs_new_scored)
+xdat <- eyedf$xdat[ti1$trgidxs[1]] 
+sacs_new_all <- trial_sacs(eyedf$xpos[ti1$trgidxs], interp_df$xpos[ti1$trgidxs], interps$b.approx$xpos[ti1$trgidxs], xdat, ti1$baseline, opts)
+all(sacs_new_all == sacs_new_pos)
 
 dropreason <- drop_interp(interp_df[ti1$trgidxs,], ti1$baseline, opts)
 dropreason <- no_early_move(eyedf$xpos[1:(opts$lat.fastest*opts$sampleHz)], opts)

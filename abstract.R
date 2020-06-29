@@ -10,10 +10,10 @@
 #  opts <- studysettings(): task and algo settings/options. passed everwhere. 
 #  eyedf <- {read,clean}_data(): all raw data
 #  b.approx, interp_df/b.nona <- interp_samples(): blink exended and sike removed, nan's removed
-#  -- trial  <- score_trial() --
+#  -- trial  <- trial_sacs() --
 #  blinks <- find_blinks(): blink index info
 #  sac_df <- find_saccades():  where eye movement velocity excites expected
-#         <- score_sacs():     use expected position to "score" saccades
+#         <- sac_pos():     use expected position to "score" saccades
 
 
 
@@ -32,6 +32,14 @@ studysettings <- function(...){
    stopcodes=c(250,254,255),
    sac.time=1.45,           # how long is the target up before we see the fixation cross again?
    sac.majorRegionEnd=.75,  # the useful saccades probably already occur
+   ## XDAT functions -> trial info
+   # use xdat to get trial info
+   # what is the threshold for left/right position
+   # xdatCode is index for thesholds (1 -> right short, 2-> right long, 3->left short, 4->left long)
+   getExpPos=function(xdat) return(c(258, 172, 87, 2)[ xdat - 130 ] ),
+   # is this xdat an antisaccde xdat?
+   xdatIsAS=function(xdat) return(TRUE),
+   trialIsType=function(xdat) return('AS'),
 
       
    ## equipment - ASL eyetracker circa ~2000
@@ -312,7 +320,7 @@ drop_blink <- function(ts, sac.df, blinks, opts) {
 
     ###### DROP TRIAL CONDITIONS
     # no saccades, also will trap no enough data
-    if(nrow(sac.df)<1L){return('no saccades (getSacs)')}
+    if(nrow(sac.df)<1L){return('no saccades (drop_blink)')}
 
     # BLINK DROP
     # drop if there is a long blink that ends before any good sacade begins
@@ -462,19 +470,20 @@ interp_samples <- function(ts, opts){
     return(namedList(b.approx, b.nona))
 }
 
-score_sacs <- function(sac.df, sac.expmag, base.val) {
-    # sac.thres for anti like  2, 87, 172 or 258 (left to right)
-    # likely from e.g.  getExpPos(sac.thresholds,xdatCode)
-    # sac.expmag <- sac.thres - screen.x.mid
+sac_pos <- function(sac.df) {
+    # use position to inform extracted saccades
+    # used soley by trail_pos
+    # here to make it "easier" to read through code (maybe)
 
-    # test again for no sacs
-    # remove sacs that are too far away
-    sac.df    =  sac.df[which(sac.df$onset < opts$sac.time), ]
-    nsacs      <- dim(sac.df)[1]
-    if(nsacs<1) return('no saccades within sac.time(%.3f)', opts$sac.time)
+    # quick check. need to have gotten a few extra columns
+    stopif(!c("onset","sac.time", "base.val", "sac.thres") %in%names(sac.df))
+
+    # previously not stored in df. so extract here
+    base.val <- sac.df$base.val[1]
+    sac.thres <- sac.df$sac.thres[1]
 
     #expected mag and direction of saccade
-    sac.expdir <- sign(sac.expmag)
+    sac.expdir <- sign(sac.df$sac.expmag)
 
     sac.df$crossFix  = as.numeric(sac.df$startpos < base.val) - as.numeric(sac.df$endpos < base.val)
     # want to test against both the base.val (where we think center is) and screen.x.mid (where center fix should be)
@@ -487,9 +496,9 @@ score_sacs <- function(sac.df, sac.expmag, base.val) {
     #  1 moved to the right
 
     # SCORE
-    sac.df$cordir    = sign(sac.df$endpos - sac.df$startpos) == sac.expdir
-    sac.df$corpos    = abs(sac.df$endpos - sac.thres) <= sac.padding
-    sac.df$corside   = sign(sac.df$endpos - base.val ) == sign(sac.thres - base.val)
+    sac.df$cordir  = sign(sac.df$endpos - sac.df$startpos) == sac.expdir
+    sac.df$corpos  = abs(sac.df$endpos - sac.thres) <= opts$sac.padding
+    sac.df$corside = sign(sac.df$endpos - base.val ) == sign(sac.thres - base.val)
 
     return(sac.df)
 }
@@ -530,10 +539,12 @@ segment <- function(data_file, opts=studysettings()){
 
 
     # TODO: do for each trial
-    tidxs <- tinfo[[1]]$targidxs
+    tidxs <- tinfo[[1]]$trgidxs
     bval  <- tinfo[[1]]$baseline
-    score_trial(eyedf$xpos[tidxs], interps$b.nona$xpos[tidxs], interps$b.approx$xpos[tidxs], bval, opts)
-
+    xdat <- tidxdf$xdat[1]
+    sac_df <- trial_sacs(eyedf$xpos[tidxs], interps$b.nona$xpos[tidxs], interps$b.approx$xpos[tidxs],
+                     xdat, bval, opts)
+    score_trial(sac_df, opts)
 }
 
 partition_trials <- function(targets, stops, xpos) {
@@ -546,7 +557,7 @@ partition_trials <- function(targets, stops, xpos) {
   lapply(1:length(baselines), function(i) list(baseline=baselines[i], trgidxs=trgrange[[i]]))
 }
 
-score_trial <- function(eye_xpos, t_interp_xpos, t_approx, base.val, opts){
+trial_sacs <- function(xdat, eye_xpos, t_interp_xpos, t_approx, base.val, opts){
     # get blinks, saccades, tracking
     # check for resaons to drop
 
@@ -555,46 +566,43 @@ score_trial <- function(eye_xpos, t_interp_xpos, t_approx, base.val, opts){
     sac_df <- find_saccades(t_interp_xpos, blinks, opts)
     sac_df$p.tracked <- tracked_withinsac(sac_df, eye_xpos)
 
+    # sac.thres for anti like  reverse of 2, 87, 172 or 258 (left to right)
+    sac.thres <- opts$getExpPos(xdat) 
+    sac_df$sac.expmag <- sac.thres - opts$screen.x.mid
+    sac_df$sac.thres <- sac.thres
+    sac_df$base.val  <- base.val
+
+    # drop?
+    sac_df$Desc <- should_drop(eye_xpos, t_interp_xpos sac_df, blinks, opts)
+
+    # use columns to setup useful info from positions
+    sac_df <- sac_pos(sac_df)
+
+    return(sac_df)
+}
+
+should_drop <- function(eye_xpos, t_interp_xpos sac_df, blinks, opts) {
     # should we drop?
-    dropreason <- drop_interp(t_interp_xpos, base.val, opts)
+    dropreason <- drop_interp(t_interp_xpos, x$base.val[1], opts)
     if(!is.na(dropreason)) return(dropreason)
     dropreason <- no_early_move(eye_xpos[1:(opts$lat.fastest*opts$sampleHz)], opts)
     if(!is.na(dropreason)) return(dropreason)
     dropreason <- drop_blink(ts, sac_df, blinks, opts)
     if(!is.na(dropreason)) return(dropreason)
 
-    # sac.thres for anti like  2, 87, 172 or 258 (left to right)
-    # likely from e.g.  getExpPos(sac.thresholds,xdatCode)
-    # sac.expmag <- sac.thres - screen.x.mid
-    return(score_sacs(sac_df, sac.expmag, base.val))
-}
+    if(dim(sac_df)[1]<1 || is.na(sac_df$onset)) return('no saccades')
+    # if the first sacc is too soon
+    # is something the scoring function should do!? -- dropTrialSacs is easier to run from here
+    if(sac_df$onset[1]<lat.fastest && !opts$nothingistoofast ) return('1st good sac too soon')
+    if(abs(sac_df$startpos[1] - opts$screen.x.mid) > 50 && !opts$ignorefirstsacstart)
+      return('start pos too far from center fix')
+    goodsacsIdx <- with(sac_df,{intime & gtMinLen & p.tracked > sac.trackingtresh})
+    if(length(goodsacsIdx)<1) return('no good saccades')
 
-# TODO: itengrate? taken from scoreEveryone.R
-additional_drops<-function(x) { # x is good sacs for that trial
-     failreason <-NA
-     dropped <- !is.na(x$reason) && x$reason[1]!=''
-     nosacdrop <- grepl('no saccades', as.character(x$reason[1]) ) 
+    if(!any(sac_df$onset < opts$sac.time)) {
+        return(sprintf('no saccades within sac.time(%.3f)', opts$sac.time))
 
-     # fixes are different from PS and AS
-     # and we can accept a drop if it's because 'no saccades'
-     if (trialIsType(x$xdat[1]) == 'FX' && (!dropped || nosacdrop ) )  {
-       return(scoreFixationTrial(x))
-     } else if(dropped){
-       failreason <- as.character(x$reason[1])
-     }else if(dim(x)[1]<1 || is.na(x$onset) ){
-        failreason <- 'no saccades' 
-     # if the first sacc is too soon
-     # is something the scoring function should do!? -- dropTrialSacs is easier to run from here
-     } else if(x$onset[1]<lat.fastest && !opts$nothingistoofast ){
-        failreason <- '1st good sac too soon' 
-     } else if(abs(x$startpos[1] - screen.x.mid) > 50 && !opts$ignorefirstsacstart) { 
-       failreason <- 'start pos too far from center fix' 
-       # now select only the good saccades
-       goodsacsIdx <- which(with(x,{intime&gtMinLen&p.tracked>sac.trackingtresh}))
-       if(length(goodsacsIdx)<1){
-        failreason <- 'no good saccades'
-        }
-     }
+    return(NA)
 }
 
 read_eye <- function(data_file, verbose=T){
@@ -755,4 +763,67 @@ trial_indexs <- function(d, opts) {
       merge(wide, trials[trials$type=='target',c('trial','xdat')], by='trial')
      }, error=function(e)
       sprintf("cannot create start,target,stop pairing: %s", e))
+}
+
+score_trial <- function(x, opts, failreason=NA) {
+     if (opts$trialIsType(x$xdat[1]) == 'FX')  {
+       return(count_as_score_fix(x$Desc))
+     } 
+
+     # now select only the good saccades
+     goodsacsIdx <- which(with(x,{intime & gtMinLen & p.tracked > opts$sac.trackingtresh}))
+     goodsacs <- x[goodsacsIdx, ]
+     x <- goodsacs
+
+     # if we want to drop
+     if(!is.na(failreason)){
+       cat('dropped at trial level:', x$subj[1],x$trial[1], failreason,'\n');
+       y <- x[1,]
+       y[1,] <-NA
+       y$trial <- x$trial[1]
+       y$xdat <- x$xdat[1]
+       x <- y
+       #return( dropTrialScore(x$trial[1],failreason, xdat=x$xdat[1], AS=xdatIsAS(x$xdat[1]) ) )
+     } else {
+         # from NA to ''
+         failreason=''
+     }
+     ### EVERYTHING IS GOOD SO FAR
+     # break into trials, do we have 
+     #  1) a first correct movement?
+     #  2) correct movement after incorrect?
+     #  3) an xdat that says Anti Saccade?
+     data.frame( 
+        trial=x$trial[1],
+        xdat=x$xdat[1],
+        lat=round(x$onset[1]*1000),
+        fstCorrect=x$cordir[1],
+        ErrCorr=!x$cordir[1] &
+                 length(x$cordir)>1 &
+                 (any(x$MaxMinX[-1]) || any(x$corside)),
+        AS=opts$trialIsType(x$xdat[1]),
+        Desc=failreason)
+}
+
+count_as_score <- function(lat, frstCor, ErrCorr){
+  # get a "count" score for saccades
+  # default to dropped
+  count <- rep(-1, length(lat))
+  # set count "num sacs til correct movement" 
+  # -1 drop, 0 error, 1 correct, 2 error corrected
+  #count[is.na(lat )]  <- -1
+  count[!is.na(lat )] <- 0
+  count[fstCorrect]   <- 1
+  count[ErrCorr   ]   <- 2
+  return(count)
+}
+
+count_as_score_fix <- function(desc){
+  # score fixation -- if no saccades drop reason. consider it good
+  count <- rep(-1, length(desc))
+  count[grepl("no saccades",desc)] <- 1;
+  count[desc==""]                  <- 0;
+  count[desc=="no good saccades"]  <- 1;
+  count[grepl("no saccades within sac.time", desc) ] <- 1;
+  return(count)
 }
