@@ -4,6 +4,12 @@
 # library(arrow)
 # ds <- read_parquet("./anti.parquet")
 
+# encase return value with success/failure structure
+# helpful when we need to bail out of a function because something broke
+# 20200629 - is this better than `stop` and tryCatch?
+r <- function(value=NULL, reason=NULL)
+    list(value=value,success=!is.null(value), reason=reason) 
+f <- function(reason) r(reason=reason) 
 
 
 studysettings <- function(...){
@@ -352,6 +358,25 @@ drop_blink <- function(ts, sac.df, opts) {
     return(NA)
 }
 
+# remove spikes at single time points
+# see rmspikes(b.approx$x, opts$sac.padding)
+# 20200629 thres was hardcoded at 30 (sac.padding)
+# was:
+#  which(zoo::rollapply(c(0,diff(ts)),2,function(x){sign(prod(x,na.rm=T))==-1 & abs(min(x,na.rm=T))>30}))
+rmspikes <- function(ts, thres) {
+      delta <- c(0, diff(ts))
+      # change is different on both sides (spike) and is greater than threshold
+      spikypointsIdx <- which(zoo::rollapply(delta, 2, function(x){
+          # remove warnings about no comparison in min
+          if(all(is.na(x))) return(F)
+          # return diff on each side, gt thres
+          sign(prod(x, na.rm=T)) == -1 &
+          abs(  min(x, na.rm=T))  > thres
+      }))
+      ts[spikypointsIdx ] <- NA
+      return(ts)
+}
+
 interoplateSamples <- function(ts, opts){
     ## get eye tracking for relevant portion
     b.orig <- data.frame(time=1:length(ts),x=ts) 
@@ -380,11 +405,7 @@ interoplateSamples <- function(ts, opts){
     ###### Remove crazy points that can be nothing other than tracking errors
     # eg, xpos like: 10 10 *200* 10 10; see behbars: 10827.20100617.1.34
     if(!opts$dontcutspikes){
-      e<-length(b.approx$x)
-      xposΔ <- c(0,diff(b.approx$x));
-      # change is different on both sides (spike) and is greater than threshold
-      spikypointsIdx <- which(zoo::rollapply(xposΔ,2,function(x){sign(prod(x,na.rm=T))==-1 & abs(min(x,na.rm=T))>30}))
-      b.approx$x[spikypointsIdx ] <- NA
+        b.approx$x <- rmspikes(b.approx$x, opts$sac.padding)
     }
 
     ###### TRIM
@@ -427,7 +448,7 @@ interoplateSamples <- function(ts, opts){
 
     ###### CHECKS
     # if we take out the NAs and there is nothing left!
-    if(length(b.approx$x)<=1) return('no data left after removing blinks')
+    if(length(b.approx$x)<=1) stop('no data left after removing blinks')
 
 
     ####### Estimate away NAs
@@ -449,7 +470,7 @@ scoreSacs <- function(sac.df, sac.expmag, base.val) {
     # remove sacs that are too far away
     sac.df    =  sac.df[which(sac.df$onset < opts$sac.time), ]
     nsacs      <- dim(sac.df)[1]
-    if(nsacs<1) return('no saccades within sac.time(%.3f)', opts$sac.time)
+    if(nsacs<1) stop(sprintf('no saccades within sac.time(%.3f)', opts$sac.time))
 
     #expected mag and direction of saccade
     sac.expdir <- sign(sac.expmag)
@@ -501,11 +522,8 @@ segment <- function(data_file, opts=studysettings()){
 
     eyedf <- clean_xdat(eyedf, opts) # bad data samples to NA
     tidxdf <- trial_indexs(eyedf, opts) # trial, start, target, stop, xdat
-    if(is.character(tidx)) return(c(failreason=trgIdxs))
 
     interp_df <- interoplateSamples(eyedf$xpos, opts) #  remove samples around blinks, smooth
-    if(is.character(interp_df)) return(c(failreason=interp_df))
-
 
     # TODO: partition into trials
     # get baseval
@@ -518,13 +536,13 @@ score_trial <- function(eye_xpos, t_interp_df, base.val, opts){
     sac.df <- saccades(t_interp_df, opts)
     sac.df$p.tracked <- tracked_withinsac(sac.df, eye_xpos)
     dropreason <- drop_interp(t_interp_df[start:end], base.val, opts)
-    if(!is.null(dropreason)) return(dropreason)
+    if(!is.null(dropreason)) stop(dropreason)
 
     # TODO: adjust sac.df indexes to match provided ts?
     dropreason <- no_early_move(ts[start:(start+opts$lat.fastest*opts$sampleHz)], opts)
-    if(!is.null(dropreason)) return(dropreason)
+    if(!is.null(dropreason)) stop(dropreason)
     dropreason <- drop_blink(ts, sac.df, opts)
-    if(!is.null(dropreason)) return(dropreason)
+    if(!is.null(dropreason)) stop(dropreason)
 
     # sac.thres for anti like  2, 87, 172 or 258 (left to right)
     # likely from e.g.  getExpPos(sac.thresholds,xdatCode)
@@ -687,10 +705,14 @@ xdat_to_type <- function(xdat, opts) {
 
 trial_indexs <- function(d, opts) {
   # return: index xdat type trial xdat(target)
+  #
+  # 20200629 - replaces get_targets ?
+  xdats             <- rle(d$xdat)            # run length encode
+  xdats$cs          <- cumsum(xdats$lengths)  # index in d where xdat happends
 
   # remove repeats
   trials      <- rle(d$xdat)
-  if(!any(trials$values %in% opts$targetcodes)) return('no targetcodes in data!')
+  if(!any(trials$values %in% opts$targetcodes)) stop('no targetcodes in data!')
   # make dataframe
   trials      <- data.frame(index=xdats$lengths,
                             xdat=xdats$values)
@@ -714,8 +736,8 @@ trial_indexs <- function(d, opts) {
   # merge with target xdat
   # or return an error message
   tryCatch({
-      tidyr::spread(trials[,c("index","type","trial")], type, index)
+      wide <- tidyr::spread(trials[,c("index","type","trial")], type, index)
       merge(wide, trials[trials$type=='target',c('trial','xdat')], by='trial')
      }, error=function(e)
-      sprintf("cannot create start,target,stop pairing: %s", e))
+      stop("cannot create start,target,stop pairing: %s", e$message))
 }
