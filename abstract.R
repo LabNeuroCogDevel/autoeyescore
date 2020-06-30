@@ -136,6 +136,7 @@ no_early_move <- function(ts, opts){
     # opts$lat.fastest*opts$sampleHz
     if(length(ts) > opts$lat.fastest*opts$sampleHz+1) stop('no_early_move given too long a timesies!')
 
+    if(any(is.na(ts))) stop("blink at onset")
     fst  <- KernSmooth::locpoly(1:length(ts), ts, bandwidth=1, drv=1)
     # catch movement before actual onset 
     # fst$x is in samples, we want the y value before the sample capturing closest time a sac can be made
@@ -166,30 +167,32 @@ find_blinks <- function(x, opts){
     namedList(NArlecs, actualblinkidx, eyeidx.blinkstart, blinkends)
 }
 
+# trial 40 error:
+# onsets <- c(0.432125, 0.6263, 0.78120833, 0.97295833)
+# blinks <- list(NArlecs = c(0.4, 0.65, 0.667, 1), actualblinkidx = c(TRUE, FALSE, FALSE, FALSE), eyeidx.blinkstart = numeric(0), blinkends = 0.4)
+
 onset_blink <-function(onsets, blinks, opts) {
     # if a sac starts with a blink, add that blink to the start
     # NB!!! onsetidx, min and max are now incorrect!!!
     if(opts$ignoreblinks) return(onsets)
-    sapply(sac.df$onset,
+    sapply(onsets,
        function(x){ 
             a=x-blinks$blinkends
             bidx=which(a<2/opts$sampleHz & a>0)
-            newstart=blinks$NArlecs[which(blinks$actualblinkidx)-1][bidx]
+            blink_offset <- blinks$NArlecs[which(blinks$actualblinkidx)-1]
+            newstart=blink_offset[bidx]
             #TODO: newstart should be null if this change doesn't change x position
-            if(length(newstart)>0 && x-newstart < .5 ){ 
-             newstart + opts$blink.trim.samples/opts$sampleHz 
-            }else{
-             x
-            } 
+            if(length(newstart)>0 && x-newstart < .5 )
+             return(newstart + opts$blink.trim.samples/opts$sampleHz )
+           # not in a blink, no reason to change
+           return(x)
       })
 
 }
 
-find_saccades <- function(interp_xpos, blinks, opts, xtime=1:length(interp_xpos)){
-    # 20200503 - init - copy of ScoreRun.R:getSacs
-
+# get accelration info from interopolated xposition
+get_accels <- function(interp_xpos, opts, xtime=1:length(interp_xpos)){
     # fit to local polynomial (with guassain kernel)
-    #browser()
     est  <- KernSmooth::locpoly(xtime, interp_xpos, bandwidth=1, drv=0)
     fst  <- KernSmooth::locpoly(xtime, interp_xpos, bandwidth=1, drv=1)
     
@@ -216,16 +219,21 @@ find_saccades <- function(interp_xpos, blinks, opts, xtime=1:length(interp_xpos)
     speedingUp  <- delt.x[rlePastDrv$values==F]
     slowingDown <- delt.x[rlePastDrv$values==T]
     slowedDown  <- slowpntIdx[slowpoints$values==F]
-    
-    
+
+    namedList(est, fst, startUp, speedingUp, slowingDown,slowedDown)
+}
+
+find_saccades <- function(accel, blinks, opts){
+    # 20200503 - init - copy of ScoreRun.R:getSacs
+
     # how do those match up
     sac.df <- data.frame(
       # saccade started
-      onsetIdx  = speedingUp,
+      onsetIdx  = accel$speedingUp,
       # find matching slowDowns
-      slowedIdx = sapply(speedingUp, function(x){ slowingDown[which(x<slowingDown)[1]] }),
+      slowedIdx = sapply(accel$speedingUp, function(x) accel$slowingDown[which(x<accel$slowingDown)[1]]),
       # find the first place they slow down after speeding up
-      endIdx    =  sapply(speedingUp, function(x){ slowedDown[which(x<slowedDown)[1]] }))
+      endIdx    =  sapply(accel$speedingUp, function(x) accel$slowedDown[which(x<accel$slowedDown)[1]] ))
 
 
 
@@ -234,6 +242,7 @@ find_saccades <- function(interp_xpos, blinks, opts, xtime=1:length(interp_xpos)
     noEndIdx <- which(is.na(sac.df$endIdx+sac.df$slowedIdx))
     if(length(noEndIdx)>0) { sac.df <- sac.df[ -noEndIdx, ] }
     nsacs      <- dim(sac.df)[1]
+    if(nsacs==0L) stop("no saccades found!")
 
 
     # actual time from target cue
@@ -244,7 +253,8 @@ find_saccades <- function(interp_xpos, blinks, opts, xtime=1:length(interp_xpos)
     
 
     # onsets start at start of blink if saccade over a blink
-    sac.df$onset <- onset_blink(sac.df$onsets, blinks, opts)
+    sac.df$onset_withblink <- sac.df$onset
+    sac.df$onset <- onset_blink(sac.df$onset, blinks, opts)
     
     #####
     ##### OVERLAPS
@@ -321,6 +331,27 @@ find_saccades <- function(interp_xpos, blinks, opts, xtime=1:length(interp_xpos)
     return(sac.df)
 }
 
+# quick way to see if blink is held
+# if xpos is more than 5 px from any other
+# return true or false for each blink onset idx
+find_unheld_blinks <- function(blink_idx, blinks, opts) {
+    # before and after blink ( with a two samples give for blink junk)
+    samples <- round(opts$sac.held*opts$sampleHz)
+    if(blink_idx<samples) { 
+        origIdxesBeforeBlink <- c() 
+    } else {
+        origIdxesBeforeBlink <- blinks$eyeidx.blinkstart[blink_idx]+c(-samples:-1)
+    }
+    origIdxesAfterBlink <- blinks$blinkends[blink_idx]*opts$sampleHz+c(1:samples)
+    # 20200506 change from real data to interoplated 
+    #position <- b.orig[c(origIdxesBeforeBlink,origIdxesAfterBlink) ,'blink_idx']
+    posittion <- ts[c(origIdxesBeforeBlink,origIdxesAfterBlink)]
+    cat(blinks$blinkends[blink_idx] - blinks$eyeidx.blinkstart[blink_idx]/opts$sampleHz,"\n")
+    max(position)-min(position) > opts$sac.minmag |         # positions of start and stop are far away
+        blinks$blinkends[blink_idx] - blinks$eyeidx.blinkstart[blink_idx]/opts$sampleHz > .5 # sac is too long
+    # should let scannerbars 10701.20110323.2.30 pass, doesn't
+}
+
 drop_blink <- function(ts, sac.df, blinks, opts) {
 
 
@@ -337,26 +368,8 @@ drop_blink <- function(ts, sac.df, blinks, opts) {
 
 
     if(any(blinks$blinkends < firstsacstart ) & !opts$ignoreblinks){
-     # quick way to see if blink is held
-     # if xpos is more than 5 px from any other
-     unheldblinks <- unlist(lapply(which(blinks$blinkends<firstsacstart),
-       function(x){
-        # before and after blink ( with a two samples give for blink junk)
-        samples <- round(opts$sac.held*opts$sampleHz)
-        if(x<samples) { 
-          origIdxesBeforeBlink <- c() 
-        } else {
-          origIdxesBeforeBlink <- blinks$eyeidx.blinkstart[x]+c(-samples:-1)
-        }
-        origIdxesAfterBlink <- blinks$blinkends[x]*opts$sampleHz+c(1:samples)
-        # 20200506 change from real data to interoplated 
-        #position <- b.orig[c(origIdxesBeforeBlink,origIdxesAfterBlink) ,'x']
-        posittion <- ts[c(origIdxesBeforeBlink,origIdxesAfterBlink)]
-        cat(blinks$blinkends[x] - blinks$eyeidx.blinkstart[x]/opts$sampleHz,"\n")
-        max(position)-min(position) > opts$sac.minmag |         # positions of start and stop are far away
-         blinks$blinkends[x] - blinks$eyeidx.blinkstart[x]/opts$sampleHz > .5 # sac is too long
-        # should let scannerbars 10701.20110323.2.30 pass, doesn't
-      }))
+     unheldblinks <- sapply(which(blinks$blinkends<firstsacstart),
+                            FUN=find_unheld_blinks, blinks=blinks, opts=opts)
 
       # this checks that there isn't an immediate acceleration after the blink
       if(is.na(unheldblinks) || any(unheldblinks)) {
@@ -497,7 +510,7 @@ sac_pos <- function(sac.df) {
     # here to make it "easier" to read through code (maybe)
 
     # quick check. need to have gotten a few extra columns
-    stopif(!c("onset","sac.time", "base.val", "sac.thres") %in%names(sac.df))
+    stopifnot(c("onset", "base.val", "sac.thres") %in%names(sac.df))
 
     # previously not stored in df. so extract here
     base.val <- sac.df$base.val[1]
@@ -544,7 +557,7 @@ plot_data <- function(eyedf, interp_df, sac.df, base.val, sac.exp, opts, tmin=1,
      cowplot::theme_cowplot()
 }
 
-segment <- function(data_file, opts=studysettings()){
+score_visit <- function(data_file, opts=studysettings(), onlyon=NA){
     # data_file <- './10997.20200221.1.data.tsv'
     
     eyedf <- read_eye(data_file) # this maybe replaced by arrow?
@@ -553,45 +566,94 @@ segment <- function(data_file, opts=studysettings()){
     tidxdf <- trial_indexs(eyedf, opts) # trial, start, target, stop, xdat
     interps <- interp_samples(eyedf$xpos, opts) #  remove samples around blinks, smooth
 
-    tinfo <- partition_trials(tidxdf$target, tidxdf$stop, eyedf$xpos) 
+    tinfo <- partition_trials(tidxdf, eyedf$xpos) 
 
+    # restict to indexes provided by onlyon if we have any
+    if(!is.na(onlyon)) tinfo <- tinfo[onlyon]
 
-    # TODO: do for each trial
-    tidxs <- tinfo[[1]]$trgidxs
-    bval  <- tinfo[[1]]$baseline
-    xdat <- tidxdf$xdat[1]
-    sac_df <- trial_sacs(eyedf$xpos[tidxs], interps$b.nona$xpos[tidxs], interps$b.approx$xpos[tidxs],
-                     xdat, bval, opts)
-    score_trial(sac_df, opts)
+    lapply(tinfo, function(trl) {
+        ti<-trl$trgidxs
+        failure <- NA
+        sac_df <- data.frame(xdat=trl$xdat,trial=trl$trial)
+        tryCatch(
+            sac_df <- trial_sacs(trl,
+                                 eye_xpos=eyedf$xpos[ti],
+                                 t_interp_xpos=interps$b.nona$xpos[ti],
+                                 t_approx=interps$b.approx$xpos[ti],
+                                 opts=opts),
+            error=function(e){
+                # set the parent failure variable
+                failure<<-e$message
+                cat(sprintf("WARNING: trial %d failure %s\n", trl$trial, failure))
+            })
+        score_trial(sac_df, opts, failreason=failure)
+   })
 }
 
-partition_trials <- function(targets, stops, xpos) {
+
+partition_trials <- function(tidxdf, xpos) {
+  stopifnot(c("target", "stop", "xdat", "trial") %in% names(tidxdf))
   # how to partition trials - need baseline (from raw ts) and range of where to work
   # take raw input and target/stop indexs
   
-  baselines <- sapply(FUN=function(i)  mean(xpos[c(-5:2) + i],na.rm=T), targets) 
-  trgrange  <- mapply(FUN=function(a,b) c(a:(b-1)), targets, stops, SIMPLIFY=F) 
+  baselines <- sapply(FUN=function(i)  mean(xpos[c(-5:2) + i],na.rm=T),
+                      tidxdf$target) 
+  trgrange  <- mapply(FUN=function(a,b) c(a:(b-1)),
+                      tidxdf$target, tidxdf$stop,
+                      SIMPLIFY=F) 
   # put these together
-  lapply(1:length(baselines), function(i) list(baseline=baselines[i], trgidxs=trgrange[[i]]))
+  lapply(1:length(baselines), function(i)
+      list(baseline=baselines[i], trgidxs=trgrange[[i]],
+           xdat=tidxdf$xdat[i], trial=tidxdf$trial[i]))
 }
 
-trial_sacs <- function(xdat, eye_xpos, t_interp_xpos, t_approx, base.val, opts){
+# plot trial info
+# freq from opts$sampleHz
+plot_trial <- function(orig, a=NA, blinks=NA, sacs=NA, freq=60) {
+    plot(orig)
+
+    # interpolated and first derivative
+    if(!is.na(a)){
+        lines(a$est$x, a$est$y, col="green")
+        lines(a$fst$x, a$fst$y+mean(a$est$y), col="blue")
+    }
+
+    # if we have blinks
+    # NArcels in ornage
+    # start and stop (dashed) in red
+    if(!is.na(blinks)) {
+        lapply(blinks$NArlecs, function(x)
+            abline(v=x*freq, col="orange"))
+        lapply(blinks$eyeindx.blinkstart, function(x)
+            abline(v=x*freq, col="red", lty=2))
+        lapply(blinks$blinkends, function(x)
+            abline(v=x*freq, col="red", lty=2))
+    }
+}
+
+trial_sacs <- function(trl, eye_xpos, t_interp_xpos, t_approx, opts){
     # get blinks, saccades, tracking
     # check for resaons to drop
 
+    # trl is a list. should have this info
+    stopifnot(c("xdat","trial", "baseline") %in% names(trl))
+
     # parse data
     blinks <- find_blinks(t_approx, opts)
-    sac_df <- find_saccades(t_interp_xpos, blinks, opts)
+    accel_info <- get_accels(t_interp_xpos, opts)
+    sac_df <- find_saccades(accel_info, blinks, opts)
     sac_df$p.tracked <- tracked_withinsac(sac_df, eye_xpos)
 
     # sac.thres for anti like  reverse of 2, 87, 172 or 258 (left to right)
-    sac.thres <- opts$getExpPos(xdat) 
+    sac.thres <- opts$getExpPos(trl$xdat) 
     sac_df$sac.expmag <- sac.thres - opts$screen.x.mid
     sac_df$sac.thres <- sac.thres
-    sac_df$base.val  <- base.val
+    sac_df$base.val  <- trl$baseline
+    sac_df$xdat <- trl$xdat
+    sac_df$trial <- trl$trial
 
     # drop?
-    sac_df$Desc <- should_drop(eye_xpos, t_interp_xpos sac_df, blinks, opts)
+    sac_df$Desc <- should_drop(eye_xpos, t_interp_xpos, sac_df, blinks, opts)
 
     # use columns to setup useful info from positions
     sac_df <- sac_pos(sac_df)
@@ -599,9 +661,9 @@ trial_sacs <- function(xdat, eye_xpos, t_interp_xpos, t_approx, base.val, opts){
     return(sac_df)
 }
 
-should_drop <- function(eye_xpos, t_interp_xpos sac_df, blinks, opts) {
+should_drop <- function(eye_xpos, t_interp_xpos, sac_df, blinks, opts) {
     # should we drop?
-    dropreason <- drop_interp(t_interp_xpos, x$base.val[1], opts)
+    dropreason <- drop_interp(t_interp_xpos, sac_df$base.val[1], opts)
     if(!is.na(dropreason)) return(dropreason)
     dropreason <- no_early_move(eye_xpos[1:(opts$lat.fastest*opts$sampleHz)], opts)
     if(!is.na(dropreason)) return(dropreason)
@@ -617,7 +679,7 @@ should_drop <- function(eye_xpos, t_interp_xpos sac_df, blinks, opts) {
     goodsacsIdx <- with(sac_df,{intime & gtMinLen & p.tracked > sac.trackingtresh})
     if(length(goodsacsIdx)<1) return('no good saccades')
 
-    if(!any(sac_df$onset < opts$sac.time)) {
+    if(!any(sac_df$onset < opts$sac.time)) 
         return(sprintf('no saccades within sac.time(%.3f)', opts$sac.time))
 
     return(NA)
@@ -787,43 +849,52 @@ trial_indexs <- function(d, opts) {
       stop("cannot create start,target,stop pairing: %s", e$message))
 }
 
-score_trial <- function(x, opts, failreason=NA) {
-     if (opts$trialIsType(x$xdat[1]) == 'FX')  {
-       return(count_as_score_fix(x$Desc))
+score_trial <- function(sac_df, opts, failreason=NA, subj=NA) {
+     if (opts$trialIsType(sac_df$xdat[1]) == 'FX')  {
+       return(count_as_score_fix(sac_df$Desc))
      } 
 
-     # now select only the good saccades
-     goodsacsIdx <- which(with(x,{intime & gtMinLen & p.tracked > opts$sac.trackingtresh}))
-     goodsacs <- x[goodsacsIdx, ]
-     x <- goodsacs
+     # should get these from trial_sacs()
+     stopifnot(c("xdat", "trial") %in% names(sac_df))
+     # should have fail reason set if no rows. will be missing xdat and trial info
+     stopifnot(nrow(sac_df)>0L)
+
+     # but only if we have columns to do that
+     if(is.na(failreason)) {
+        # select only the good saccades
+        goodsacsIdx <- which(with(sac_df,{
+            intime & gtMinLen & p.tracked > opts$sac.trackingtresh}))
+        goodsacs <- sac_df[goodsacsIdx, ]
+        sac_df <- goodsacs
+
+        # did we kill everything?
+        if(length(sac_df)<1L) 
+            failreason <- "no saccedes w/intime & held & tracked!"
+     }
+
 
      # if we want to drop
      if(!is.na(failreason)){
-       cat('dropped at trial level:', x$subj[1],x$trial[1], failreason,'\n');
-       y <- x[1,]
-       y[1,] <-NA
-       y$trial <- x$trial[1]
-       y$xdat <- x$xdat[1]
-       x <- y
-       #return( dropTrialScore(x$trial[1],failreason, xdat=x$xdat[1], AS=xdatIsAS(x$xdat[1]) ) )
+       cat('dropped at trial level:', subj, sac_df$trial[1], failreason,'\n');
+       # clear all values
+       sac_df <- data.frame(
+        trial=sac_df$trial[1], xdat=sac_df$xdat[1],
+        onset=NA, cordir=NA, MaxMinX=NA, corside=NA)
      } else {
          # from NA to ''
          failreason=''
      }
-     ### EVERYTHING IS GOOD SO FAR
-     # break into trials, do we have 
-     #  1) a first correct movement?
-     #  2) correct movement after incorrect?
-     #  3) an xdat that says Anti Saccade?
+     ## FINAL TRIAL OUTPUT
+     # drops get NA for calc columns, will propigate here too
      data.frame( 
-        trial=x$trial[1],
-        xdat=x$xdat[1],
-        lat=round(x$onset[1]*1000),
-        fstCorrect=x$cordir[1],
-        ErrCorr=!x$cordir[1] &
-                 length(x$cordir)>1 &
-                 (any(x$MaxMinX[-1]) || any(x$corside)),
-        AS=opts$trialIsType(x$xdat[1]),
+        trial=sac_df$trial[1],
+        xdat=sac_df$xdat[1],
+        lat=round(sac_df$onset[1]*1000),
+        fstCorrect=sac_df$cordir[1],
+        ErrCorr=!sac_df$cordir[1] &
+                 length(sac_df$cordir)>1 &
+                 (any(sac_df$MaxMinX[-1]) || any(sac_df$corside)),
+        AS=opts$trialIsType(sac_df$xdat[1]),
         Desc=failreason)
 }
 

@@ -5,6 +5,7 @@ source('ScoreRun.R')
 source('anti/anti.settings.R')
 sacs_old <- getSacs('./10997.20200221.1.data.tsv', '10997', 1, runtype,rundate=0,onlyontrials=c(1),showplot=F)
 
+data_file <- './10997.20200221.1.data.tsv'
 opts <- studysettings()
 eyedf <- read_eye(data_file) # this maybe replaced by arrow?
 eyedf <- clean_xdat(eyedf, opts) # bad data samples to NA
@@ -14,12 +15,13 @@ tidxdf <- trial_indexs(eyedf, opts) # trial, start, target, stop, xdat
  #  remove samples around blinks, smooth
 interps <- interp_samples(eyedf$xpos, opts)
 interp_df <- interps$b.nona
-tinfo <- partition_trials(tidxdf$target, tidxdf$stop, eyedf$xpos) 
+tinfo <- partition_trials(tidxdf, eyedf$xpos) 
 ti1 <- tinfo[[1]]
 t_interp_df <- interp_df[ti1$trgidxs, ]
 t_approx <- interps$b.approx$xpos[ti1$trgidxs]
 blinks <- find_blinks(t_approx, opts)
-sacs_new <- find_saccades(t_interp_df$xpos, blinks, opts)
+accel_info <- get_accels(t_interp_df$xpos, opts)
+sacs_new <- find_saccades(accel_info, blinks, opts)
 
 # old
 d <- eyedf
@@ -43,14 +45,13 @@ all(sacs_old[,n] == sacs_new[,n])
 sacs_new$p.tracked <- tracked_withinsac(sacs_new, eyedf$xpos[tinfo[[1]]$trgidxs])
 all(sacs_new$p.tracked == sacs_old$p.tracked) # all 1 -- full coverage
 
-# add scored - sac.thres and sac.expmag from interpolateSamples globals
-sacs_new_pos <- sac_pos(sacs_new, sac.thres, sac.expmag, ti1$baseline)
-
 
 ### for real, all together
-xdat <- eyedf$xdat[ti1$trgidxs[1]] 
-sacs_new_all <- trial_sacs(eyedf$xpos[ti1$trgidxs], interp_df$xpos[ti1$trgidxs], interps$b.approx$xpos[ti1$trgidxs], xdat, ti1$baseline, opts)
-all(sacs_new_all == sacs_new_pos)
+ti <- ti1$trgidxs # idx from 132 to 191
 
-dropreason <- drop_interp(interp_df[ti1$trgidxs,], ti1$baseline, opts)
-dropreason <- no_early_move(eyedf$xpos[1:(opts$lat.fastest*opts$sampleHz)], opts)
+# check out drop reasons
+dropreason <- drop_interp(interp_df[ti,], ti1$baseline, opts) # TODO: sampling rate?
+dropreason <- no_early_move(eyedf$xpos[ti[1] + 0:(opts$lat.fastest*opts$sampleHz)], opts)
+
+sacs_new_all <- trial_sacs(ti1, eyedf$xpos[ti], interp_df$xpos[ti], interps$b.approx$xpos[ti], opts)
+trial1_score <- score_trial(sacs_new_all, opts)
