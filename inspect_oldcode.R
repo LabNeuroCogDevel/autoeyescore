@@ -55,3 +55,8 @@ dropreason <- no_early_move(eyedf$xpos[ti[1] + 0:(opts$lat.fastest*opts$sampleHz
 
 sacs_new_all <- trial_sacs(ti1, eyedf$xpos[ti], interp_df$xpos[ti], interps$b.approx$xpos[ti], opts)
 trial1_score <- score_trial(sacs_new_all, opts)
+
+# plot
+plot_trial(eyedf$xpos[ti], accel_info, blinks, sacs_new_all)
+
+## trial 40 is different between the two
