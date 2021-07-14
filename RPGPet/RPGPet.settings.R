@@ -23,8 +23,7 @@ sac.left.small  <- 100
 sac.right.small <- 160
 
 # acceleration -- needs to be this many pixels per sample before considering saccade
-lat.minvel   <- 5      # ASLcoordx/60Hz 
-# 20190625, with default of 4, dropping 3178 b/c moving
+lat.minvel   <- 8      # ASLcoordx/60Hz 
 
 # if there are spikes in fixation, bad tracking, drop
 # 99 means don't worry about it
