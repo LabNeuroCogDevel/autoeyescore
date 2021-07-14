@@ -3,7 +3,7 @@ rm(list=ls());
 # get what settings file we are using
 # assume we are starting in the task's directory
 settingsfile <- grep('settings.R',list.files(),value=T)
-cat(sprintf('using %s!\n',settingsfile ) )
+cat(sprintf('using settings file "%s"!\n',settingsfile ) )
 
 # source settings for run, and functions
 source(settingsfile);

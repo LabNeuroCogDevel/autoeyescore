@@ -56,7 +56,7 @@ dot2runinfo <- function(dotnotation) {
      correct <- read.table(file=EPfile,sep="\t",header=T)$Correct
      if(!is.null(correct)){cat('found and using eprime log file\n')}
      correct
-    },error=function(e){ cat('couldnt open eplog!\n'); NULL })
+    },error=function(e){ warning('couldnt open eplog!\n'); NULL })
 
  return(list(eyetrack=eyetrack, saveto=saveto, parts=parts, EPcorrect=EPcorrect))
 }
@@ -112,6 +112,8 @@ getRunDot <- function(dotnotation, showplot=F,funnybusiness='',showcmd=F,auditor
  }
 
  i <- dot2runinfo(dotnotation)
+ parts <- i$parts
+ eyetrack<- i$eyetrack
  if (showplot==T) {
     # where to save
     tname <- basename(gsub("Basic/", "", filebasedir))

@@ -16,7 +16,7 @@ finalpdf=$(pwd)/${TASK}_drop.pdf
 
 
 [ -z "$REDO" ] && cmd="todo"  || cmd="redo"
-#../eyeQC.R $TASK --pdf $cmd
+../eyeQC.R $TASK --pdf $cmd
 
 #pdftk  /Volumes/Hera/Projects/autoeyescore/audit/$TASK/pdf/*/*-1.pdf cat output $finalpdf
 
