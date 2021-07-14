@@ -43,7 +43,7 @@ library(devtools)
 library(KernSmooth)
 library(ggplot2)
 library(gridExtra)
-library(plyr)
+#library(plyr)
 library(zoo) # for na.approx, rollapply
 
 #### Settings ######
@@ -124,12 +124,18 @@ ggplotXpos <- function(est,d,trgt,sac.df,base.val,delt.x.scale,slowpnt.x.scale,p
      #g <- g + geom_point(data=data.frame(x=est$x,y=est$y),aes(x=x,y=y),alpha=I(.5))
      g <- g + geom_point(data=data.frame(x=est$x,y=est$y),aes(x=x,y=y))
   }
-
-     g <- g + geom_point(data=d[trgt,],x=1:length(trgt), aes(y=xpos,color=as.factor(xdat),size=dil))  +
-          scale_color_manual(values=c('green','red','blue','black')) + # should only ever see green -- otherwise more than one XDAT
-          scale_size_continuous(limits=c(1,100),range=c(.3,5)) + # limit dilation scale to 2 std of mean (for random subj)
-          geom_vline(xintercept=sampleHz*lat.fastest,color=I('red')) +
-          geom_vline(xintercept=sampleHz*sac.time,color=I('red'),linetype=I('dotdash'))
+  # 20210713 - not a dataframe when data fails to read in
+  #            but still get here when making a list and dropping the trial
+  plt_trgt <- d[trgt,]
+  if(is.data.frame(plt_trgt)) {
+     g <- g + geom_point(data=plt_trgt,
+                       x=1:length(trgt),
+                       aes(y=xpos,color=as.factor(xdat),size=dil))  +
+        scale_color_manual(values=c('green','red','blue','black')) + # should only ever see green -- otherwise more than one XDAT
+        scale_size_continuous(limits=c(1,100),range=c(.3,5)) + # limit dilation scale to 2 std of mean (for random subj)
+        geom_vline(xintercept=sampleHz*lat.fastest,color=I('red')) +
+        geom_vline(xintercept=sampleHz*sac.time,color=I('red'),linetype=I('dotdash'))
+  }
 
   # show velocity changes and estimated base (center focus) value
   if(length(delt.x.scale)>0) {
@@ -247,6 +253,7 @@ dropTrialSacs <- function(subj,runtype,trl,xdatCode,reason,allsacs,showplot=F,sa
           sprintf("%s\n",reason))
    }
 
+    # 20210713 - why is "aslist" here? because plot can be returned in list
    if(showplot|aslist){
       ptitle <- paste(subj,runtype, trl,xdatCode, paste('DROPPED!', reason) )
       g    <- ggplotXpos(est=NULL,d,trgt,sac.df=NULL,base.val=NULL,delt.x.scale=NULL,slowpnt.x.scale=NULL,ptitle)
@@ -292,13 +299,22 @@ dropTrialSacs <- function(subj,runtype,trl,xdatCode,reason,allsacs,showplot=F,sa
 
 parseRawForTargets <- function(eydfile, funnybusiness=''){
   # reset d
-  d <<-data.frame(xdat=NA,dil=NA,xpos=NA,ypos=NA)
-
-  cat('using ', eydfile ,'\n')
-
-  ### load data
-  #load xdat, eye position and dialation data for parsed eydfile
-  readeydsuccess <- tryCatch( { d        <<- read.table( eydfile, sep="\t",header=T) },error=function(e){cat('error! cant read input\n')})
+  if (any("data.frame" %in% class(eydfile))) {
+     d <<- as.data.frame(eydfile)
+     if(!all(c("XDAT", "pupil_diam", "horz_gaze_coord", "vert_gaze_coord") ==
+             names(d))){
+        cat("ERROR: unexpected columns in ", names(d), "\n")
+        readeydsuccess <- FALSE
+     } else {
+        readeydsuccess <- TRUE
+     }
+  } else {
+    d <<-data.frame(xdat=NA,dil=NA,xpos=NA,ypos=NA)
+    cat('using ', eydfile ,'\n')
+    ### load data
+    #load xdat, eye position and dialation data for parsed eydfile
+    readeydsuccess <- tryCatch( { d        <<- read.table( eydfile, sep="\t",header=T) },error=function(e){cat('error! cant read input\n')})
+  }
 
   if(is.null(readeydsuccess)) {
     #allsacs <- dropTrialSacs(subj,runtype,1:expectedTrialLengths,0,'no data in eyd!',
@@ -312,14 +328,14 @@ parseRawForTargets <- function(eydfile, funnybusiness=''){
     #allsacs <- dropTrialSacs(subj,runtype,1:expectedTrialLengths,0,sprintf('eyd data does not make sense to me %dx%d',dim(d)[1],dim(d)[2]),
     #                     allsacs,showplot=F,run=run,rundate=rundate)
     #return(allsacs) 
-    return('eyd data does not make sense!')
+    return(sprintf('eyd data does not make sense! dataframe dim[2]=%d < 4', dim(d)[2]))
   }
 
 
   names(d) <<- c("xdat","dil","xpos","ypos")
 
   ## fix bars zero'ed xdats
-  zeroxdat        <- rle(d$xdat==0)
+  zeroxdat        <- rle(is.na(d$xdat)|d$xdat==0)
   
   if(zeroxdat$values[1] == T) { 
     minzeroxdatlen <-2 
@@ -372,7 +388,7 @@ parseRawForTargets <- function(eydfile, funnybusiness=''){
   if(any(na.omit(d$dil)<1)) { d$dil[which(d$dil<1)]<<-1 }# so we can see something! 
   # which is need to not die on scanbars 10656.20090410.2
   
-   # remove repeats
+  # remove repeats
   xdats             <- rle(d$xdat)            # run length encode
   xdats$cs          <- cumsum(xdats$lengths)  # index in d where xdat happends
   
@@ -385,7 +401,6 @@ parseRawForTargets <- function(eydfile, funnybusiness=''){
   
   # x by 2 matrix of target onset and offset indicies
   targetIdxs       <- cbind(xdats$cs[goodTargPos-1],xdats$cs[goodTargPos])
-
 
   if(length(goodTargPos) <= 0) {
     #allsacs <- dropTrialSacs(subj,runtype,runontrials,0,'no understandable start/stop xdats!',allsacs,showplot=F,run=run,rundate=rundate)
@@ -472,7 +487,7 @@ interoplateSamples <- function(trl, funnybusiness=''){
     nastops  <-  SeqStartIdx[naStartIdx]+ naSeq$lengths[naStartIdx]+blink.trim.samples 
     nastops[nastops>length(b.orig$x)] <- length(b.orig$x)
 
-    start10nas <- unname(unlist(alply(cbind(nastarts,nastops),1, function(x) { x[1]:x[2]} )))
+    start10nas <- unname(unlist(plyr::alply(cbind(nastarts,nastops),1, function(x) { x[1]:x[2]} )))
     b.cutblink <- b.orig
     b.cutblink$x[start10nas] <- NA
     #b.cuttblink$used[start10nas] <- F
@@ -559,7 +574,7 @@ interoplateSamples <- function(trl, funnybusiness=''){
 }
 
 # returns 'allsacs' a list of all saccades in each trial
-getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writetopdf=F,savedas=NULL, showplot=F, funnybusiness="", pdffname=NULL, aslist=F){
+getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writetopdf=F,savedas=NULL, showplot=F, funnybusiness="", pdffname=NULL, aslist=F, save_scored=T){
   
   # this inputs might not come in as numbers
   subj   <-as.numeric(subj)
@@ -574,8 +589,9 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
   targetIdxs <<- parseRawForTargets(eydfile,funnybusiness)
 
   if(is.character(targetIdxs)) {
-    r <- dropTrialSacs(subj,runtype,1:expectedTrialLengths,0,samples,
-                       allsacs,showplot=F,run=run,rundate=rundate,
+    r <- dropTrialSacs(subj,runtype,1:expectedTrialLengths,
+                       xdatCode=0, reason=targetIdxs,
+                       allsacs=allsacs,showplot=F,run=run,rundate=rundate,
                        savedas=pdffname, writetopdf=writetopdf, aslist=T)
     if(aslist) return(r)
     return(r$allsacs) 
@@ -870,7 +886,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     sac.df$endpos    = est$y[sac.df$endIdx]
 
     sac.df <- cbind( sac.df,
-            ddply(sac.df,.(onsetIdx, endIdx),function(x){
+            plyr::ddply(sac.df,plyr::.(onsetIdx, endIdx),function(x){
              a=est$y[x$onsetIdx:x$endIdx]; 
              c(maxpos=max(a),minpos=min(a))}
             )[,c('maxpos','minpos')]
@@ -1045,7 +1061,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
 
   # only write to file if we have processed all
   # which means we didn't specify onlyontrials when calling the function
-  if(is.null(onlyontrials) ) {
+  if(is.null(onlyontrials) & save_scored ) {
    if(is.null(savedas)) { savedas <- paste(outputdir,"/",subj,"-",runtype,".txt",sep="") }
    if(!file.exists(dirname(savedas))) { dir.create(dirname(savedas),recursive=T) }
    print(paste('writting to',savedas))
@@ -1232,7 +1248,7 @@ scoreSac <- function(allsacs,EPcorrect=NULL,funnybusiness=''){
   #   failreason <- 'no good saccades found' 
   #}
 
-  cor.ErrCor.AS <- ddply(allsacs, .(trial), scoreSingleTrial, funnybusiness=funnybusiness)
+  cor.ErrCor.AS <- plyr::ddply(allsacs, plyr::.(trial), scoreSingleTrial, funnybusiness=funnybusiness)
 
 
   #names(cor.ErrCor.AS) <- c('trial','xdat','lat','fstCorrect','ErrCorr','AS')
