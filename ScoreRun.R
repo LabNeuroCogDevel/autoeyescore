@@ -67,6 +67,7 @@ sac.trackingtresh <- 0    # what percent of a sac has to have actual samples (ta
 #  how fast the eye has to move before considering the movement a saccade (also heuristic overcompesating approximation)
 #lat.minvel   <- 4      # ASLcoordx/60Hz , per paradigm
 lat.fastest  <- 67/1000  # fastest latency allowed is 200ms
+fixpos.maxdrift <- 50  # 20210813 remove from hardcoded conditional
 
 ## saccade properties ##
 #minium distance to be considered a saccade
@@ -608,8 +609,6 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     #trl  <- 8
     #print(trl)
     
-
-
     nrow(targetIdxs)
     if(trl>nrow(targetIdxs)){
      #cat('BAD TRIAL NUMBER ', trl, ' only have ', nrow(targetIdxs), ' trials')
@@ -679,10 +678,11 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
     #base.idx <- which(est$y < sac.right.small & est$y > sac.left.small & abs(fst$y) < lat.minvel )
     #base.val <- mean(est$y[base.idx])
     base.val <- mean(d[ c(-5:2) + targetIdxs[trl,1], 'xpos' ],na.rm=T)
-
-    if(is.nan(base.val) || abs(base.val-screen.x.mid )>50) {
+    base.drift <- abs(base.val-screen.x.mid )
+    if(is.nan(base.val) || base.drift > fixpos.maxdrift ) {
      allsacs <- dropTrialSacs(subj,runtype,trl,xdatCode,
-                   sprintf('average fixpos(%f) is off from baseline(%f)!',base.val,screen.x.mid ),
+                   sprintf('average fixpos(%.1f) is off from middle(%.1f) by %.2f (>max %.1f)!',
+                           base.val, screen.x.mid, base.drift, fixpos.maxdrift),
                    allsacs,run=run,showplot=showplot,rundate=rundate,savedas=pdffname, writetopdf=writetopdf)
      next;
     }
@@ -1132,8 +1132,9 @@ scoreSingleTrial<-function(x,funnybusiness='') { # x is good sacs for that trial
 
      ## drop if first sac is not close to baseline (use same value as used to drop trials that start too far from baseline)
      ##  means the first sac doesn't inform the initial movement, so this trial is bogus
-     } else if(abs(x$startpos[1] - screen.x.mid) > 50 && !any(grepl('ignorefirstsacstart',funnybusiness)) ) { 
-       failreason <- 'start pos too far from center fix' 
+     } else if(abs(x$startpos[1] - screen.x.mid) > fixpos.maxdrift && !any(grepl('ignorefirstsacstart',funnybusiness)) ) {
+       failreason <- sprintf('start pos too far from center fix (%.2f > %.2f max)',
+                     abs(x$startpos[1] - screen.x.mid), fixpos.maxdrift)
 
      # do we have a good sac that explains how we got where we are from baseline
      # if not, drop trial
