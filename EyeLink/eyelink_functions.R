@@ -76,14 +76,14 @@ score_trial <- function(lat, dur, sacdist, dotpos, screen_x_res=1920){
   return(score(2))
 }
 
-score_file<-function(asc_fname='example/220682rr01.asc.gz'){
+score_file<-function(asc_fname='example/220682rr01.asc.gz', dot_event=4){
     dat<- eyelinker::read.asc(asc_fname)
     events <- extract_events(dat)
     #dat$info$screen.x # 1920
 
     # TODO: is dot event encoded as 4? it has the fewest negative saccades
     dot_events <- events %>% filter(event==dot_event) 
-    sac_during_dot_all <- merge_sacs(dot_events, saccs)
+    sac_during_dot_all <- merge_sacs(dot_events, dat$sacc)
     sacs_during_dot <- sac_during_dot_all %>%
       select(trial, dot_onset=time, sac_onset=stime, rewtype,
              dotpos, tdir, sxp, exp, dur) %>%
