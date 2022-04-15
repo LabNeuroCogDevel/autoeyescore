@@ -5,9 +5,21 @@ Compared to ASL:
   * different output (binary edf, text asc)
   * existing packages (R: `eyelinker`)
 
+also see https://github.com/samhforbes/eyetrackingr
+
+## Extracting for R
+
+edf binary can be converted to asc text to be read by [[`eyetracker::read.asc`][https://github.com/a-hurst/eyelinker]]
+```bash
+export EDFDIR=$HOME/scratch/EyeLink_LinuxDevKit_1.11_x64_debs/usr/bin/EdfConverter;
+for f in /path/to/edfs/*edf; do
+   LD_LIBRARY_PATH=$EDFDIR java -jar $EDFDIR/edfconverter.jar $f
+   # can gzip ${f/.edf/.asc} to reduce disk usage
+done
+```
 
 ## Scoring strategies
-Trails are scored based on where gaze goes as soon as the distracting dot is displayed. Trial latency is the time from pretension to the first saccade. The direction of the first saccade  determines the score: away = correct = 1, toward = incorrect = 0. A corrective saccade away from the dot after an incorrect is a "error corrected" (score = 2) trial.
+Trails are scored based on where gaze goes as soon as the distracting dot is displayed. Trial latency is the time from pretension to the first saccade. The direction of the first saccade  determines the score: away = correct = 1, toward = incorrect = 0. A corrective saccade away from the dot after an incorrect trial is "error corrected" (score = 2) trial.
 
 ### Eyelink saccades
 A naive implantation that only looks at the saccades within a trial to get latency and score.
@@ -17,13 +29,11 @@ Using the saccades provided by EyeLink, trial scoring is reasonable. Most trials
 run_stats(score_file(asc_fname='example/220682rr01.asc.gz'))
 ```
 
-> # A tibble: 4 × 4
->   score     n lat_m lat_sd
->   <dbl> <int> <dbl>  <dbl>
-> 1    -1    20 -971. 1504. 
-> 2     0     3  476.  376. 
-> 3     1    73  342.  104. 
-> 4     2    16  230.   57.5
+|   score  |  n|`lat_m`|`lat_sd`|
+|      -1  | 20|-971.|1504. |
+|       0  |  3| 476.| 376. |
+|       1  | 73| 342.| 104. |
+|       2  | 16| 230.|  57.5|
 
 
 #### TODO:
