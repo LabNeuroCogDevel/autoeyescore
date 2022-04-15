@@ -1,5 +1,6 @@
 library(tidyr)
 library(dplyr)
+options(dplyr.summarise.inform = FALSE) # okay with overwritting group_by with another
 # IRanges is in Bioconductor:
 # install.packages("BiocManager"); BiocManager::install("IRanges")
 # also need
@@ -69,6 +70,8 @@ score_trial <- function(lat, dur, sacdist, dotpos, screen_x_res=1920){
   # could merge close together short saccades?
   consider_idx<- abs(sacdist)>20
   if(!any(consider_idx)) return(score(-1, "no saccades"))
+  if(any(is.na(consider_idx))) return(score(-1, "NA values in sac distance!?"))
+  if(is.na(dotpos)) return(score(-1, "dot position unknown!?"))
 
   # expect to look opposite dot position
   expect_dir <- -1* sign(first(dotpos)-screen_x_res/2)
