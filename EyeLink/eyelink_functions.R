@@ -163,7 +163,7 @@ approx60Hz<-function(ts, time,hz=60, ...){
 }
 
 trial_from_xdat <-function(xdat) cumsum(c(T,diff(xdat)!=0)&xdat<100)
-asc_as_asl<-function(asm_fname){
+asc_as_asl<-function(asc_fname, gaze=list(x=1920,y=1080)){
     dat<- eyelinker::read.asc(asc_fname)
     events_rep <- dat %>%
         extract_events %>%
@@ -171,36 +171,75 @@ asc_as_asl<-function(asm_fname){
         rep_samples
     raw_events <- merge(dat$raw, events_rep, by="time") %>% arrange(time)
         
-    asl <- raw_events %>%
-        select(time, xdat, pupil_diam=ypr,horz_gaze_coord=xpl, vert_gaze_coord=ypl)
-    
-    # TODO: rescale to 261x261
+    # rescale to asl grid: 262x240. y doesn't matter other than it cant be super large
+    # gaze and screen are the same. that doesn't have to be true?
+    # minus one on the EyeLink side b/c 0 is valid position
+    to_asl_x = 261/(gaze$x-1)
+    to_asl_y = 240/(gaze$y-1)
 
+    # set names and resample grid
+    asl_coord <- raw_events %>%
+        mutate(horz_gaze_coord=xpl*to_asl_x,
+               vert_gaze_coord=ypl*to_asl_y) %>%
+        select(time, xdat, pupil_diam=ypr, horz_gaze_coord, vert_gaze_coord)
+    
     # probably an xts+zoo way to do this elegantly.
     # but cant figure it out. so same approx call on each column
-    asl_60hz <- with(asl,data.frame(
+    asl_60hz <- with(asl_coord, data.frame(
+              time            = approx60Hz(time, time) %>% round, # lazy. should use $x
               xdat            = approx60Hz(xdat, time, method="constant"),
               pupil_diam      = approx60Hz(pupil_diam, time),
+              missing         = is.na(approx60Hz(horz_gaze_coord, time, method="constant")),
               horz_gaze_coord = approx60Hz(horz_gaze_coord, time),
               vert_gaze_coord = approx60Hz(vert_gaze_coord, time)))
 
-    # TODO: use dat$blinks to cut 0 values during blink
+    ## blinks do not overlap with missing raw data!
+    ## removing those regions just makes it harder to see whats happening
+    # # set blink samples to 0.
+    # # reuse eyelinks blink segment across both eyes
+    # # might cause a problem later (pick eye=="L" or "R")
+    # asl_60hz_blink <- dat$blinks %>%
+    #     select(time=stime,dur) %>%
+    #     mutate(isblink=TRUE) %>%
+    #     uncount(dur) %>%
+    #     left_join(asl_60hz,., by="time")
 
-    return(asl_60hz)
-    # dead code below. plot confirms resampling is okay
-    plot_resample <- rbind(
-        asl_60hz %>% mutate(time=min(asl$time)+60*(0:(nrow(asl_60hz)-1)),
-                            res="60Hz", trial=trial_from_xdat(xdat)),
-        asl %>% mutate(res="250Hz", trial=trial_from_xdat(xdat))) %>%
-        group_by(trial) %>% mutate(time=time-min(time))
-        
+    # asl <- asl_60hz_blink %>%
+    #     mutate_at(vars(pupil_diam,horz_gaze_coord, vert_gaze_coord),
+    #               ~ifelse(is.na(isblink),., 0)) %>%
+    #     select(-time, -isblink)
 
+    asl <- asl_60hz %>%
+        mutate_at(vars(pupil_diam,horz_gaze_coord, vert_gaze_coord),
+                  ~ifelse(missing,0, .)) %>%
+        select(-time, -missing)
+
+    return(asl)
+
+    ## dead code below. plot for resample visual QC 
     theme_set(cowplot::theme_cowplot())
+    
+    # what does the raw eyetrack look like
+    plot_raw <- raw_events %>% filter(event==4) %>%
+        group_by(trial) %>%
+        mutate(time=time-min(time))
+    ggplot(plot_raw) + aes(y=xpl, x=time, color=trial) +
+        geom_point() +
+        geom_hline(aes(NULL), yintercept = unique(raw_events$dotpos),color="red") +
+        ggtitle("xgaze @ event=4")
 
-    ggplot(plot_resample %>% filter(trial %in% c(1,27,50))) +
-        aes(x=time, y=horz_gaze_coord, linetype=as.factor(xdat),
+    # resample overlayed on original. randomly hardcoded trials
+    plot_resample <- rbind(
+        asl %>% mutate(time=min(asl_coord$time)+60*(0:(nrow(asl)-1)),
+                            res="60Hz", trial=trial_from_xdat(xdat)),
+        asl_coord %>% mutate(res="250Hz", trial=trial_from_xdat(xdat))) %>%
+        group_by(res,trial) %>% mutate(time=time-min(time))
+
+    ggplot(plot_resample %>%
+           filter(trial %in% c(2,5,20), time<9000)) +
+        aes(x=time, y=horz_gaze_coord, shape=as.factor(xdat), linetype=as.factor(xdat),
             color=res, group=paste(xdat,res)) +
-        geom_path() + facet_wrap(~trial) +
+        geom_point() + geom_path() +facet_grid(res~trial) +
         ggtitle("SR as ASL: interpolation check on random trials")
 
 }
