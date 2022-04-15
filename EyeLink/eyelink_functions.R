@@ -53,6 +53,15 @@ merge_sacs <- function(events, saccs){
 ## scoring
 score<-function(val, desc="") return(list(score=val, desc=desc))
 score_trial <- function(lat, dur, sacdist, dotpos, screen_x_res=1920){
+  # trial score a value -1 to 2. can think of as number of saccades until correct
+  # -1 dropped trial,  0 = error, 1 = correct, 2 = error corrected
+  # returning list of [1] score value [2] drop explination/description
+  # use vectors of saccade
+  #  latencies, duration, and distance
+  # with single value
+  #  dotpos - correct saccade is away from this position
+  #  screen_x_res - how wide the screen is (default to 1920)
+  #
   # drop if was already saccading or moved before could be reacting to dot
   if(min(lat) < 60) return(score(-1, "early saccade"))
   # maybe we care about saccade duration
