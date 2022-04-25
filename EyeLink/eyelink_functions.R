@@ -19,8 +19,19 @@ options(dplyr.summarise.inform = FALSE) # okay with overwritting group_by with a
 
 extract_events<-function(eyets){
   # event intervals (4 per trial, long format)
+  # from GK 2022-04-15 (encoded in eprime3 task):
+  #   Message Trial Event TrialType         DotPosition1+2
+  #   TRIALID   2       0 Reward            1406    R-27
+  #   EventID   2       1 Fixation Cross
+  #   EventID   2       2 Ring ($ or #)
+  #   EventID   2       3 Fixation Cross
+  #   EventID   2       4 Yellow Dot
+  #   EventID   2       5 End of Trial (Yellow Dot Offset)
+  #   TRIAL OK
   events <- eyets$msg %>%
-      filter(!grepl("OK$",text)) %>%
+      # remove task administrator notes (InputId Awake Droop Intrv) and end of TRIAL OK
+      # could maybe just grab TRIALID|EventID
+      filter(!grepl("^InputID|OK$",text)) %>%
       # text encodes all the event information. pull it into separate columns
       separate(text, c("msg", "trial","event","ttypenum", "desc"), extra="merge") %>%
       # only TRIALID has rewtype, dotpos, & L/R-#
@@ -74,11 +85,11 @@ score_trial <- function(lat, dur, sacdist, dotpos, screen_x_res=1920){
   if(is.na(dotpos)) return(score(-1, "dot position unknown!?"))
 
   # expect to look opposite dot position
-  expect_dir <- -1* sign(first(dotpos)-screen_x_res/2)
+  expect_dir <- -1* sign(dotpos[1]-screen_x_res/2)
 
   # TODO: drop if not starting close to center
 
-  if(expect_dir == sign(first(sacdist[consider_idx]))) return(score(1))
+  if(expect_dir == sign(sacdist[consider_idx][1])) return(score(1))
 
   # all saccades of any real length are the wrong direction? incorrect
   if(all(expect_dir != sign(sacdist[consider_idx]))) return(score(0))
@@ -103,7 +114,7 @@ score_file<-function(asc_fname='example/220682rr01.asc.gz', dot_event=4){
 
     scored_run <- sacs_during_dot %>%
       group_by(trial, dotpos, rewtype) %>%
-      summarise(lat=first(lat),
+      summarise(lat=lat[1],
                 nsac=n(),
                 leftmost=min(c(sxp,exp)),
                 rightmost=max(c(sxp,exp)),
