@@ -202,7 +202,7 @@ asc_as_asl<-function(asc_fname, gaze=list(x=1920,y=1080)){
 
     # set names and resample grid
     asl_coord <- raw_events %>%
-        mutate(horz_gaze_coord=xpl*to_asl_x,
+        mutate(horz_gaze_coord=xpr*to_asl_x,
                vert_gaze_coord=ypl*to_asl_y) %>%
         select(time, xdat, pupil_diam=ypr, horz_gaze_coord, vert_gaze_coord)
     
@@ -246,7 +246,7 @@ asc_as_asl<-function(asc_fname, gaze=list(x=1920,y=1080)){
     plot_raw <- raw_events %>% filter(event==4) %>%
         group_by(trial) %>%
         mutate(time=time-min(time))
-    ggplot(plot_raw) + aes(y=xpl, x=time, color=trial) +
+    ggplot(plot_raw) + aes(y=xpr, x=time, color=trial) +
         geom_point() +
         geom_hline(aes(NULL), yintercept = unique(raw_events$dotpos),color="red") +
         ggtitle("xgaze @ event=4")
@@ -266,7 +266,47 @@ asc_as_asl<-function(asc_fname, gaze=list(x=1920,y=1080)){
         ggtitle("SR as ASL: interpolation check on random trials")
 
 }
+restrict_range <- function(d, t_start, t_end){
+   d %>% filter(stime <= t_end,
+                etime >= t_start) %>%
+      mutate(across(c(etime, stime), ~ .x - t_start))
+}
 
+
+inspect_trial <- function(dat, only_trial, desc="") {
+    #asc_fname='example/220682rr01.asc.gz'
+    #dat<- eyelinker::read.asc(asc_fname)
+    t_events <- extract_events(dat) %>% filter(trial==only_trial)
+    t_start <- min(t_events$time)
+    t_end <- max(t_events$event_endtime)
+
+    t_raw <- filter(dat$raw, time>=t_start, time<= t_end) %>%
+        mutate(time=time-t_start)
+
+    t_b <- restrict_range(dat$blinks, t_start, t_end)
+    t_s <- restrict_range(dat$sacc, t_start, t_end)
+
+    t_event_plot <- t_events %>%
+        mutate(across(c(time,event_endtime), ~.x-t_start),
+               event=factor(event,levels=1:5,
+                            labels=c("fix","ring","fix2","dot","end")))
+    
+    ggplot(t_raw) +
+        aes(xmin=stime, xmax=etime)+
+        geom_rect(data=t_b, aes(fill=eye, ymin=-100, ymax=-200),
+                  alpha=.5, color="red")+
+        geom_rect(data=t_s, aes(fill=eye, ymin=0, ymax=-100),
+                  alpha=.5, color="blue")+
+        geom_vline(data=t_event_plot,
+                   aes(xintercept=time, color=event))+
+        geom_hline(data=t_event_plot[1,],
+                   aes(yintercept=dotpos),color="yellow", size=3)+
+        geom_hline(yintercept=1920/2,color="green",linetype=2)+
+        geom_point(aes(x=time, y=xpr, xmin=NULL, xmax=NULL), color="blue",alpha=.5)+
+        geom_point(aes(x=time, y=xpl, xmin=NULL, xmax=NULL), color="red",alpha=.5)+
+        coord_cartesian(ylim=c(-200,1920),xlim=c(0,t_end-t_start))+
+        ggtitle(sprintf("trial %d %s", only_trial, desc))
+}
 
 local_tests<-function(){
     library(testthat)
@@ -324,4 +364,20 @@ local_tests<-function(){
 
         expect_equal(c(250,80), xdat(c("Neut","Reward"),96, c(5,1)))
     })
+    
+   ranges <- data.frame(stime=c(0,5,15),
+                        etime=c(2,8,20))
+   rr_res       <- restrict_range(ranges, 4, 6)
+   rr_res_early <- restrict_range(ranges, 6, 8)
+   rr_res_late  <- restrict_range(ranges, 4, 6)
+   test_that("restrict range",{
+      expect_equal(1, nrow(rr_res))
+      expect_equal(1, rr_res$stime)
+      expect_equal(4, rr_res$etime)
+
+      expect_equal(1, nrow(rr_res_early))
+      expect_equal(-1, rr_res_early$stime)
+
+      expect_equal(1, nrow(rr_res_late))
+   })
 }
