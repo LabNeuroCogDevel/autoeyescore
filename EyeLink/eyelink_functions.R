@@ -181,16 +181,25 @@ xdat <- function(rewtype, dotpos, eventnum, target_num=4, x.screen.res=1920) {
 # old data is 60Hz.        10ms
 approx60Hz<-function(ts, time,hz=60, ...){
   # ... useful for method="constant" for xdat
-  xout <- seq(min(time), max(time), by=hz)
+  #NB. ts expected in milliseconds
+  xout <- seq(min(time), max(time), by=1000/hz)
   stats::approx(x=time,y=ts, xout=xout, ...)$y
 }
 
 trial_from_xdat <-function(xdat) cumsum(c(T,diff(xdat)!=0)&xdat<100)
-asc_as_asl<-function(asc_fname, gaze=list(x=1920,y=1080)){
+asc_as_asl<-function(asc_fname){
+    #asc_fname='example/220682rr01.asc.gz'
     dat<- eyelinker::read.asc(asc_fname)
+    gaze <- list(x=dat$info$screen.x, y=dat$info$screen.y)
+    origHz <- dat$info$sample.rate
+    
+    # time is in ms
+    # 4    == dat$raw$time %>% head %>% diff %>% unique
+    # .004 == 1/origHz
+
     events_rep <- dat %>%
         extract_events %>%
-        mutate(xdat=xdat(rewtype, dotpos, event)) %>%
+        mutate(XDAT=xdat(rewtype, dotpos, event)) %>%
         rep_samples
     raw_events <- merge(dat$raw, events_rep, by="time") %>% arrange(time)
         
@@ -253,19 +262,27 @@ asc_as_asl<-function(asc_fname, gaze=list(x=1920,y=1080)){
 
     # resample overlayed on original. randomly hardcoded trials
     plot_resample <- rbind(
-        asl %>% mutate(time=min(asl_coord$time)+60*(0:(nrow(asl)-1)),
-                            res="60Hz", trial=trial_from_xdat(xdat)),
-        asl_coord %>% mutate(res="250Hz", trial=trial_from_xdat(xdat))) %>%
+        asl %>% mutate(time=min(asl_coord$time)+1000/60*(0:(nrow(asl)-1)),
+                       res="60Hz", trial=trial_from_xdat(XDAT)),
+        asl_coord %>% mutate(res="250Hz", trial=trial_from_xdat(XDAT))) %>%
         group_by(res,trial) %>% mutate(time=time-min(time))
 
     ggplot(plot_resample %>%
            filter(trial %in% c(2,5,20), time<9000)) +
-        aes(x=time, y=horz_gaze_coord, shape=as.factor(xdat), linetype=as.factor(xdat),
-            color=res, group=paste(xdat,res)) +
-        geom_point() + geom_path() +facet_grid(res~trial) +
+        aes(x=time, y=horz_gaze_coord, shape=as.factor(XDAT), linetype=as.factor(XDAT),
+            color=res, group=paste(XDAT,res)) +
+        geom_point() + geom_path() +
+        facet_grid(~trial) +
+        #facet_grid(res~trial) +
         ggtitle("SR as ASL: interpolation check on random trials")
-
 }
+
+
+old_scorer <- function(asl){
+   source("../ScoreRun.R")
+   sacs <- getSacs(asl, subj=1, run=1, runtype=AS,rundate=0, save_scored=F)
+}
+
 restrict_range <- function(d, t_start, t_end){
    d %>% filter(stime <= t_end,
                 etime >= t_start) %>%
@@ -352,6 +369,11 @@ local_tests<-function(){
         expect_equal(6, with(r_stat, n[lab=="A"]))
         expect_equal(51, with(r_stat, n[lab=="B"]))
         expect_equal(51, with(r_stat, n[lab=="C"]))
+    })
+    
+    test_that("approx 60Hz",{
+      timeeg <- seq(1,500,1000/250)
+      expect_equal(approx60Hz(timeeg,timeeg), seq(1,500,by=1000/60))
     })
 
     test_that("xdats",{
