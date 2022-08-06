@@ -2,8 +2,8 @@
 # 20210924 - extract from vpx.org (20210813)
 
 suppressPackageStartupMessages({
- source('/Volumes/Hera/Projects/autoeyescore/RingReward/RingReward.settings.R')
- source('/Volumes/Hera/Projects/autoeyescore/ScoreRun.R')
+ source('RingReward/RingReward.settings.R')
+ source('ScoreRun.R')
  library(dplyr)
  library(tidyr)
  library(glue)
@@ -61,6 +61,7 @@ vp2asl <- function(vp) {
 }
 
 score_arrington <- function(eyetxt, ...) {
+   # eyetxt <- "arrington/example/sub-WF_ses-01_task-DR_run-1"
    # ... can be 'show_plot=T'
    fixpos.maxdrift <- 100 # default 50
    sac.minmag <- 30 #default 10
@@ -88,8 +89,9 @@ score_arrington <- function(eyetxt, ...) {
 
 
 # USING
-runs96y7 <- Sys.glob("096/y7/sub-*run-[1-4]") %>% 
-   lapply(score_arrington) %>%
-   bind_rows
-
-print(runs96y7)
+arrington_example <- function() {
+  runs96y7 <- Sys.glob("arrington/example/sub-*_ses-*_task-DR_run-1") %>% 
+     lapply(score_arrington) %>%
+     bind_rows
+  print(runs96y7)
+}
