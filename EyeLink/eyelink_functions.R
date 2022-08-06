@@ -213,19 +213,22 @@ asc_as_asl<-function(asc_fname){
     asl_coord <- raw_events %>%
         mutate(horz_gaze_coord=xpr*to_asl_x,
                vert_gaze_coord=ypl*to_asl_y) %>%
-        select(time, xdat, pupil_diam=ypr, horz_gaze_coord, vert_gaze_coord)
+        select(time, XDAT, pupil_diam=ypr, horz_gaze_coord, vert_gaze_coord)
     
     # probably an xts+zoo way to do this elegantly.
     # but cant figure it out. so same approx call on each column
     asl_60hz <- with(asl_coord, data.frame(
               time            = approx60Hz(time, time) %>% round, # lazy. should use $x
-              xdat            = approx60Hz(xdat, time, method="constant"),
+              XDAT            = approx60Hz(XDAT, time, method="constant"),
               pupil_diam      = approx60Hz(pupil_diam, time),
-              missing         = is.na(approx60Hz(horz_gaze_coord, time, method="constant")),
+              missing         = approx60Hz(1*!is.na(horz_gaze_coord), time, method="constant") < 1,
+              # NA constant interpolation didn't work as expected? (20220429)
+              #missing         = is.na(approx60Hz(horz_gaze_coord, time, method="constant")),
               horz_gaze_coord = approx60Hz(horz_gaze_coord, time),
               vert_gaze_coord = approx60Hz(vert_gaze_coord, time)))
 
     ## blinks do not overlap with missing raw data!
+    ## -- 20220429 probably because I'm mixing L/R eye blinks and (prev) the worse of the eyes (left)
     ## removing those regions just makes it harder to see whats happening
     # # set blink samples to 0.
     # # reuse eyelinks blink segment across both eyes
@@ -241,11 +244,11 @@ asc_as_asl<-function(asc_fname){
     #               ~ifelse(is.na(isblink),., 0)) %>%
     #     select(-time, -isblink)
 
-    asl <- asl_60hz %>%
-        mutate_at(vars(pupil_diam,horz_gaze_coord, vert_gaze_coord),
-                  ~ifelse(missing,0, .)) %>%
-        select(-time, -missing)
+    asl_rmmissing <- asl_60hz %>%
+        mutate(across(c(pupil_diam, horz_gaze_coord, vert_gaze_coord),
+                      ~ifelse(missing,0, .x)))
 
+    asl <- asl_rmmissing %>% select(-time, -missing)
     return(asl)
 
     ## dead code below. plot for resample visual QC 
@@ -293,6 +296,7 @@ restrict_range <- function(d, t_start, t_end){
 inspect_trial <- function(dat, only_trial, desc="") {
     #asc_fname='example/220682rr01.asc.gz'
     #dat<- eyelinker::read.asc(asc_fname)
+    if("character" %in% class(dat)) dat <- eyelinker::read.asc(dat)
     t_events <- extract_events(dat) %>% filter(trial==only_trial)
     t_start <- min(t_events$time)
     t_end <- max(t_events$event_endtime)

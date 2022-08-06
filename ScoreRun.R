@@ -302,9 +302,10 @@ parseRawForTargets <- function(eydfile, funnybusiness=''){
   # reset d
   if (any("data.frame" %in% class(eydfile))) {
      d <<- as.data.frame(eydfile)
-     if(!all(c("XDAT", "pupil_diam", "horz_gaze_coord", "vert_gaze_coord") ==
+     need_cols <- c("XDAT", "pupil_diam", "horz_gaze_coord", "vert_gaze_coord")
+     if(!all(need_cols ==
              names(d))){
-        cat("ERROR: unexpected columns in ", names(d), "\n")
+        cat("ERROR: unexpected columns. have: ", names(d),"; want:", need_cols, "\n")
         readeydsuccess <- FALSE
      } else {
         readeydsuccess <- TRUE
