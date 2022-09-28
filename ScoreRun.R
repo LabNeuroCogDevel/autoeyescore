@@ -455,13 +455,14 @@ interoplateSamples <- function(trl, funnybusiness=''){
     }
 
     pretargetD   <- d[pretargetIDX, ] 
-    if(
-      length(which(is.na(pretargetD$xpos))) > .2*sampleHz &&
+    n_missing_blink_thres <- .2*sampleHz  # .2seconds, 12 samples 60Hz
+    n_pretrg_missing <- length(which(is.na(pretargetD$xpos)))
+    if(n_pretrg_missing > n_missing_blink_thres &&
       !any(grepl('preblinkok',funnybusiness))
     ){
      #allsacs <- dropTrialSacs(subj,runtype,trl,xdatCode,'blink before target onset',allsacs,showplot=showplot,run=run,rundate=rundate)
      #next
-     return('blink before target onset')
+     return(sprintf('blink before target onset (%d of %d pretarget NA)', n_pretrg_missing, nrow(pretargetD)))
     }
 
 
