@@ -1,8 +1,9 @@
 library(dplyr)
 source('../eyelink_functions.R')
-get_id <- function(s) stringr::str_extract(s,'\\d{6}..\\d{2}')
+get_id <- function(s) stringr::str_extract(s,'\\d{4,6}..\\d{2}')
 
-asc_files <- Sys.glob('asc/*.asc.gz')
+# 20220928: 3* ids are CARRS. 2* are SITS (?)
+asc_files <- Sys.glob('asc/3*.asc.gz')
 scores_el <- lapply(asc_files, function(f) score_file(f) %>% mutate(vid=get_id(f)))
 d_eyelink <- scores_el %>% bind_rows()
 
@@ -39,7 +40,7 @@ d_both <- merge(d_asl %>% select(vid,trial,lat,Count,Desc),
                 d_eyelink %>% select(vid,trial,lat,Count=score,Desc=desc),
                 by=c("vid","trial"),
                 suffixes=c(".asl",".el"))
-write.csv(d_both,"score_asl_and_et.csv",row.names=F)
+write.csv(d_both,"scoreCARRS_asl_and_et.csv",row.names=F)
 #d_both %>% filter(Count.el==Count.asl,Count.asl>=0) %>% with(summary(lat.el - lat.asl))
 #  Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
 #  -938.00   -4.00   -1.00  -12.92    3.00  158.00 
@@ -66,4 +67,4 @@ p_score_rat <- ggplot(score_rat) +
     geom_label() +
     scale_fill_gradient(low="white", high="red") +
     ggtitle("Algo agreement: ASL vs EyeLink (lat: asl-el)")
-ggsave(p_score_rat, file="score_rat.png")
+ggsave(p_score_rat, file="score_rat_CARRS.png")

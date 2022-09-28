@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 EDFDIR="$HOME/scratch/EyeLink_LinuxDevKit_1.11_x64_debs/usr/bin/EdfConverter"
-edfconv(){ LD_LIBRARY_PATH=$EDFDIR java -jar $EDFDIR/edfconverter.jar "$@"; }
+edfconv(){ LD_LIBRARY_PATH=$EDFDIR java -jar $EDFDIR/edfconverter.jar "$@" || echo "always exits withe error"; }
 
 fetch_edf(){
    DRYRUNrsync=""
@@ -8,12 +8,14 @@ fetch_edf(){
 
   # currently working on all files at once
   # better to have single command to make predictable .asc.gz file
-  origdir=/Volumes/SITS/Tasks/AnnualLabVisit/Pupil_Tasks/RAS/Data
+
+  #origdir="/Volumes/SITS/Tasks/AnnualLabVisit/Pupil_Tasks/RAS/Data/*.edf"
+  origdir="/Volumes/CARRS/Participant Data folders/P1/" # */Eyetracker/RAS/*edf
   datadir=$(pwd)
 
   # only sync edfs we dont already have
   find $datadir/asc/ -iname '*asc.gz' | sed 's:.*/::; s/.asc.gz/.edf/;' | mkifdiff had_edf.txt
-  rsync $DRYRUNrsync --size-only --exclude-from=had_edf.txt -vrhi $origdir/*.edf $datadir/edf/
+  rsync $DRYRUNrsync --size-only --exclude-from=had_edf.txt -vrhi "$origdir"/*/Eyetracker/RAS/*edf $datadir/edf/
 }
 
 # gzip, mv, and rm edf copy
