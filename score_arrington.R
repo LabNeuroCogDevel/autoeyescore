@@ -12,14 +12,16 @@ suppressPackageStartupMessages({
 
 
 read_arr <- function(f) {
-   id <- gsub('.*sub-([^_]*).*run-([^_]).*','\\1 \\2',f)
-   eye_samps <- read.table(text=system(glue('grep ^10 {f}|cut -f2-14'),intern=T),sep="\t",
-      col.names=c("TotalTime","DeltaTime",
-		  "X_Gaze","Y_Gaze",
-		  "X_CorrectedGaze","Y_CorrectedGaze",
-		  "Region","PupilWidth","PupilHeight",
-		  "Quality","Fixation","PupilDiameter","Count"))
-   msg <- read.table(text=system(glue('grep ^12 {f}|cut -f2-3'),intern=T),sep="\t", col.names=c("TotalTime","msg")) 
+   id <- gsub(".*sub-([^_]*).*run-([^_]).*", "\\1 \\2", f)
+   eye_samps <- read.table(text=system(glue("grep ^10 {f}|cut -f2-14"), intern=T),
+                           sep="\t",
+      col.names=c("TotalTime", "DeltaTime",
+                  "X_Gaze", "Y_Gaze",
+                  "X_CorrectedGaze", "Y_CorrectedGaze",
+                  "Region", "PupilWidth", "PupilHeight",
+                  "Quality", "Fixation", "PupilDiameter", "Count"))
+   msg <- read.table(text=system(glue('grep ^12 {f}|cut -f2-3'), intern=T),
+                     sep="\t", col.names=c("TotalTime","msg")) 
   
    d <- bind_rows(eye_samps, msg) %>%
     arrange(TotalTime) %>%
@@ -31,8 +33,19 @@ read_arr <- function(f) {
 msg2dollarreward <- function(d) d %>%
    separate(msg, c('trial','part','ttype','dotpos'),sep=" ", extra='merge', remove=F) %>%
    mutate_at(vars(trial, dotpos),as.numeric) %>%
-   mutate(part=ifelse(is.na(part),'iti', part))
+   mutate(part=ifelse(is.na(part),'iti', part)) %>%
+   # if iti doesn't carry trial, use value from dot (which is after iti)
+   fill(trial, .direction="up")
   
+med_norm <- function(d, norm_from=c("cue")) {
+  # norm_from could be c("iti","ring","cue")
+  t_med <- d %>%
+    #filter(! part %in% c('dot')) %>%
+    filter(part %in% norm_from) %>%
+    group_by(trial) %>% summarise(x_med = median(X_CorrectedGaze,na.rm=T))
+  d %>% left_join(t_med, by="trial") %>% mutate(x_norm = X_CorrectedGaze - x_med)
+}
+
 dr_lrx <- function(d) d %>%
    filter(part=='dot') %>% group_by(id,trial) %>%
    mutate(t=TotalTime-first(TotalTime),
@@ -60,23 +73,29 @@ vp2asl <- function(vp) {
       arrange(id,TotalTime)
 }
 
-score_arrington <- function(eyetxt, ...) {
-   # eyetxt <- "arrington/example/sub-WF_ses-01_task-DR_run-1"
-   # ... can be 'show_plot=T'
-   fixpos.maxdrift <- 100 # default 50
-   sac.minmag <- 30 #default 10
-   lat.minvel <- 8 # default 4
-   # sub-xxx_run-y
-   nameinfo <- basename(eyetxt) %>%
-      # "sub-96_ses-01_task-DR_run-1
+info_from_fname <- function(eyetxt) {
+   # "sub-96_ses-01_task-DR_run-1
+   basename(eyetxt) %>%
       str_match(pattern="sub-(.*)_task-(.*)_run-(.*)") %>%
       as.vector %>%
       `names<-`(c('all','subj','task','run')) 
-   print(nameinfo)
+}
+
+score_arrington <- function(eyetxt, ...) {
+
+   nameinfo <- info_from_fname(eyetxt)
+
+   # eyetxt <- "arrington/example/sub-WF_ses-01_task-DR_run-1"
+   # ... can be 'show_plot=T'
+   fixpos.maxdrift <<- 100 # default 50
+   sac.minmag <<- 30 #default 10
+   lat.minvel <<- 8 # default 4
 
    d <- read_arr(eyetxt) %>%
       msg2dollarreward %>%
+      med_norm %>%
       vp2asl
+
    print(head(d))
    d %>%
       select(XDAT, pupil_diam, horz_gaze_coord, vert_gaze_coord) %>%
