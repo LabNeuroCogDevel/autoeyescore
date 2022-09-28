@@ -30,7 +30,7 @@ asl_score <- function(asc)
 
 
 scores_asl <- lapply(asc_files,
-                    function(f) tryCatch(score_asc(f), error=function(e)NULL))
+                    function(f) tryCatch(asl_score(f), error=function(e)NULL))
 
 
 d_asl <- scores_asl %>% bind_rows()
@@ -66,4 +66,4 @@ p_score_rat <- ggplot(score_rat) +
     geom_label() +
     scale_fill_gradient(low="white", high="red") +
     ggtitle("Algo agreement: ASL vs EyeLink (lat: asl-el)")
-ggsave(p_score_rat, "score_rat.png")
+ggsave(p_score_rat, file="score_rat.png")
