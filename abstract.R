@@ -199,7 +199,7 @@ onset_blink <-function(onsets, blinks, opts) {
 }
 
 # get accelration info from interopolated xposition
-get_accels <- function(interp_xpos, opts, xtime=1:length(interp_xpos)){
+find_accels <- function(interp_xpos, opts, xtime=1:length(interp_xpos)){
     # fit to local polynomial (with guassain kernel)
     # 20200706 NB! gridsize defaults to 401. we want to get a consistant resolution.
     #              60 is likely length of target area (orig input). 401/60 ~= 6.66
@@ -288,7 +288,6 @@ find_saccades <- function(accel, blinks, opts){
        sac.df$held      = 1
      }
 
-    #browser()
     sac.df$gtMinLen  = sac.df$end - sac.df$onset > opts$sac.minlen
     sac.df$intime    = sac.df$onset < opts$sac.time & sac.df$end > opts$lat.fastest
     # first clause of intime (within xdat, isn't needed)
@@ -300,10 +299,9 @@ find_saccades <- function(accel, blinks, opts){
     # 2 would be perfect (e.g. start going up, slow once at top)
     if(slowcnt > 8) { cat("WARNING: unusual number of velc. changes",slowcnt ," poor tracking?\n") }
     
-    ##TODO?? not a saccade (we care about) if motion is back to baseline
-
     # 20200508 - reset onsetIdx and endIdx to be relative to actual samplerate
     sac.df$onsetIdx <- round(accel$est$x[sac.df$onsetIdx])
+    sac.df$slowedIdx <- round(accel$est$x[sac.df$slowedIdx])
     sac.df$endIdx   <- round(accel$est$x[sac.df$endIdx])
     return(sac.df)
 }
@@ -574,6 +572,42 @@ plot_data <- function(eyedf, interp_df, sac.df, base.val, sac.exp, opts, tmin=1,
      cowplot::theme_cowplot()
 }
 
+#' add_trials
+#' add trial info to all saccades
+#' @param all_sacs - find_saccades()
+#' @param tidxdf - trial_indexs() + get_baseline()
+#' @param ntrials - opts$expectedTrialLengths
+#' @return all_sacs with trl{Start,End,Trg}Idx + trial, base.val, xdat
+add_trials <- function(all_sacs, tidxdf, ntrials) {
+    # find a trial for each saccade
+    # put saccade in the trial where the saccade ends
+    # (maybe IRanges is a better way to do this)
+    l <- apply(tidxdf,1,function(x)
+               data.frame(
+                   # will match against saccade dataframe column
+                   endIdx=x[['start']]:x[['stop']],
+                   # same dataframe as before
+                   trial=x[['trial']],
+                   xdat=x[['xdat']],
+                   trlStartIdx=x[['start']],
+                   trlEndIdx=x[['stop']],
+                   trlTrgIdx=x[['target']],
+                   base.val=x[['baseline']]
+                   )) %>% dplyr::bind_rows()
+    all_sacs <- merge(l, all_sacs, by='endIdx', all.y=T)
+    # add all trials
+    all_sacs <- merge(data.frame(trial=1:ntrials), all_sacs, by='trial',all=T)
+
+    # saccades should be short. so no risk of being in target of previous?
+    if(with(all_sacs,
+            any(!is.na(trlStartIdx) &
+                onsetIdx < trlStartIdx &
+                endIdx >= trlTrgIdx)))
+        stop('saccades starts in one trial and end in/after target of another')
+
+    return(all_sacs)
+}
+
 #' segment_file
 #' pull out target segements of eye tracking
 #' @param data_file file to read from
@@ -584,28 +618,38 @@ segment_file <- function(data_file, opts=studysettings()){
     eyedf <- read_eye(data_file) # this maybe replaced by arrow?
     eyedf <- clean_xdat(eyedf, opts) # bad data samples to NA
     tidxdf <- trial_indexs(eyedf, opts) # trial, start, target, stop, xdat
+    tidxdf$baseline <- get_baselines(tidxdf, eyedf$xpos)
     interps <- interp_samples(eyedf$xpos, opts) #  remove samples around blinks, smooth
     all_blinks <- find_blinks(interps$b.approx$xpos, opts)
-    all_accel  <- get_accels(interps$b.nona$xpos, opts)
+    all_accel  <- find_accels(interps$b.nona$xpos, opts)
     all_sacs   <- find_saccades(all_accel, all_blinks, opts)
+    # add aditional columns
+    all_sacs   <- add_trials(all_sacs, tidxdf, opts$expectedTrialLengths)
+    all_sacs <- sac_thres(all_sacs, opts)
+    all_sacs$p.tracked <- tracked_withinsac(all_sacs, eyedf$xpos)
+    all_sacs <- sac_pos(all_sacs)
 
-    tinfo <- partition_trials(tidxdf, eyedf$xpos) 
+    # TODO: drop per trial
+    #dropreasons <- lapply(
+    #                             rawdf=segs$eyedf[ti,],
+    #                             t_interp_xpos=segs$interps$b.nona$xpos[ti],
+    #                             t_approx=segs$interps$b.approx$xpos[ti],
+    #                             opts=opts),
+    #dropreason <- should_drop(eye_xpos, t_interp_xpos, sac_df, blinks, opts)
+    #sac_df$Desc <- dropreason
+    #sac_df$Drop <- !is.na(dropreason)
+
+
+    #plot_trial(eyedf, all_accel, all_blinks, all_sacs)
 
     # return list of all things
+    tinfo <- partition_trials(tidxdf, eyedf$xpos) 
     namedList(eyedf, interps, tinfo)
 }
 
-# get segments of the trial
-segment_targets <- function(segs) {
-    lapply(segs$tinfo, function(trl) {
-       ti <- trl$trgidxs
-       ret <- list(
-           rawdf = segs$eyedf[ti,],
-           xpos_interp=segs$interps$b.nona$xpos[ti],
-           xpos_approx=segs$interps$b.approx$xpos[ti],
-       )
+# TODO: maybe part of partition_trials?
+relative_times <- function(sac_df, blinks, interp){
 
-    })
 }
 
 score_visit <- function(data_file, opts=studysettings(), onlyon=NA){
@@ -621,7 +665,7 @@ score_visit <- function(data_file, opts=studysettings(), onlyon=NA){
         sac_df <- data.frame(xdat=trl$xdat,trial=trl$trial)
         tryCatch(
             sac_df <- trial_sacs(trl,
-                                 eye_xpos=segs$eyedf$xpos[ti],
+                                 rawdf=segs$eyedf[ti,],
                                  t_interp_xpos=segs$interps$b.nona$xpos[ti],
                                  t_approx=segs$interps$b.approx$xpos[ti],
                                  opts=opts),
@@ -634,6 +678,16 @@ score_visit <- function(data_file, opts=studysettings(), onlyon=NA){
    })
 }
 
+#' get baseline for a number of samples before target onset
+#' @param tidxdf  from trial_indexs()
+#' @param xpos  timeseries of all x positions to get pre target baseline
+#' @param nbefore  timepoints before onset
+#' @param nafter  timepoints after onset
+#' @return baselines for each trial 
+get_baselines <- function(tidxdf, xpos, nbefore=5, nafter=2) {
+  sapply(tidxdf$target,
+         FUN=function(i)  mean(xpos[c((-1*nbefore):nafter) + i],na.rm=T)) 
+}
 
 #' parition_trials
 #' parition trials into target info lists
@@ -645,8 +699,7 @@ partition_trials <- function(tidxdf, xpos) {
   # how to partition trials - need baseline (from raw ts) and range of where to work
   # take raw input and target/stop indexs
   
-  baselines <- sapply(FUN=function(i)  mean(xpos[c(-5:2) + i],na.rm=T),
-                      tidxdf$target) 
+  baselines <- get_baselines(tidxdf, xpos)
   trgrange  <- mapply(FUN=function(a,b) c(a:(b-1)),
                       tidxdf$target, tidxdf$stop,
                       SIMPLIFY=F) 
@@ -659,13 +712,15 @@ partition_trials <- function(tidxdf, xpos) {
 #' @title plot trial info
 #' @description freq from opts$sampleHz
 #' @param orig xpos time series of target segment
-#' @param a   from get_accels()
+#' @param a   from find_accels()
 #' @param blinks from find_blinks()
 #' @param sacs TODO
 #' @param freq from opts$sampleHz
-plot_trial <- function(orig, a=NULL, blinks=NULL, sacs=NULL,
+plot_trial <- function(origdf, a=NULL, blinks=NULL, sacs=NULL,
                        freq=60, ylim=c(0,270), maxdil=50) {
-    p <- plot(orig, ylim=ylim, cex=)
+    # make 30 = size 1, range 0-50 to .1 - 2
+    dil <- origdf$dil * (2-.1)/50 + .1
+    p <- plot(origdf$xpos, ylim=ylim, cex=dil)
 
     if(!is.null(sacs)){
       # colored blocks for each saccade
@@ -701,26 +756,25 @@ plot_trial <- function(orig, a=NULL, blinks=NULL, sacs=NULL,
     return(p)
 }
 
-trial_sacs <- function(trl, eye_xpos, t_interp_xpos, t_approx, opts, plot=F){
+trial_sacs <- function(trl, rawdf, t_interp_xpos, t_approx, opts, plot=F){
     # get blinks, saccades, tracking
     # check for resaons to drop
 
     # trl is a list. should have this info
     stopifnot(c("xdat","trial", "baseline") %in% names(trl))
+    eye_xpos <- rawdf$xpos
 
     # parse data
     blinks <- find_blinks(t_approx, opts)
-    accel_info <- get_accels(t_interp_xpos, opts)
+    accel_info <- find_accels(t_interp_xpos, opts)
     sac_df <- find_saccades(accel_info, blinks, opts)
-    sac_df$p.tracked <- tracked_withinsac(sac_df, eye_xpos)
-
-    # sac.thres for anti like  reverse of 2, 87, 172 or 258 (left to right)
-    sac.thres <- opts$getExpPos(trl$xdat) 
-    sac_df$sac.expmag <- sac.thres - opts$screen.x.mid
-    sac_df$sac.thres <- sac.thres
-    sac_df$base.val  <- trl$baseline
-    sac_df$xdat <- trl$xdat
     sac_df$trial <- trl$trial
+    sac_df$xdat <- trl$xdat
+    sac_df$base.val  <- trl$baseline
+
+    sac_df$p.tracked <- tracked_withinsac(sac_df, eye_xpos)
+    # sac.thres for anti like  reverse of 2, 87, 172 or 258 (left to right)
+    sac_df <- sac_thres(sac_df, opts)
 
     # drop?
     dropreason <- should_drop(eye_xpos, t_interp_xpos, sac_df, blinks, opts)
@@ -731,8 +785,20 @@ trial_sacs <- function(trl, eye_xpos, t_interp_xpos, t_approx, opts, plot=F){
     # use columns to setup useful info from positions
     sac_df <- sac_pos(sac_df)
 
-    if(plot) plot_trial(eye_xpos, accel_info, blinks, sac_df)
+    if(plot) plot_trial(origdf, accel_info, blinks, sac_df)
 
+    return(sac_df)
+}
+
+#' sac_thres
+#' adds xposition threshold info based on xdat
+#' @param sac_df df with xdat
+#' @param opts  list with getExpPos function and screen.x.mid
+#' @return sac_df with additonal columns: sac.thres, sac.expmag
+sac_thres <- function(sac_df, opts){
+    sac.thres <- opts$getExpPos(sac_df$xdat) 
+    sac_df$sac.expmag <- sac.thres - opts$screen.x.mid
+    sac_df$sac.thres <- sac.thres
     return(sac_df)
 }
 
