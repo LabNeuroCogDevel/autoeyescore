@@ -140,7 +140,7 @@ arrington_example <- function() {
   print(runs96y7)
 }
 
-## ** Single example
+## ** Single Example
 run_one <- function() {
   d <- score_arrington("/Volumes/L/bea_res/Data/Tasks/DollarReward2/MR/11907_20230117/sub-11907_ses-01_task-DR_run-1.txt",
                        onlyontrials=2, showplot = TRUE)
