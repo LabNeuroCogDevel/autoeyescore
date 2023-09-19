@@ -9,6 +9,7 @@ library(ggplot2)
 #plot_run('/Volumes/L/bea_res/Data/Tasks/DollarReward2/MR/11883_20220913/sub-11883_ses-01_task-DR_run-2.txt')
 
 library(tidyr)
+# selld8 l |grep Habit > scans.txt
 DATELOOKUP <- read.table('scans.txt', sep="\t",
                          col.names=c("ld8", "age", "sex", "scan", "study", "Vx", "session")) %>%
     separate(ld8,c("id","d8"))
@@ -17,12 +18,17 @@ fname2info <-function(fname) {
     fnameid <- subjid(fname)
     matchi <- grep(fnameid, DATELOOKUP$id)[1]
     d_id <- DATELOOKUP[matchi,]
+    
     return(with(d_id, glue::glue("{id}_{d8} {round(age)} yo{sex}")))
 }
 
-dr_eye_files <- function() 
- Sys.glob('DR_MR_files/1*_2*/sub*_task-DR_run-*')
- #Sys.glob('/Volumes/L/bea_res/Data/Tasks/DollarReward2/MR/1*_2*/sub*_task-DR_run-*')
+dr_eye_files <- function() {
+ if(dir.exists('/Volumes/L/bea_res/Data/Tasks/DollarReward2/')){
+   Sys.glob('/Volumes/L/bea_res/Data/Tasks/DollarReward2/MR/1*_2*/sub*_task-DR_run-*')
+   } else {
+   Sys.glob('DR_MR_files/1*_2*/sub*_task-DR_run-*')
+  }
+}
 
 score_dr <- function(eg_file) {
   eye_df <- read_arr(eg_file) %>% msg2dollarreward %>% med_norm
@@ -30,6 +36,15 @@ score_dr <- function(eg_file) {
 }
 
 wrap_desc <- function(txt) sapply(txt, \(x) paste(collapse="\n",strwrap(x, width=24)))
+
+# https://stackoverflow.com/questions/44688623/adding-custom-images-to-ggplot-facets
+# put image in facet
+annotation_custom2 <- function (grob, xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, data){
+        layer(data = data, stat = StatIdentity, position = PositionIdentity, 
+                geom = ggplot2:::GeomCustomAnn,
+                inherit.aes = TRUE, params = list(grob = grob, 
+                                                xmin = xmin, xmax = xmax, 
+                                                ymin = ymin, ymax = ymax))}
 
 # 20230402 -- using to identify ideal settings for avotech/arrington at prisma2
 plot_run <- function(eg_file) {
@@ -68,7 +83,8 @@ plot_run <- function(eg_file) {
   # for plotting so we can see if noisey or just off the plot
   cap_at <- function(xs, lim=2) ifelse(abs(xs)>lim, sign(xs)*lim, xs)
 
-  ggplot(dot_df %>% mutate(x_norm=cap_at(x_norm))) +
+  
+  p <- ggplot(dot_df %>% mutate(x_norm=cap_at(x_norm))) +
       aes(x=t, y=x_norm, color=part) +
       geom_hline(aes(yintercept=0), linetype=1, alpha=.5) +
       geom_point(size=.3) +
@@ -85,17 +101,37 @@ plot_run <- function(eg_file) {
                  aes(yintercept=-dotpos), color='blue',linetype=2) +
       # give us actual sd and count in range
       geom_label(data=dot_pos,
-                 aes(x=mint, y=-1*sign(dotpos), color=NULL,
+                 aes(x=mint-1, y=-1*sign(dotpos), color=NULL,
                      label=paste0("SD: ",round(sd,1), " n:", n), 
                      vjust=ifelse(sign(dotpos)==1, 1, 0)),
-                 hjust=0, alpha=.7) +
+                 hjust=0, alpha=.7,size=3) +
       # scoring notes
       geom_text(data=d_score, aes(x=0,y=.9, color=NULL, label=wrap_desc(Desc)), vjust=1, hjust=0, size=2) +
       facet_wrap(~trial) +
       lims(y=c(-2,2)) +
       cowplot::theme_cowplot() +
       ggtitle(paste0(fname_info, " ", basename(eg_file)))
+    
+  ## show calibration image
+  calimg_file <- Sys.glob(file.path(dirname(eg_file),'/*.bmp'))
+  if(length(calimg_file)>0L) {
+    img_placeholder_df <- data.frame(trial=max(dot_df$trial)+1,x_norm=0,part='dot',t=0)
+    # first color dim in bmp is alpha. dont need it. keeping it shifts everything blue/green
+    img <- as.raster(bmp::read.bmp(calimg_file)[,,2:4], max=255)
+    rg <- function(x,y,s=3){
+       dxy <- dim(img)
+       x1 <- dxy[1]/s * (x-1) ; y1 <- dxy[2]/s * (y-1) 
+       x2 <- dxy[1]/s *  x   ;  y2 <- dxy[2]/s*   y
+       grid::rasterGrob(img[x1:x2,y1:y2], interpolate=TRUE)
+    }
+    p.img <- p +
+        annotation_custom2(rg(1,1), data=img_placeholder_df %>% mutate(trial="e1,1")) +
+        annotation_custom2(rg(2,2), data=img_placeholder_df %>% mutate(trial="e2,2")) +
+        annotation_custom2(rg(3,3), data=img_placeholder_df %>% mutate(trial="e3,3"))
+    p <- p.img
+   }
 
+  return(p + see::theme_modern())
 }
 
 # collapse all scores into one giant file
@@ -108,6 +144,34 @@ mkpdf <- function(pdf_fname="all_dollar_reward.pdf") {
     dev.off()
 }
 
+shared_et <-  function(){
+   shared <- read.table('toSiegle/annotatations.txt',sep="\t",header=F,comment.char="",quote="",
+                        col.names=c("file","rank","notes"))
+   shr_dr <- data.frame(fname=Sys.glob(paste0("/Volumes/L/bea_res/Data/Tasks/DollarReward2/MR/*/",shared$file))) %>%
+               mutate(id=subjid(fname)) %>%
+               merge(DATELOOKUP, by='id') %>%
+               arrange(d8)
+
+    pdf('toSiegle/deriv/lncd_plots.pdf', width=15, height = 8)
+    tryCatch(for(f in shr_dr$fname) print(plot_run(f)))
+    dev.off()
+
+    scored <- lapply(shr_dr$fname, \(fn) score_dr(fn) %>% mutate(fn=fn) )
+    scored_info <- scored %>% bind_rows() %>%
+       mutate(id=subjid(fn), fn=basename(fn)) %>%
+       merge(DATELOOKUP, by='id') %>%
+       arrange(d8) %>%
+       merge(shared, by.x='fn',by.y='file') %>% unique %>%
+       mutate(score=cut(Count, breaks=-2:2, labels=c('drop','error','cor','errcor')))
+
+    write.csv(scored_info, file='toSiegle/deriv/all_trials.csv',row.names=F)
+
+    scored_smry <- scored_info %>%
+       count(fn,rank,score) %>%
+       spread(score,n) %>% arrange(-cor)
+    write.csv(scored_smry, file='toSiegle/deriv/file_smry.csv',row.names=F)
+
+}
 
 # 
 # sub−11883_ses−01_task−DR_run−1.txt | low sd for many. few scored well
