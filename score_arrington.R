@@ -121,7 +121,7 @@ score_arrington <- function(eyetxt, ...) {
       med_norm %>%
       vp2asl
 
-   print(head(d))
+   #print(head(d))
    d %>%
       select(XDAT, pupil_diam, horz_gaze_coord, vert_gaze_coord) %>%
       getSacs(subj=nameinfo['subj'],
@@ -141,8 +141,9 @@ arrington_example <- function() {
 }
 
 ## ** Single Example
-run_one <- function() {
-  d <- score_arrington("/Volumes/L/bea_res/Data/Tasks/DollarReward2/MR/11907_20230117/sub-11907_ses-01_task-DR_run-1.txt",
-                       onlyontrials=2, showplot = TRUE)
+run_one <- function(f="/Volumes/L/bea_res/Data/Tasks/DollarReward2/MR/11907_20230117/sub-11907_ses-01_task-DR_run-1.txt", trials=c(2)) {
+  d <- score_arrington(f, onlyontrials=trials, showplot = TRUE)
   while (dev.off()) print("closing")
 }
+
+# see plot_run in dr_eye_score.R

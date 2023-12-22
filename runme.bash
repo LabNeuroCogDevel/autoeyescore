@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-cd $(dirname $0)
+cd "$(dirname "$0")"
 
 # 
 # wrapper to run/resume scoring on everyone

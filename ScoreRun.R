@@ -326,6 +326,9 @@ parseRawForTargets <- function(eydfile, funnybusiness=''){
   }
 
 
+  # 20230824
+  if(nrow(d)==0L) return("header only, no data!")
+
   if(dim(d)[2] != 4) {
     #allsacs <- dropTrialSacs(subj,runtype,1:expectedTrialLengths,0,sprintf('eyd data does not make sense to me %dx%d',dim(d)[1],dim(d)[2]),
     #                     allsacs,showplot=F,run=run,rundate=rundate)
@@ -336,10 +339,12 @@ parseRawForTargets <- function(eydfile, funnybusiness=''){
 
   names(d) <<- c("xdat","dil","xpos","ypos")
 
+
   ## fix bars zero'ed xdats
   zeroxdat        <- rle(is.na(d$xdat)|d$xdat==0)
+
   
-  if(zeroxdat$values[1] == T) { 
+  if(!is.na(zeroxdat$values[1]) && zeroxdat$values[1]) { 
     minzeroxdatlen <-2 
   } else {
     minzeroxdatlen <-1
@@ -986,7 +991,7 @@ getSacs <- function(eydfile, subj, run, runtype,rundate=0,onlyontrials=NULL,writ
      ##                       abs(fst$y[x]*sampleHz-startUp)<10
      #                        max(fst$y[which(fst$x - x*sampleHz > 0)[1:20]]) > sac.slowvel
      #                   }) )
-     if(is.na(unheldblinks) || any(unheldblinks)) {
+     if(any(is.na(unheldblinks)) || any(unheldblinks)) {
         allsacs <-  dropTrialSacs(subj,runtype,trl,xdatCode,'blink ends before any saccades',allsacs,run=run,showplot=showplot,rundate=rundate,savedas=pdffname, writetopdf=writetopdf)
         next
      }
@@ -1108,16 +1113,19 @@ scoreFixationTrial <-function(x) {
 ### SCORE EVERY TRIAL
 scoreSingleTrial<-function(x,funnybusiness='') { # x is good sacs for that trial
      failreason <-NA
-     dropped <- !is.na(x$reason) && x$reason[1]!=''
+     dropped <- any(!is.na(x$reason)) && x$reason[1]!=''
      nosacdrop <- grepl('no saccades', as.character(x$reason[1]) ) 
 
      # fixes are different from PS and AS
      # and we can accept a drop if it's because 'no saccades'
+     #str(x)
+     #print(x)
+     #dim(x)
      if (trialIsType(x$xdat[1]) == 'FX' && (!dropped || nosacdrop ) )  {
        return(scoreFixationTrial(x))
      } else if(dropped){
        failreason <- as.character(x$reason[1])
-     }else if(dim(x)[1]<1 || is.na(x$onset) ){
+     }else if(dim(x)[1]<1 || all(is.na(x$onset)) ){
         failreason <- 'no saccades' 
 
      # if the first sacc is too soon
