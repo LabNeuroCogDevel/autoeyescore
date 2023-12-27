@@ -34,3 +34,13 @@ extract_vgs_events <- function(eyets){
       mutate(across(c(trial, dlydur, dotpos), as.numeric),
              across(c(dlydur,dotpos),zoo::na.locf))
 }
+
+vgs_expect_dir <- function(dotpos) sign(dotpos)
+score_file_vgs <- function(asc_fname, ...)
+    score_file_generic(
+        asc_fname,
+        extract_events = extract_vgs_events,
+        groups=c("dlydur"),
+        dot_event="dot",
+        find_expect_dir=vgs_expect_dir,
+        ...)

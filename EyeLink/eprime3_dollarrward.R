@@ -42,3 +42,11 @@ extract_EP3_DR_events<-function(eyets){
       # text field seperate treated as chars. but most are nums
       mutate_each(as.numeric, trial, event, ttypenum, dotpos, tnum)
 }
+
+score_file_ep3_dr <- function(asc_fname, ...)
+    score_file_generic(
+        asc_fname='example/220682rr01.asc.gz',
+        dot_event=4,
+        extract_events=extract_EP3_DR_events,
+        groups=c("rewtype","tdir"),
+        ...)
