@@ -8,6 +8,7 @@ options(dplyr.summarise.inform = FALSE) # okay with overwritting group_by with a
 
 source('eprime3_dollarrward.R') # extract_EP3_DR_events, score_file_ep3_dr
 source('./vgs.R')               # extract_vgs_events,    score_file_vgs
+source('./mgs.R')               # extract_vgs_events,    score_file_vgs
 
 # main wrapper:
 #   ascfile_score_stats
@@ -30,12 +31,12 @@ merge_sacs <- function(events, saccs){
 
 # what side of the screen are we looking at?
 #  screen_x_res - how wide the screen is (default to 1920)
-find_expect_dir <- function(dotpos, screen_x_res=1920) -1* sign(dotpot-screen_x_res/2)
+find_expect_dir_ep3 <- function(dotpos, screen_x_res=1920) -1* sign(dotpos-screen_x_res/2)
 
 # wrapper for score and reason. unlisted into dataframe columns later
 score<-function(val, desc="") return(list(score=val, desc=desc))
 
-score_trial <- function(lat, dur, sacdist, dotpos, find_expect_dir=find_expect_dir){
+score_trial <- function(lat, dur, sacdist, dotpos, find_expect_dir=find_expect_dir_ep3){
   # trial score a value -1 to 2. can think of as number of saccades until correct
   # -1 dropped trial,  0 = error, 1 = correct, 2 = error corrected
   # returning list of [1] score value [2] drop explination/description
@@ -118,6 +119,7 @@ ascfile_score_stats <-function(asc_fname, score_file_func){
 # repeat each row for each sample in the range and make a new time column
 
 eyelink_functions_test<-function(){
+    require(testthat)
     test_that("scores",{
         # dot pos = 96 259 514 | 1406 1661 1824
         # score_trial <- function(lat, dur, sacdist, dotpos, screen_x_res=1920){

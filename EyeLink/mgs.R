@@ -1,5 +1,4 @@
-
-extract_vgs_events <- function(eyets){
+extract_mgs_events <- function(eyets){
   # asc_fname="./example/sub-wf_sendmsg/ses-01/20231226_VGSEye/sub_wf_sendmsg_ses_01_task_VGS_run_1_20232326152333.asc.gz"
   # eyets <- eyelinker::read.asc(asc_fname)
   # eyets$msg
@@ -17,9 +16,11 @@ extract_vgs_events <- function(eyets){
       # could maybe just grab TRIALID|EventID
       filter(!grepl("^!|InputID|OK$",text)) %>%
       mutate(
-          trial=stringr::str_match(text,"(?<=TRIALID )\\d+"),
-          text=gsub("dot", "vgstarget", text),
-          text=gsub("vgs_cue", "vgscue", text)) %>%
+          trial=stringr::str_extract(text,"(?<=TRIALID )\\d+"),
+          # original data has dot instead of mgstarget. probably okay to remove this
+          # currently not used anyway
+          text=gsub("mgs_","mgs",text),
+          text=gsub("dot", "mgstarget", text)) %>%
       # only TRIALID has trial number
       # na.locf will forward fill the missing 'desc' info into EventID rows
       # and then we dont need trial id rows anymore
@@ -36,12 +37,17 @@ extract_vgs_events <- function(eyets){
              across(c(dlydur,dotpos),zoo::na.locf))
 }
 
-vgs_expect_dir <- function(dotpos) sign(dotpos)
-score_file_vgs <- function(asc_fname, ...)
+mgs_expect_dir <- function(dotpos) sign(dotpos)
+score_file_mgs <- function(asc_fname, ...)
     score_file_generic(
         asc_fname,
-        extract_events = extract_vgs_events,
+        extract_events = extract_mgs_events,
         groups=c("dlydur"),
-        dot_event="vgstarget",
-        find_expect_dir=vgs_expect_dir,
+        dot_event="mgsexec",
+        find_expect_dir=mgs_expect_dir,
         ...)
+
+score_file_mgs_test <- function(){
+    asc_fname <- 'example/sub-wf_sendmsg/ses-01/20231226_MGSEye/sub_wf_sendcmd_ses_01_task_MGS_run_1_20233426153455.asc.gz'
+    s <- score_file_mgs(asc_fname)
+}
