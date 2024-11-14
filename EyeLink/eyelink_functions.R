@@ -8,7 +8,7 @@ options(dplyr.summarise.inform = FALSE) # okay with overwritting group_by with a
 
 source('eprime3_dollarrward.R') # extract_EP3_DR_events, score_file_ep3_dr
 source('./vgs.R')               # extract_vgs_events,    score_file_vgs
-source('./mgs.R')               # extract_vgs_events,    score_file_vgs
+source('./mgs.R')               # extract_mgs_events,    score_file_mgs
 
 # main wrapper:
 #   ascfile_score_stats
@@ -103,7 +103,17 @@ score_file_generic <-function(asc_fname='example/220682rr01.asc.gz',
                      extract_events=extract_EP3_DR_events,
                      groups=c("rewtype","tdir"),
                      find_expect_dir=find_expect_dir){
-    dat<- eyelinker::read.asc(asc_fname)
+
+    # input can be aready read (and maybe subseted, see inspect.R) dataframe
+    if(is.character(asc_fname)) {
+       dat<- eyelinker::read.asc(asc_fname)
+    } else {
+       dat <- asc_fname
+       #stopifnot(all(c("msg","sacc") %in% names(dat)))
+    }
+       # dat must have $msg and $sacc
+
+
     events <- extract_events(dat)
     #dat$info$screen.x # 1920
 
