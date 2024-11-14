@@ -1,16 +1,4 @@
 extract_mgs_events <- function(eyets){
-  # asc_fname="./example/sub-wf_sendmsg/ses-01/20231226_VGSEye/sub_wf_sendmsg_ses_01_task_VGS_run_1_20232326152333.asc.gz"
-  # eyets <- eyelinker::read.asc(asc_fname)
-  # eyets$msg
-  #  block   time text
-  #   <dbl>  <dbl> <chr>
-  #       1 441420 !MODE RECORD CR 500 2 1 LR
-  #       1 441436 TRIALID 3
-  #       1 441437 vgs_cue_4.0_0.43
-  #       1 445398 gap_4.0_0.43
-  #       1 445595 dot
-  #       1 446595 blank_4.0_0.43
-  #       1 446621 TRIAL OK
   events <- eyets$msg %>%
       # remove task administrator notes (InputId Awake Droop Intrv) and end of TRIAL OK
       # could maybe just grab TRIALID|EventID
