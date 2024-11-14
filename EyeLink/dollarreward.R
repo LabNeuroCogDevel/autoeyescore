@@ -1,3 +1,11 @@
+#!/usr/bin/env Rscript
+# score dollar reward task eye tracking asc files (converted edf)
+# sources eyelink_functions.R
+# 202410xxVD/WF
+# 20241114WF - save full filename in df,
+#              rename func to score_all_antiDR, add script action,
+
+
 extract_dollar_events <- function(eyets){
   #asc_fname="./example/sub-wf_sendmsg/ses-01/20231226_VGSEye/sub_wf_sendmsg_ses_01_task_VGS_run_1_20232326152333.asc.gz"
   # eyets <- eyelinker::read.asc(asc_fname)
@@ -41,20 +49,25 @@ anti_expect_dir <- function(dotpos) -1*sign(dotpos)
 
 # wraps generic score function.
 source('eyelink_functions.R')
-score_file_anti <- function(asc_fname, ...)
+score_file_antiDR <- function(asc_fname, ...)
     score_file_generic(
         asc_fname,
         extract_events = extract_dollar_events,
-        groups=c("reward"), # TODO CHANGEME
-        dot_event="dot", # TODO CHANGEME
+        groups=c("reward"),
+        dot_event="dot",
         find_expect_dir=anti_expect_dir,
-        ...) %>% mutate(file=basename(asc_fname))
+        ...) %>% mutate(file=asc_fname)
 
-score_all_anti <- function(){
+score_all_antiDR <- function(){
     asc_files <- Sys.glob("../../subj_info/sub-1*/ses-*/*_DollarReward/sub_*.asc*")
     # TODO: remove head when ready to run infull
-    all_scored_list <- lapply(asc_files, score_file_anti)
+    all_scored_list <- lapply(asc_files, score_file_antiDR)
     # final giant dataframe
     # TODO: is id stored within? otherwise add as column in lapply
     all_scored_dataframe <- dplyr::bind_rows(all_scored_list)
+}
+if (sys.nframe() == 0){
+   args <- commandArgs(trailingOnly = FALSE)
+   all_scored <- lapply(args[1:length(args)], score_file_anti) %>% bind_rows
+   write.table(all_scored, file=stdout(), sep="\t", quote=F, row.names=F)
 }
