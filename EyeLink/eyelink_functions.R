@@ -15,6 +15,31 @@ source('./mgs.R')               # extract_vgs_events,    score_file_vgs
 # needs task specific extention of score_file_generic (e.g. score_file_func=score_file_ep3_dr)
 
 
+#' make_asc - make text files from original binary EyeLink edf
+#'
+#' @param edf input filename to convert
+#' @return new_name.gz - name of file created with edf2asc
+make_asc <- function(edf, dryrun=FALSE){
+   if(!file.exists(edf)) stop(paste0("input file:",edf, "does not exist"))
+   stopifnot(all(grepl('.edf$',edf)))
+
+   # check both gzip copressed on normal asc
+   new_name <- gsub('.edf$','.asc',edf)
+   if(file.exists(new_name)) return(new_name)
+   new_name.gz <- paste0(new_name,'.gz')
+   if(file.exists(new_name.gz)) return(new_name.gz)
+
+   stopifnot(grepl('edf',system('which edf2asc',intern=T)))
+
+   cmd <- paste0('edf2asc "',edf,'"; gzip "',new_name,'"')
+   if(dryrun){
+      cat("dryrun, not running:", cmd,"\n")
+      return(new_name.gz)
+   }
+   system(cmd)
+   stopifnot(file.exists(new_name.gz))
+   return(new_name.gz)
+}
 
 merge_sacs <- function(events, saccs){
     #saccs <- eyets$sacc
