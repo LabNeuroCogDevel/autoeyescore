@@ -3,6 +3,7 @@
 # 20241114WF - init
 #   
 source('dollarreward.R')
+source('inspect.R')
 
 
 
@@ -33,6 +34,14 @@ score_from_or_save <- function(ascfile){
    write.table(scored, score_file, sep="\t", quote=F, row.names=F)
    cat("# writting ",score_file,"\n")
    return(scored)
+}
+
+write_plot <- function(ascfile) {
+  score_file <- scored_file_from_asc(ascfile)
+  plot_file <- gsub('.txt$','.pdf',score_file)
+  if(file.exists(plot_file)) return()
+  cat("# writting", plot_file,"\n")
+  p <- inspect_DR_run(ascfile, plot_file, height=11, width=8)
 }
 
 score_all_DR_MR <- function(){

@@ -56,7 +56,7 @@ score_file_antiDR <- function(asc_fname, ...)
         groups=c("reward"),
         dot_event="dot",
         find_expect_dir=anti_expect_dir,
-        ...) %>% mutate(file=asc_fname)
+        ...) %>% mutate(file=ifelse(is.character(asc_fname),asc_fname, NA))
 
 score_all_antiDR <- function(){
     asc_files <- Sys.glob("../../subj_info/sub-1*/ses-*/*_DollarReward/sub_*.asc*")
