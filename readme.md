@@ -1,20 +1,41 @@
-RUNNING SINGLE SUBJECT
-see scoreOne.bash -h
+# Running Single Subject
+see `scoreOne.bash -h`
 
-TASK DIFFERENCES
+# Task Differences
  - designed for antisaccades
- - `mgs` and msgencode (`dani_eyetools_mgsencode`) are scored outside of the main pipeline
- - `fix` is scored by examping the drops after scoring like antisaccade
+ - `mgs` and `msgencode` (`dani_eyetools_mgsencode`) are scored outside of the main pipeline
+ - `fix` is scored by examining the drops after scoring like antisaccade
 
 
-OVERVIEW 
+# Overview 
 
-These scripts score eye movements collected by ASL model 5000 or 6000, saved as ASL eyd v602
+These scripts score eye movements collected by `ASL model 5000` or `6000`, saved as `ASL eyd v602`
 input is expected at
+```
    [required] Data/Task/$paradigm/Basic/$lunaid/$date/EyeData/Raw/*eyd
    [optional] Data/Task/$paradigm/Basic/$lunaid/$date/EyeData/Scored/fs*xls
+```
 
-PARADIGM
+Recent (2024) updates include [`EyeLink/`](EyeLink/) scoring, but use the EyeLink provided saccades ranges instead of identifying within R code  like for the ASL tracker.
+
+# Citations
+
+[Tervo-Clemmens 2023](https://doi.org/10.1038/s41467-023-42540-8)
+> Luna dataset eye-tracking data was scored with the same automatic scoring algorithms from our previous work (Montez 2017; Tervo-Clemmens 2017).
+
+[Ojha 2022](https://doi.org/10.1016/j.dcn.2022.101183)
+> Responses were scored with a custom scoring script written in R (see Ravindranath et al., 2020 for details).
+
+[Ravindranath 2020](https://www.sciencedirect.com/science/article/pii/S1878929320300840?via%3Dihub)
+> Correct responses in the antisaccade task were defined as those in which the first eye movement during the saccade epoch with velocity greater than or equal to 30°/sec was made toward the mirror location of the peripheral cue and extended beyond a 2.5°/ visual angle from central fixation. Incorrect responses were defined by evidence that the first saccade during the saccade epoch was directed toward the peripheral stimulus and exceeded the 2.5°/ visual angle central fixation zone but were subsequently directed to the correct location, indicating that the instructions were being followed but the participant was unable to suppress their response. Trials in which no eye movements were generated, or in which the tracker lost fixation, were excluded from analyses. On average, 12.25 % of trials were omitted per subject, and the percent of omitted trials per subject did not significantly differ by age or sex. This scoring system was automated using custom software which has been made publicly available on GitHub (https://github.com/LabNeuroCogDevel/autoeyescore).
+
+[Tervo-Clemmens 2017](https://doi.org/10.3389/fnbeh.2017.00205)
+> Eye movements in the response epoch were a scored as a correct AS if the first eye movement during the response epoch had a velocity greater than or equal to 30°/s (Gitelman, 2002) and was made in the mirror location of the peripheral cue and extended at least 2.5° visual angle from central fixation. In contrast, eye movements were marked as an incorrect AS if the first saccade in the response epochs was made toward the peripheral cue and extended at least 2.5° visual angle from central fixation, but then later directed toward the correct location, suggesting task compliance. Trials in which no saccade occurred or if the eye-tracker lost fixation were excluded from all analyses. Scan sessions were excluded from all behavioral and fMRI analysis if the proportion of excluded trials was greater than 33%.
+
+[Montez 2017](https://pmc.ncbi.nlm.nih.gov/articles/PMC5578740/)
+> Saccadic events were detected using an in-house suite of automated routines. Individual saccade candidate events were detected from local maxima in the eye-movement velocity trace. Saccade start and end times were determined by searching backward and forward in time in the velocity trace to find the sample where velocity dropped below 1/10th of the peak velocity (Gitelman, 2002).
+
+# Paradigm
 
 Each trial asks the participant to make a saccades toward (pro) or away (anti) from a vertically centered target along the width of the presentation screen. Eye position, pupil dilation, and an XDAT code are sampled at 60Hz. While eye position and dilation are raw recordings of the participant from the eyetracker, XDATs are sent by the presentation and denote the start of a trial, onset of a cue (target), and end of a trial. Each trial should have 3 associated codes (where the last, stop code, is always 250).
 The  direction and final position of the correct saccade for a trial are given by the trial's middle, "target", XDAT. A "correct" trial is one where the first saccade is in this direction. Trials can also be classified as an "error," when the first saccade is in the opposite direction and no saccades go to the correct position, or as a "corrected error," when the first saccade is in the wrong direction, but a subsequent saccade moves in the correct direction (eye position moves beyond baseline toward the correct position).  The latency of a trial always refers to the initiation of the first saccade, regardless of it's label as correct or error.
@@ -38,42 +59,46 @@ Parameters (particularly velocity and stddev xpos) have been set to maximize agr
 
 
 
-RUNNING BATCH
+# Running Batch
   
   each task has its own directory (anti,bars,scannerbars) with subdirectories for results and tests
-  from this directory, '../score.R' is run which sources settings and scores. but use runme.bash 
+  from this directory, `../score.R` is run which sources settings and scores. but use `runme.bash` 
  
   see runme.bash for help
 
 
- depeneds on 
+## Depeneds on 
   finding files: 
+  ```
     root in /mnt/B/bea_res/Data/Tasks/$TASK/Basic/$SUBJ/$DATE/
     prased to                Raw/txt/$SUBJ.$DATE.$RUN.data.tsv
     output saved as          Scored/txt/$SUBJ.$DATE.$RUN.{trial,summary}.tsv
+  ```
 
-  parsing eyds: ../eyds/dataFromAnyEyd.pl (which needs ../eyds/EyeTracking-EYD/EyeTracking-EYD-0.1.2/lib/EyeTracking/EYD.pm)
+  parsing eyds: `../eyds/dataFromAnyEyd.pl` (which needs `../eyds/EyeTracking-EYD/EyeTracking-EYD-0.1.2/lib/EyeTracking/EYD.pm`)
 
 
- Results
-   check score.Rout (in results if successful) for errors!
-   the bottom of the file lists all subjects.date.runs that were not processed
+## Results
+  * check score.Rout (in results if successful) for errors!
+  * the bottom of the file lists all subjects.date.runs that were not processed
 
-ITERATIVE CHANGES
+# ITERATIVE CHANGES
   in R
     # for behavioral bars
     source('viewdiffs/checkBarsBeh.R')
 
-TESTING
+# TESTING
 
   in R
+  ```
     # for behavioral bars
     source('bars/bars.settings.R')
     source('ScoreRun.R')
     source('getSacsbyDot.R')
     source('scoreTests.R')
+  ```
   
   and
+  ```
     runme.sh -T
-  
-
+  ```
